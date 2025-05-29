@@ -1,0 +1,400 @@
+//// ------------------------------------------------------
+//// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+//// ------------------------------------------------------
+
+Table Users {
+  id Int [pk, increment]
+  username String [unique, not null]
+  password String [not null]
+  email String [unique, not null]
+  role Role [not null]
+  isActive Boolean [not null, default: true]
+  token String
+  groups Groups [not null]
+}
+
+Table Schools {
+  id Int [pk, increment]
+  name String [not null]
+  email String [unique, not null]
+  phone String [unique]
+  address String
+  isActive Boolean [not null, default: true]
+  classes Classes [not null]
+}
+
+Table Classes {
+  id Int [pk, increment]
+  name String [not null]
+  schoolId Int [not null]
+  school Schools [not null]
+  isActive Boolean [not null, default: true]
+  students Students [not null]
+  videos Class_Videos [not null]
+}
+
+Table Students {
+  id Int [pk, increment]
+  fullName String [not null]
+  studentCode String
+  classId Int [not null]
+  class Classes [not null]
+  isActive Boolean [not null, default: true]
+  contestants Contestants [not null]
+}
+
+Table About {
+  id Int [pk, increment]
+  schoolName String [not null]
+  website String
+  departmentName String
+  email String
+  fanpage String
+  mapEmbedCode String
+  isActive Boolean [not null, default: true]
+}
+
+Table Question_Topics {
+  id Int [pk, increment]
+  name String [not null]
+  isActive Boolean [not null, default: true]
+  questions Questions [not null]
+}
+
+Table Question_Packages {
+  id Int [pk, increment]
+  name String [not null]
+  isActive Boolean [not null, default: true]
+  questionDetails Question_Details [not null]
+  matches Matches [not null]
+}
+
+Table Questions {
+  id Int [pk, increment]
+  intro String
+  defaultTime Int [not null]
+  remainingTime Int
+  questionType QuestionType [not null]
+  plainText String [not null]
+  content String [not null]
+  questionMedia Json
+  options Json
+  correctAnswer String [not null]
+  mediaAnswer Json
+  score Int [not null, default: 1]
+  difficulty Difficulty [not null]
+  explanation String
+  questionTopicId Int [not null]
+  questionTopic Question_Topics [not null]
+  isActive Boolean [not null, default: true]
+  questionDetails Question_Details [not null]
+}
+
+Table Question_Details {
+  questionId Int [not null]
+  questionPackageId Int [not null]
+  question Questions [not null]
+  questionPackage Question_Packages [not null]
+  questionOrder Int [not null]
+  isActive Boolean [not null]
+
+  indexes {
+    (questionId, questionPackageId) [pk]
+  }
+}
+
+Table Contests {
+  id Int [pk, increment]
+  name String [not null]
+  slug String [unique, not null]
+  rule String [not null]
+  plainText String [not null]
+  location String [not null]
+  startTime DateTime [not null]
+  endTime DateTime [not null]
+  logo String
+  background String
+  media String
+  slogan String
+  status ContestStatus [not null, default: 'upcoming']
+  isActive Boolean [not null, default: true]
+  matches Matches [not null]
+  contestants Contestants [not null]
+  awards Awards [not null]
+  round Rounds [not null]
+}
+
+Table Rounds {
+  id Int [pk, increment]
+  name String [not null]
+  index Int [not null]
+  contestId Int [not null]
+  contest Contests [not null]
+  isActive Boolean [not null, default: true]
+  contestants Contestants [not null]
+  matches Matches [not null]
+}
+
+Table Matches {
+  id Int [pk, increment]
+  name String [not null]
+  startTime DateTime [not null]
+  endTime DateTime [not null]
+  status ContestStatus [not null, default: 'upcoming']
+  currentQuestion Int [not null]
+  questionPackageId Int [not null]
+  questionPackage Question_Packages [not null]
+  contestId Int [not null]
+  contest Contests [not null]
+  roundId Int [not null]
+  round Rounds [not null]
+  isActive Boolean [not null, default: true]
+  groups Groups [not null]
+  contestantMatches Contestant_Matches [not null]
+  results Results [not null]
+  rescues Rescues [not null]
+  screenControls Screen_Controls
+}
+
+Table Groups {
+  id Int [pk, increment]
+  name String [not null]
+  userId Int [not null]
+  user Users [not null]
+  matchId Int [not null]
+  match Matches [not null]
+  confirmCurrentQuestion Int [not null]
+  contestantMatches Contestant_Matches [not null]
+}
+
+Table Contestants {
+  id Int [pk, increment]
+  name String [not null]
+  contestId Int [not null]
+  contest Contests [not null]
+  studentId Int [not null]
+  student Students [not null]
+  roundId Int [not null]
+  round Rounds [not null]
+  status ContestantStatus [not null, default: 'compete']
+  contestantMatches Contestant_Matches [not null]
+  results Results [not null]
+  awards Awards [not null]
+}
+
+Table Contestant_Matches {
+  contestantId Int [not null]
+  matchId Int [not null]
+  groupId Int [not null]
+  contestant Contestants [not null]
+  match Matches [not null]
+  group Groups [not null]
+  registrationNumber Int [not null]
+  status ContestantMatchStatus [not null, default: 'not_started']
+  isActive Boolean [not null, default: true]
+
+  indexes {
+    (contestantId, matchId) [pk]
+  }
+}
+
+Table Results {
+  id Int [pk, increment]
+  name String [not null]
+  contestantId Int [not null]
+  matchId Int [not null]
+  contestant Contestants [not null]
+  match Matches [not null]
+  isCorrect Boolean [not null, default: true]
+  questionOrder Int [not null]
+}
+
+Table Rescues {
+  id Int [pk, increment]
+  name String [not null]
+  rescueType RescueType [not null]
+  questionFrom Int [not null]
+  questionTo Int [not null]
+  studentIds Json [not null]
+  supportAnswers Json [not null]
+  remainingContestants Int
+  maxStudent Int
+  index Int [not null]
+  status RescueStatus [not null]
+  matchId Int [not null]
+  match Matches [not null]
+}
+
+Table Awards {
+  id Int [pk, increment]
+  name String [not null]
+  contestId Int [not null]
+  contest Contests [not null]
+  contestantId Int
+  contestant Contestants
+  type AwardType [unique, not null]
+}
+
+Table Sponsors {
+  id Int [pk, increment]
+  name String [not null]
+  logo String
+  images String
+  videos String [not null]
+}
+
+Table Class_Videos {
+  id Int [pk, increment]
+  name String [not null]
+  slogan String
+  classId Int [not null]
+  class Classes [not null]
+  videos String [not null]
+}
+
+Table Screen_Controls {
+  id Int [pk, increment]
+  controlKey ControlKey [not null]
+  controlValue ControlValue [not null]
+  matchId Int [unique, not null]
+  match Matches [not null]
+  media String [not null]
+}
+
+Enum Role {
+  Admin
+  Judge
+}
+
+Enum QuestionType {
+  multiple_choice
+  essay
+}
+
+Enum Difficulty {
+  Alpha
+  Beta
+  Rc
+  Gold
+}
+
+Enum ContestStatus {
+  upcoming
+  ongoing
+  finished
+}
+
+Enum ContestantStatus {
+  compete
+  eliminate
+  advanced
+}
+
+Enum ContestantMatchStatus {
+  not_started
+  in_progress
+  confirmed1
+  confirmed2
+  eliminated
+  rescued
+  banned
+  completed
+}
+
+Enum RescueType {
+  resurrected
+  lifelineUsed
+}
+
+Enum RescueStatus {
+  notUsed
+  used
+  passed
+}
+
+Enum AwardType {
+  firstPrize
+  secondPrize
+  thirdPrize
+  fourthPrize
+  impressiveVideo
+  excellentVideo
+}
+
+Enum ControlKey {
+  background
+  question
+  questionInfo
+  answer
+  matchDiagram
+  explanation
+  firstPrize
+  secondPrize
+  thirdPrize
+  fourthPrize
+  impressiveVideo
+  excellentVideo
+  allPrize
+  topWin
+  listEliminated
+  listRescued
+  video
+  audio
+  image
+}
+
+Enum ControlValue {
+  start
+  pause
+  reset
+  zoomIn
+  zoomOut
+}
+
+Ref: Classes.schoolId > Schools.id [delete: Restrict]
+
+Ref: Students.classId > Classes.id [delete: Restrict]
+
+Ref: Questions.questionTopicId > Question_Topics.id [delete: Restrict]
+
+Ref: Question_Details.questionId > Questions.id [delete: Restrict]
+
+Ref: Question_Details.questionPackageId > Question_Packages.id [delete: Restrict]
+
+Ref: Rounds.contestId > Contests.id [delete: Restrict]
+
+Ref: Matches.questionPackageId > Question_Packages.id [delete: Restrict]
+
+Ref: Matches.contestId > Contests.id [delete: Restrict]
+
+Ref: Matches.roundId > Rounds.id [delete: Restrict]
+
+Ref: Groups.userId > Users.id [delete: Restrict]
+
+Ref: Groups.matchId > Matches.id [delete: Restrict]
+
+Ref: Contestants.contestId > Contests.id [delete: Restrict]
+
+Ref: Contestants.studentId > Students.id [delete: Restrict]
+
+Ref: Contestants.roundId > Rounds.id [delete: Restrict]
+
+Ref: Contestant_Matches.contestantId > Contestants.id [delete: Restrict]
+
+Ref: Contestant_Matches.matchId > Matches.id [delete: Restrict]
+
+Ref: Contestant_Matches.groupId > Groups.id [delete: Restrict]
+
+Ref: Results.contestantId > Contestants.id [delete: Restrict]
+
+Ref: Results.matchId > Matches.id [delete: Restrict]
+
+Ref: Rescues.matchId > Matches.id [delete: Restrict]
+
+Ref: Awards.contestId > Contests.id [delete: Restrict]
+
+Ref: Awards.contestantId > Contestants.id [delete: Restrict]
+
+Ref: Class_Videos.classId > Classes.id [delete: Restrict]
+
+Ref: Screen_Controls.matchId - Matches.id [delete: Restrict]

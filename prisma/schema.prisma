@@ -116,6 +116,9 @@ model User {
   token     String?  @db.Text
   groups    Group[]
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("Users")
 }
 
@@ -127,6 +130,8 @@ model User {
     address   String?  @db.VarChar(255)
     isActive  Boolean  @default(true)
     classes   Class[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     @@map("Schools")
   }
@@ -139,6 +144,8 @@ model User {
     isActive  Boolean   @default(true) 
     students  Student[]
     videos    ClassVideo[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     @@map("Classes")
   }
@@ -151,6 +158,8 @@ model Student {
   class        Class    @relation(fields: [classId], references: [id],onUpdate:Restrict, onDelete:Restrict)
   isActive     Boolean  @default(true) 
   contestants  Contestant[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Students")
 }
@@ -164,6 +173,8 @@ model About {
   fanpage       String?  @db.VarChar(255)
   mapEmbedCode  String?  @db.Text
   isActive      Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("About")
 }
@@ -173,6 +184,8 @@ model QuestionTopic {
   name      String     @db.VarChar(255)
   isActive  Boolean    @default(true) 
   questions Question[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Question_Topics")
 }
@@ -183,6 +196,8 @@ model QuestionPackage {
   isActive         Boolean          @default(true) 
   questionDetails  QuestionDetail[]
   matches          Match[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Question_Packages")
 }
@@ -206,6 +221,8 @@ model Question {
   questionTopic  QuestionTopic   @relation(fields: [questionTopicId], references: [id],onDelete:Restrict , onUpdate:Restrict)
   isActive       Boolean         @default(true)
   questionDetails QuestionDetail[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Questions")
 }
@@ -217,6 +234,8 @@ model QuestionDetail {
   questionPackage   QuestionPackage @relation(fields: [questionPackageId], references: [id],onDelete:Restrict,onUpdate:Restrict)
   questionOrder     Int            
   isActive         Boolean        
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@id([questionId, questionPackageId])
   @@map("Question_Details")
@@ -241,6 +260,8 @@ model Contest {
   contestants  Contestant[]
   awards       Award[]
   round        Round[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@map("Contests")
 }
 
@@ -253,6 +274,8 @@ model Round {
   isActive    Boolean      @default(true) 
   contestants Contestant[]
   matches     Match[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@map("Rounds")
 }
 
@@ -275,7 +298,8 @@ model Match {
   results          Result[]
   rescues          Rescue[]
   screenControls   ScreenControl?   
-
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@map("Matches")
 }
 
@@ -288,6 +312,8 @@ model Group {
   match                Match             @relation(fields: [matchId], references: [id],onDelete:Restrict ,onUpdate:Restrict)
   confirmCurrentQuestion Int              
   contestantMatches    ContestantMatch[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Groups")
 }
@@ -305,6 +331,8 @@ model Contestant {
   contestantMatches ContestantMatch[]
   results           Result[]
   awards            Award[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Contestants")
 }
@@ -319,6 +347,8 @@ model ContestantMatch {
   registrationNumber Int              
   status           ContestantMatchStatus @default(not_started)
   isActive         Boolean              @default(true) 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@id([contestantId, matchId])
   @@map("Contestant_Matches")
@@ -333,7 +363,8 @@ model Result {
   match          Match      @relation(fields: [matchId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   isCorrect      Boolean    @default(true) 
   questionOrder  Int       
-
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@map("Results")
 }
 
@@ -351,6 +382,8 @@ model Rescue {
   status             RescueStatus
   matchId            Int          @map("match_id")
   match              Match        @relation(fields: [matchId], references: [id],onDelete :Restrict , onUpdate :Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Rescues")
 }
@@ -363,6 +396,8 @@ model Award {
   contestantId Int?       @map("contestant_id")
   contestant   Contestant? @relation(fields: [contestantId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   type         AwardType  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Awards")
 }
@@ -373,6 +408,8 @@ model Sponsor {
   logo    String? @db.VarChar(255)
   images  String? @db.VarChar(255)
   videos  String  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Sponsors")
 }
@@ -384,6 +421,8 @@ model ClassVideo {
   classId  Int    
   class    Class   @relation(fields: [classId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   videos   String  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@map("Class_Videos")
 }
 
@@ -394,6 +433,8 @@ model ScreenControl {
   matchId      Int          @unique     
   match        Match        @relation(fields: [matchId], references: [id],onDelete:Restrict,onUpdate:Restrict)
   media        String       @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("Screen_Controls")
 }

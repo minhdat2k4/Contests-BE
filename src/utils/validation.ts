@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { ZodSchema, ZodError } from 'zod';
-import { createError } from '@/middlewares/errorHandler';
+import { Request, Response, NextFunction } from "express";
+import { ZodSchema, ZodError } from "zod";
+import { createError } from "@/middlewares/errorHandler";
 
 export const validateBody = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -11,7 +11,7 @@ export const validateBody = (schema: ZodSchema) => {
       if (error instanceof ZodError) {
         next(error);
       } else {
-        next(createError('VALIDATION_ERROR', 400));
+        next(createError("VALIDATION_ERROR", 400));
       }
     }
   };
@@ -26,7 +26,7 @@ export const validateParams = (schema: ZodSchema) => {
       if (error instanceof ZodError) {
         next(error);
       } else {
-        next(createError('VALIDATION_ERROR', 400));
+        next(createError("VALIDATION_ERROR", 400));
       }
     }
   };
@@ -41,7 +41,7 @@ export const validateQuery = (schema: ZodSchema) => {
       if (error instanceof ZodError) {
         next(error);
       } else {
-        next(createError('VALIDATION_ERROR', 400));
+        next(createError("VALIDATION_ERROR", 400));
       }
     }
   };

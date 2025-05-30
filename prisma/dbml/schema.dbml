@@ -11,6 +11,8 @@ Table Users {
   isActive Boolean [not null, default: true]
   token String
   groups Groups [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Schools {
@@ -21,6 +23,8 @@ Table Schools {
   address String
   isActive Boolean [not null, default: true]
   classes Classes [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Classes {
@@ -31,6 +35,8 @@ Table Classes {
   isActive Boolean [not null, default: true]
   students Students [not null]
   videos Class_Videos [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Students {
@@ -41,6 +47,8 @@ Table Students {
   class Classes [not null]
   isActive Boolean [not null, default: true]
   contestants Contestants [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table About {
@@ -52,6 +60,8 @@ Table About {
   fanpage String
   mapEmbedCode String
   isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Question_Topics {
@@ -59,6 +69,8 @@ Table Question_Topics {
   name String [not null]
   isActive Boolean [not null, default: true]
   questions Questions [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Question_Packages {
@@ -67,6 +79,8 @@ Table Question_Packages {
   isActive Boolean [not null, default: true]
   questionDetails Question_Details [not null]
   matches Matches [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Questions {
@@ -88,6 +102,8 @@ Table Questions {
   questionTopic Question_Topics [not null]
   isActive Boolean [not null, default: true]
   questionDetails Question_Details [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Question_Details {
@@ -97,6 +113,8 @@ Table Question_Details {
   questionPackage Question_Packages [not null]
   questionOrder Int [not null]
   isActive Boolean [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 
   indexes {
     (questionId, questionPackageId) [pk]
@@ -122,6 +140,8 @@ Table Contests {
   contestants Contestants [not null]
   awards Awards [not null]
   round Rounds [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Rounds {
@@ -133,6 +153,8 @@ Table Rounds {
   isActive Boolean [not null, default: true]
   contestants Contestants [not null]
   matches Matches [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Matches {
@@ -154,6 +176,8 @@ Table Matches {
   results Results [not null]
   rescues Rescues [not null]
   screenControls Screen_Controls
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Groups {
@@ -165,6 +189,8 @@ Table Groups {
   match Matches [not null]
   confirmCurrentQuestion Int [not null]
   contestantMatches Contestant_Matches [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Contestants {
@@ -180,6 +206,8 @@ Table Contestants {
   contestantMatches Contestant_Matches [not null]
   results Results [not null]
   awards Awards [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Contestant_Matches {
@@ -192,6 +220,8 @@ Table Contestant_Matches {
   registrationNumber Int [not null]
   status ContestantMatchStatus [not null, default: 'not_started']
   isActive Boolean [not null, default: true]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 
   indexes {
     (contestantId, matchId) [pk]
@@ -207,6 +237,8 @@ Table Results {
   match Matches [not null]
   isCorrect Boolean [not null, default: true]
   questionOrder Int [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Rescues {
@@ -223,6 +255,8 @@ Table Rescues {
   status RescueStatus [not null]
   matchId Int [not null]
   match Matches [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Awards {
@@ -233,6 +267,8 @@ Table Awards {
   contestantId Int
   contestant Contestants
   type AwardType [unique, not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Sponsors {
@@ -241,6 +277,8 @@ Table Sponsors {
   logo String
   images String
   videos String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Class_Videos {
@@ -250,6 +288,8 @@ Table Class_Videos {
   classId Int [not null]
   class Classes [not null]
   videos String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Table Screen_Controls {
@@ -259,6 +299,8 @@ Table Screen_Controls {
   matchId Int [unique, not null]
   match Matches [not null]
   media String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
 }
 
 Enum Role {

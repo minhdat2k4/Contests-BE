@@ -111,11 +111,10 @@ model User {
   username  String   @unique @db.Char(255)
   password  String   @db.Char(255)
   email     String   @unique @db.VarChar(255)
-  role      Role
+  role      Role     
   isActive  Boolean  @default(true)
   token     String?  @db.Text
   groups    Group[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

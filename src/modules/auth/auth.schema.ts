@@ -1,59 +1,69 @@
-import { z } from 'zod';
-
-// Login schema
+import { z } from "zod";
+import { Role } from "@prisma/client";
 export const LoginSchema = z.object({
-  identifier: z.string().min(1, 'Email or username is required'),
-  password: z.string().min(1, 'Password is required'),
+  identifier: z
+    .string({
+      required_error: "Vui lòng nhập tên đăng nhập hoặc email",
+      invalid_type_error: "Yêu cầu nhập kí tự chuỗi ",
+    })
+    .min(1, "Vui lòng nhập tên đăng nhập hoặc email"),
+  password: z
+    .string({
+      required_error: "Vui lòng nhập mật khẩu",
+      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
+    })
+    .min(1, "Vui lòng nhập mật khẩu"),
 });
-
-// Register schema
 export const RegisterSchema = z.object({
-  email: z.string().email('Invalid email format'),
   username: z
     .string()
-    .min(3, 'Username must be at least 3 characters')
-    .max(20, 'Username must be at most 20 characters')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+    .min(1, "Vui lòng nhập tên đăng nhập")
+    .max(20, "Tên đăng nhập không được quá 20 ký tự"),
+  email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ"),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain at least one lowercase letter, one uppercase letter, and one number'),
-  firstName: z.string().min(1, 'First name is required').max(50, 'First name must be at most 50 characters').optional(),
-  lastName: z.string().min(1, 'Last name is required').max(50, 'Last name must be at most 50 characters').optional(),
+    .min(8, "Mật khẩu là bắt buộc và phải có ít nhất 8 ký tự")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/,
+      "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
+    ),
+  Role: z.nativeEnum(Role).default(Role.Judge).optional(),
 });
-
-// Refresh token schema
-export const RefreshTokenSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
-});
-
-// Change password schema
-export const ChangePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z
-    .string()
-    .min(8, 'New password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'New password must contain at least one lowercase letter, one uppercase letter, and one number'),
-});
-
-// Forgot password schema
-export const ForgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email format'),
-});
-
-// Reset password schema
 export const ResetPasswordSchema = z.object({
-  token: z.string().min(1, 'Reset token is required'),
-  newPassword: z
-    .string()
-    .min(8, 'New password must be at least 8 characters')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'New password must contain at least one lowercase letter, one uppercase letter, and one number'),
+  email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ"),
 });
+export const UpdateUserSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Vui lòng nhập email")
+    .email("Email không hợp lệ")
+    .optional(),
+  role: z.nativeEnum(Role).default(Role.Judge).optional(),
+});
+export const ChangePasswordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(8, "Mật khẩu mới là bắt buộc và phải có ít nhất 8 ký tự")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/,
+        "Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
+      ),
+    confirmNewPassword: z
+      .string()
+      .min(8, "Xác nhận mật khẩu mới là bắt buộc và phải có ít nhất 8 ký tự")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/,
+        "Xác nhận mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
+      ),
+  })
+  .refine(data => data.newPassword === data.confirmNewPassword, {
+    message: "Mật khẩu mới và xác nhận mật khẩu không khớp",
+    path: ["confirmNewPassword"],
+  });
 
-// Type exports
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
-export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
-export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
-export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;

@@ -10,9 +10,21 @@ Table Users {
   role Role [not null]
   isActive Boolean [not null, default: true]
   token String
+  otpCode String
+  otpExpiredAt DateTime
   groups Groups [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  refreshToken RefreshTokens [not null]
+}
+
+Table RefreshTokens {
+  id Int [pk, increment]
+  userId Int [not null]
+  user Users [not null]
+  refreshToken String [not null]
+  createdAt DateTime [default: `now()`, not null]
+  expiredAt DateTime [not null]
 }
 
 Table Schools {
@@ -392,6 +404,8 @@ Enum ControlValue {
   zoomIn
   zoomOut
 }
+
+Ref: RefreshTokens.userId > Users.id
 
 Ref: Classes.schoolId > Schools.id [delete: Restrict]
 

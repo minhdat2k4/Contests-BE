@@ -1,10 +1,17 @@
-import { z } from "zod";
+import { nativeEnum, number, string, z } from "zod";
 import { Role } from "@prisma/client";
+export const CreateRefreshTokenShchema = z.object({
+  id: number(),
+  username: string(),
+  email: string(),
+  role: nativeEnum(Role),
+});
+
 export const LoginSchema = z.object({
   identifier: z
     .string({
       required_error: "Vui lòng nhập tên đăng nhập hoặc email",
-      invalid_type_error: "Yêu cầu nhập kí tự chuỗi ",
+      invalid_type_error: "Vui lòng nhập kí tự chuỗi ",
     })
     .min(1, "Vui lòng nhập tên đăng nhập hoặc email"),
   password: z
@@ -67,3 +74,4 @@ export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+export type CreateRefreshTokenInput = z.infer<typeof CreateRefreshTokenShchema>;

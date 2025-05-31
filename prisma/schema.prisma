@@ -117,9 +117,20 @@ model User {
   groups    Group[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  refreshToken RefreshToken[]
   @@map("Users")
 }
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int     
+  user      User     @relation(fields:[userId],references:[id])
+  refreshToken   String  @db.Text 
+  createdAt DateTime @default(now())
+  expiredAt DateTime 
+  
+  @@map("RefreshTokens")
+}
+
 
   model School {
     id        Int      @id @default(autoincrement())

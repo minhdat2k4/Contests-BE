@@ -1,9 +1,9 @@
 import AuthService from "./auth.service";
 
-import { LoginInput, ResetPasswordInput } from "./auth.schema";
+import { LoginInput, ResetPasswordInput, OtpInput } from "./auth.schema";
 import { json, Request, Response } from "express";
 import { logger } from "@/utils/logger";
-import { errorResponse } from "@/utils/response";
+import { errorResponse, successResponse } from "@/utils/response";
 import { verifyToken, generateAccessToken } from "@/utils/jwt";
 import UserService from "../user/user.service";
 import { validateData } from "@/middlewares/validation";
@@ -14,7 +14,7 @@ export default class AuthController {
       const data: LoginInput = req.body;
       const result = await AuthService.login(data);
       if (!result) {
-        res.status(400).json(errorResponse("Đăng nhập không thành công"));
+        res.json(errorResponse("Đăng nhập không thành công"));
       }
       const updateAccessToken: any = {};
       updateAccessToken.token = result.accessToken;
@@ -23,7 +23,7 @@ export default class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 1000 * 60,
+        maxAge: 1000 * 60 * 60,
       });
       res.cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
@@ -31,11 +31,7 @@ export default class AuthController {
         sameSite: "lax",
         maxAge: 30 * 60 * 60 * 100 * 24, //30 ngày
       });
-      res.json({
-        success: true,
-        message: `Đăng nhập thành công`,
-        data: result,
-      });
+      res.json(successResponse({ result }, "Đăng nhập thành công"));
       logger.info(`Đăng nhập thành công`);
     } catch (error) {
       res.status(400).json(error);
@@ -65,10 +61,7 @@ export default class AuthController {
         message: "Đăng xuất thành công",
       });
     } catch (error) {
-      res.status(400).json({
-        success: false,
-        message: "Lỗi khi đăng xuất",
-      });
+      res.json(errorResponse((error as Error).message));
     }
   }
   static async refreshAccToken(req: Request, res: Response): Promise<void> {
@@ -97,7 +90,7 @@ export default class AuthController {
       res.cookie("accessToken", newAccessToken, {
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 60 * 100,
+        maxAge: 60 * 1000 * 60,
         secure: process.env.NODE_ENV === "production",
       });
       res.json({
@@ -146,6 +139,26 @@ export default class AuthController {
         susscess: false,
         message: error,
       });
+    }
+  }
+  static async verifyOtp(req: Request, res: Response) {
+    try {
+      const otp: OtpInput = req.body;
+      const user = await UserService.getUserByEmail(otp.email);
+      if (!user) {
+        res.json(validateData("email", "Không tìm thấy tài khoản"));
+        return;
+      }
+      if (!user.otpExpiredAt || new Date() > user.otpExpiredAt) {
+        throw new Error("Mã OTP đã hết hạn");
+      }
+
+      if (!user.otpCode || String(otp.otp) !== user.otpCode) {
+        throw new Error("Mã OTP không chính xác");
+      }
+      res.json(successResponse(null, "Xác nhận OTP thành công"));
+    } catch (error) {
+      res.json(errorResponse((error as Error).message));
     }
   }
 }

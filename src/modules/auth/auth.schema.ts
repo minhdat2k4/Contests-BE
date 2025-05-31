@@ -37,7 +37,13 @@ export const RegisterSchema = z.object({
   Role: z.nativeEnum(Role).default(Role.Judge).optional(),
 });
 export const ResetPasswordSchema = z.object({
-  email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ"),
+  email: z
+    .string({
+      required_error: "Vui lòng nhập email",
+      invalid_type_error: "Vui lòng nhập kí tự chuỗi ",
+    })
+    .min(1, "Vui lòng nhập email")
+    .email("Email không hợp lệ"),
 });
 export const UpdateUserSchema = z.object({
   email: z
@@ -68,10 +74,16 @@ export const ChangePasswordSchema = z
     message: "Mật khẩu mới và xác nhận mật khẩu không khớp",
     path: ["confirmNewPassword"],
   });
-
+export const otpShema = ResetPasswordSchema.extend({
+  otp: z.number({
+    required_error: "Vui lòng nhập mã OTP",
+    invalid_type_error: "Vui lòng nhập kí tự số ",
+  }),
+});
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 export type CreateRefreshTokenInput = z.infer<typeof CreateRefreshTokenShchema>;
+export type OtpInput = z.infer<typeof otpShema>;

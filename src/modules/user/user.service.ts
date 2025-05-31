@@ -58,6 +58,8 @@ export default class UserService {
         id: true,
         username: true,
         email: true,
+        otpCode: true,
+        otpExpiredAt: true,
       },
     });
   }

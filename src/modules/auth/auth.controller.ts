@@ -1,120 +1,113 @@
-import { Request, Response, NextFunction } from 'express';
-import { AuthService } from './auth.service';
-import { LoginInput, RegisterInput, RefreshTokenInput, ChangePasswordInput } from './auth.schema';
-import { successResponse } from '@/utils/response';
-import { logger } from '@/utils/logger';
+import AuthService from "./auth.service";
 
-export class AuthController {
-  /**
-   * Register a new user
-   */
-  static async register(req: Request, res: Response, next: NextFunction): Promise<void> {
+import { LoginInput } from "./auth.schema";
+import { json, Request, Response } from "express";
+import { logger } from "@/utils/logger";
+import { errorResponse } from "@/utils/response";
+import { verifyToken, generateAccessToken } from "@/utils/jwt";
+import UserService from "../user/user.service";
+import { token } from "morgan";
+export default class AuthController {
+  static async login(req: Request, res: Response): Promise<void> {
     try {
-      const registerData: RegisterInput = req.body;
-      const result = await AuthService.register(registerData);
-
-      logger.info('User registered successfully', { 
-        userId: result.user.id, 
-        email: result.user.email 
+      const data: LoginInput = req.body;
+      const result = await AuthService.login(data);
+      if (!result) {
+        res.status(400).json(errorResponse("Đăng nhập không thành công"));
+      }
+      const updateAccessToken: any = {};
+      updateAccessToken.token = result.accessToken;
+      await UserService.UpdateUser(result.id, updateAccessToken);
+      res.cookie("accessToken", result.accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 1000 * 60,
+      });
+      res.cookie("refreshToken", result.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 30 * 60 * 60 * 100 * 24, //30 ngày
+      });
+      res.json({
+        success: true,
+        message: `Đăng nhập thành công`,
+        data: result,
+      });
+      logger.info(`Đăng nhập thành công`);
+    } catch (error) {
+      res.status(400).json(error);
+    }
+  }
+  static async logout(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new Error("Không tìm thấy người dùng ");
+      }
+      const userId: number = req.user.userId!;
+      await AuthService.logout(userId);
+      await AuthService.deleteRefreshToken(userId);
+      res.clearCookie("accessToken", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
       });
 
-      res.status(201).json(successResponse(result, 'User registered successfully'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Login user
-   */
-  static async login(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const loginData: LoginInput = req.body;
-      const result = await AuthService.login(loginData);
-
-      logger.info('User logged in successfully', { 
-        userId: result.user.id, 
-        email: result.user.email 
+      res.json({
+        success: true,
+        message: "Đăng xuất thành công",
       });
-
-      res.status(200).json(successResponse(result, 'Login successful'));
     } catch (error) {
-      next(error);
+      res.status(400).json({
+        success: false,
+        message: "Lỗi khi đăng xuất",
+      });
     }
   }
-
-  /**
-   * Refresh access token
-   */
-  static async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  static async refreshAccToken(req: Request, res: Response): Promise<void> {
     try {
-      const { refreshToken }: RefreshTokenInput = req.body;
-      const result = await AuthService.refreshToken(refreshToken);
-
-      res.status(200).json(successResponse(result, 'Token refreshed successfully'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Change password
-   */
-  static async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = req.user?.id;
-      
-      if (!userId) {
-        return next(new Error('User not authenticated'));
+      const token: string = req.cookies.refreshToken;
+      if (!token) {
+        throw new Error("Không tìm thấy refreshtoken");
       }
-
-      const changePasswordData: ChangePasswordInput = req.body;
-      const result = await AuthService.changePassword(userId, changePasswordData);
-
-      logger.info('Password changed successfully', { userId });
-
-      res.status(200).json(successResponse(result, 'Password changed successfully'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Logout user
-   */
-  static async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = req.user?.id;
-      
-      if (!userId) {
-        return next(new Error('User not authenticated'));
+      const payload = verifyToken(token);
+      if (payload.type != "refresh") {
+        throw new Error("Sai loại token");
       }
-
-      const result = await AuthService.logout(userId);
-
-      logger.info('User logged out successfully', { userId });
-
-      res.status(200).json(successResponse(result, 'Logged out successfully'));
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Get current user profile
-   */
-  static async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = req.user?.id;
-      
-      if (!userId) {
-        return next(new Error('User not authenticated'));
+      const refreshtoken = await AuthService.getRefreshtokenByUseridToken(
+        payload.userId,
+        token
+      );
+      if (!refreshtoken || new Date(refreshtoken.expiredAt) < new Date()) {
+        throw new Error("Token hết hạn");
       }
-
-      // User data is already available from auth middleware
-      res.status(200).json(successResponse(req.user, 'Profile retrieved successfully'));
+      const { userId, email, role, username } = payload;
+      const newPayLoad = { userId, email, role, username };
+      const newAccessToken = generateAccessToken(newPayLoad);
+      const data: any = {};
+      data.token = newAccessToken;
+      await UserService.UpdateUser(userId, data);
+      res.cookie("accessToken", newAccessToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 60 * 100,
+        secure: process.env.NODE_ENV === "production",
+      });
+      res.json({
+        success: true,
+        message: "Lấy token mới thành công",
+      });
     } catch (error) {
-      next(error);
+      res.status(401).json({
+        success: false,
+        message: (error as Error).message || "Có lỗi xảy ra",
+      });
     }
   }
 }

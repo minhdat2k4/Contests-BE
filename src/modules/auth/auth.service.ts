@@ -1,157 +1,135 @@
-import { UserService } from '@/modules/user/user.service';
-import { generateTokenPair, verifyToken, JwtPayload } from '@/utils/jwt';
-import { createError } from '@/middlewares/errorHandler';
-import { LoginInput, RegisterInput, ChangePasswordInput } from './auth.schema';
-import bcrypt from 'bcrypt';
-
-export class AuthService {
-  private static readonly SALT_ROUNDS = 12;
-
-  /**
-   * Register a new user
-   */
-  static async register(data: RegisterInput) {
-    try {
-      const user = await UserService.createUser(data);
-      
-      // Generate tokens
-      const tokens = generateTokenPair({
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-      });
-
-      return {
-        user,
-        tokens,
-      };
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Login user with email/username and password
-   */
+import {
+  LoginInput,
+  ChangePasswordInput,
+  RegisterSchema,
+  ResetPasswordInput,
+  CreateRefreshTokenInput,
+} from "./auth.schema";
+import { prisma } from "@/config/database";
+import { RefreshToken, User } from "@prisma/client";
+import bcrypt from "bcrypt";
+import { generateAccessToken } from "@/utils/jwt";
+import { logger } from "@/utils/logger";
+import { validateData } from "@/middlewares/validation";
+import { generateRefreshToken } from "../../utils/jwt";
+export default class AuthService {
   static async login(data: LoginInput) {
+    const { identifier, password } = data;
     try {
-      // Get user by email or username
-      const user = await UserService.getUserByIdentifier(data.identifier);
-      
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ email: identifier }, { username: identifier }],
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true,
+          password: true,
+        },
+      });
       if (!user) {
-        throw createError('INVALID_CREDENTIALS', 401);
+        logger.error("Đăng nhập thất bại", {
+          email: identifier,
+          reason: "Tài khoản không tồn tại",
+        });
+        throw validateData("identifier", "Tài khoản không tồn tại");
       }
 
-      // Check if user is active
-      if (!user.isActive) {
-        throw createError('ACCOUNT_DEACTIVATED', 403);
-      }
+      // Check password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
 
-      // Verify password
-      const isPasswordValid = await UserService.verifyPassword(data.password, user.password);
-      
       if (!isPasswordValid) {
-        throw createError('INVALID_CREDENTIALS', 401);
+        logger.error("Đăng nhập thất bại", {
+          email: identifier,
+          reason: "Mật khẩu không đúng",
+        });
+        throw validateData("password", "Mật khẩu không đúng ");
       }
-
-      // Generate tokens
-      const tokens = generateTokenPair({
+      const accessToken = generateAccessToken({
         userId: user.id,
+        username: user.username,
         email: user.email,
         role: user.role,
       });
 
-      // Remove password from response
-      const { password: _, ...userWithoutPassword } = user;
-
+      logger.info("Đăng nhập thành công", {
+        email: user.email,
+        username: user.username,
+      });
+      const refreshToken = await AuthService.CreateRefreshToken(user);
       return {
-        user: userWithoutPassword,
-        tokens,
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+        accessToken,
+        refreshToken,
       };
     } catch (error) {
       throw error;
     }
   }
-
-  /**
-   * Refresh access token using refresh token
-   */
-  static async refreshToken(refreshToken: string) {
+  static async logout(userId: number) {
     try {
-      // Verify refresh token
-      const payload: JwtPayload = verifyToken(refreshToken);
-      
-      if (payload.type !== 'refresh') {
-        throw createError('INVALID_TOKEN', 401, 'Invalid token type');
-      }
-
-      // Get user to ensure they still exist and are active
-      const user = await UserService.getUserById(payload.userId);
-      
-      if (!user.isActive) {
-        throw createError('ACCOUNT_DEACTIVATED', 403);
-      }
-
-      // Generate new tokens
-      const tokens = generateTokenPair({
-        userId: user.id,
-        email: user.email,
-        role: user.role,
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
       });
 
-      return { tokens };
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Change user password
-   */
-  static async changePassword(userId: string, data: ChangePasswordInput) {
-    try {
-      // Get user with password
-      const user = await UserService.getUserByIdentifier(userId);
-      
       if (!user) {
-        throw createError('USER_NOT_FOUND', 404);
+        logger.error("Đăng xuất thất bại - Người dùng không tồn tại", {
+          userId,
+        });
+        throw new Error("Người dùng không tồn tại");
+      } else {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { token: null },
+        });
       }
-
-      // Verify current password
-      const isCurrentPasswordValid = await UserService.verifyPassword(
-        data.currentPassword,
-        user.password
-      );
-      
-      if (!isCurrentPasswordValid) {
-        throw createError('INVALID_CREDENTIALS', 401, 'Current password is incorrect');
-      }
-
-      // Hash new password
-      const hashedNewPassword = await bcrypt.hash(data.newPassword, this.SALT_ROUNDS);
-
-      // Update password in database (you'll need to add this method to UserService)
-      // await UserService.updatePassword(userId, hashedNewPassword);
-
-      return { message: 'Password changed successfully' };
     } catch (error) {
       throw error;
     }
   }
-
-  /**
-   * Logout user (invalidate tokens)
-   * Note: In a real application, you might want to maintain a blacklist of invalidated tokens
-   */
-  static async logout(userId: string) {
+  //  Long-create-refesh-Token
+  static async CreateRefreshToken(data: CreateRefreshTokenInput) {
     try {
-      // In a simple JWT implementation, logout is handled client-side
-      // by removing the tokens from storage
-      // For more security, implement token blacklisting
-      
-      return { message: 'Logged out successfully' };
+      const refreshToken = generateRefreshToken({
+        userId: data.id,
+        username: data.username,
+        email: data.email,
+        role: data.role,
+      });
+      await prisma.refreshToken.create({
+        data: {
+          userId: data.id,
+          refreshToken: refreshToken,
+          expiredAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 ngày
+        },
+      });
+      logger.info(`Tạo refresh token thành công `);
+      return refreshToken;
     } catch (error) {
+      logger.error("Tạo refresh token thất bại", { error });
       throw error;
+    }
+  }
+  static async getRefreshtokenByUseridToken(id: number, token: string) {
+    const refreshToken = await prisma.refreshToken.findFirst({
+      where: {
+        userId: id,
+        refreshToken: token,
+      },
+    });
+    return refreshToken;
+  }
+  static async deleteRefreshToken(id: number) {
+    try {
+      await prisma.refreshToken.deleteMany({
+        where: { userId: id },
+      });
+    } catch (error) {
+      error;
     }
   }
 }

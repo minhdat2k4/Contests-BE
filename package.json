@@ -13,7 +13,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "docs:generate": "node scripts/generate-swagger-docs.js",
+    "docs:open": "start http://localhost:3000/api/v1/docs"
   },
   "keywords": [
     "nodejs",
@@ -27,6 +29,8 @@
   "description": "Backend application with TypeScript, Express, and Prisma",
   "dependencies": {
     "@prisma/client": "^6.8.2",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -36,6 +40,8 @@
     "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
     "prisma": "^6.8.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "winston": "^3.17.0",
     "zod": "^3.25.30"
   },

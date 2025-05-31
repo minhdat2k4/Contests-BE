@@ -21,7 +21,7 @@ export const generateAccessToken = (payload: Omit<JwtPayload, 'type'>): string =
   return jwt.sign(
     { ...payload, type: 'access' },
     CONFIG.JWT_SECRET,
-    { 
+    {
       expiresIn: CONFIG.JWT_EXPIRES_IN,
       issuer: 'contest-api',
       audience: 'contest-app',
@@ -36,7 +36,7 @@ export const generateRefreshToken = (payload: Omit<JwtPayload, 'type'>): string 
   return jwt.sign(
     { ...payload, type: 'refresh' },
     CONFIG.JWT_SECRET,
-    { 
+    {
       expiresIn: CONFIG.JWT_REFRESH_EXPIRES_IN,
       issuer: 'contest-api',
       audience: 'contest-app',
@@ -63,17 +63,17 @@ export const verifyToken = (token: string): JwtPayload => {
       issuer: 'contest-api',
       audience: 'contest-app',
     } as jwt.VerifyOptions) as JwtPayload;
-    
+
     return decoded;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       throw createError('TOKEN_EXPIRED', 401);
     }
-    
+
     if (error instanceof jwt.JsonWebTokenError) {
       throw createError('INVALID_TOKEN', 401);
     }
-    
+
     throw createError('TOKEN_VERIFICATION_FAILED', 401);
   }
 };
@@ -85,14 +85,14 @@ export const extractTokenFromHeader = (authHeader?: string): string | null => {
   if (!authHeader) {
     return null;
   }
-  
+
   const parts = authHeader.split(' ');
-  
+
   if (parts.length !== 2 || parts[0] !== 'Bearer') {
     return null;
   }
-  
-  return parts[1];
+
+  return parts[1] || null;
 };
 
 /**
@@ -101,11 +101,11 @@ export const extractTokenFromHeader = (authHeader?: string): string | null => {
 export const getTokenExpiration = (token: string): Date | null => {
   try {
     const decoded = jwt.decode(token) as any;
-    
+
     if (!decoded || !decoded.exp) {
       return null;
     }
-    
+
     return new Date(decoded.exp * 1000);
   } catch (error) {
     return null;

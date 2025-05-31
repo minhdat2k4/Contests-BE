@@ -10,6 +10,7 @@ A robust Node.js TypeScript backend application for a contest platform, built wi
 - **Security**: Helmet, CORS, bcrypt password hashing
 - **Logging**: Winston logger with file and console output
 - **Error Handling**: Centralized error handling with custom error codes
+- **API Documentation**: Interactive Swagger/OpenAPI documentation
 - **Testing**: Comprehensive test suite
 - **Development**: Hot reload with nodemon
 
@@ -76,6 +77,21 @@ npm run build
 # Start production server
 npm start
 ```
+
+### API Documentation
+
+Once the server is running, access the interactive API documentation:
+
+- **Swagger UI**: `http://localhost:3000/api/v1/docs`
+- **API Specification**: `http://localhost:3000/api/v1/docs.json`
+- **API Info**: `http://localhost:3000/api/v1`
+- **Health Check**: `http://localhost:3000/health`
+
+The Swagger UI provides:
+- 🎯 **Interactive testing** of all API endpoints
+- 🔐 **JWT authentication** support
+- 📋 **Complete request/response documentation**
+- ✅ **Real-time validation** and examples
 
 ### Database Management
 ```bash

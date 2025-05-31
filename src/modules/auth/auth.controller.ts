@@ -1,12 +1,13 @@
 import AuthService from "./auth.service";
 
-import { LoginInput } from "./auth.schema";
+import { LoginInput, ResetPasswordInput } from "./auth.schema";
 import { json, Request, Response } from "express";
 import { logger } from "@/utils/logger";
 import { errorResponse } from "@/utils/response";
 import { verifyToken, generateAccessToken } from "@/utils/jwt";
 import UserService from "../user/user.service";
-import { token } from "morgan";
+import { validateData } from "@/middlewares/validation";
+import { sendOtp } from "@/utils/email";
 export default class AuthController {
   static async login(req: Request, res: Response): Promise<void> {
     try {
@@ -107,6 +108,43 @@ export default class AuthController {
       res.status(401).json({
         success: false,
         message: (error as Error).message || "Có lỗi xảy ra",
+      });
+    }
+  }
+  static async forgotpassword(req: Request, res: Response) {
+    try {
+      const input: ResetPasswordInput = req.body;
+      const user = await UserService.getUserByEmail(input.email);
+      if (!user) {
+        res.json(validateData("email", "Không tìm thấy tài khoản"));
+        return;
+      }
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiredAt = new Date(Date.now() + 2 * 60 * 1000);
+      const data: any = {
+        otpCode: otp,
+        otpExpiredAt: expiredAt,
+      };
+      await UserService.UpdateUser(user.id, data);
+      await sendOtp({
+        to: user.email,
+        subject: "Mã OTP đặt lại mật khẩu",
+        html: `
+          <p>Xin chào ${user.username},</p>
+          <p>Mã xác thực của bạn là:</p>
+          <h2>${otp}</h2>
+          <p>Mã có hiệu lực trong 5 phút.</p>
+        `,
+      });
+
+      res.json({
+        success: true,
+        message: "Gửi mã xác thực thành công",
+      });
+    } catch (error) {
+      res.status(400).json({
+        susscess: false,
+        message: error,
       });
     }
   }

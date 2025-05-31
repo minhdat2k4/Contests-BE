@@ -14,6 +14,8 @@ export const UpdateUserSchema = z.object({
   }),
   isAcitve: z.boolean().optional(),
   updateAt: z.date().optional(),
+  otpCode: z.number().optional(),
+  otpExpiredAt: z.date().optional(),
 });
 
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;

@@ -1,13 +1,18 @@
 import AuthService from "./auth.service";
-
-import { LoginInput, ResetPasswordInput, OtpInput } from "./auth.schema";
-import { json, Request, Response } from "express";
+import {
+  LoginInput,
+  forgotPasswordInput,
+  OtpInput,
+  ResetPasswordInput,
+} from "./auth.schema";
+import { Request, Response } from "express";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { verifyToken, generateAccessToken } from "@/utils/jwt";
 import UserService from "../user/user.service";
 import { validateData } from "@/middlewares/validation";
 import { sendOtp } from "@/utils/email";
+import bcrypt from "bcrypt";
 export default class AuthController {
   static async login(req: Request, res: Response): Promise<void> {
     try {
@@ -104,9 +109,9 @@ export default class AuthController {
       });
     }
   }
-  static async forgotpassword(req: Request, res: Response) {
+  static async forgotPassword(req: Request, res: Response): Promise<void> {
     try {
-      const input: ResetPasswordInput = req.body;
+      const input: forgotPasswordInput = req.body;
       const user = await UserService.getUserByEmail(input.email);
       if (!user) {
         res.json(validateData("email", "Không tìm thấy tài khoản"));
@@ -141,7 +146,7 @@ export default class AuthController {
       });
     }
   }
-  static async verifyOtp(req: Request, res: Response) {
+  static async verifyOtp(req: Request, res: Response): Promise<void> {
     try {
       const otp: OtpInput = req.body;
       const user = await UserService.getUserByEmail(otp.email);
@@ -152,11 +157,34 @@ export default class AuthController {
       if (!user.otpExpiredAt || new Date() > user.otpExpiredAt) {
         throw new Error("Mã OTP đã hết hạn");
       }
-
       if (!user.otpCode || String(otp.otp) !== user.otpCode) {
         throw new Error("Mã OTP không chính xác");
       }
       res.json(successResponse(null, "Xác nhận OTP thành công"));
+    } catch (error) {
+      res.json(errorResponse((error as Error).message));
+    }
+  }
+  static async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const reset: ResetPasswordInput = req.body;
+      const user = await UserService.getUserByEmail(reset.email);
+      if (!user) {
+        throw new Error("Đổi mật khẩu thất bại");
+      }
+      if (!user.otpCode || String(reset.otp) !== user.otpCode) {
+        throw new Error("Đổi mật khẩu thất bại");
+      }
+      const hashPassword = await bcrypt.hash(reset.newPassword, 10);
+      const data: any = {
+        email: reset.email,
+        otp: reset.otp,
+        password: hashPassword,
+        otpCode: null,
+        otpExpiredAt: null,
+      };
+      await UserService.UpdateUser(user.id, data);
+      res.json(successResponse(null, "Đổi mật khẩu thành công"));
     } catch (error) {
       res.json(errorResponse((error as Error).message));
     }

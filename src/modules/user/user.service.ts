@@ -39,6 +39,9 @@ export default class UserService {
     if (data.otpExpiredAt !== undefined) {
       updateData.otpExpiredAt = data.otpExpiredAt;
     }
+    if (data.password !== undefined) {
+      updateData.password = data.password;
+    }
     const user: Omit<User, "password" | "updatedAt"> = await prisma.user.update(
       {
         where: {

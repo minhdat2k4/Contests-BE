@@ -1,10 +1,4 @@
-import {
-  LoginInput,
-  ChangePasswordInput,
-  RegisterSchema,
-  ResetPasswordInput,
-  CreateRefreshTokenInput,
-} from "./auth.schema";
+import { LoginInput, CreateRefreshTokenInput } from "./auth.schema";
 import { prisma } from "@/config/database";
 import { RefreshToken, User } from "@prisma/client";
 import bcrypt from "bcrypt";

@@ -63,11 +63,13 @@ export const verifyToken = (token: string): JwtPayload => {
       audience: "contest-app",
     } as jwt.VerifyOptions) as JwtPayload;
 
+
     return decoded;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       throw createError("TOKEN_EXPIRED", 401);
     }
+
 
     if (error instanceof jwt.JsonWebTokenError) {
       throw createError("INVALID_TOKEN", 401);
@@ -101,9 +103,11 @@ export const getTokenExpiration = (token: string): Date | null => {
   try {
     const decoded = jwt.decode(token) as any;
 
+
     if (!decoded || !decoded.exp) {
       return null;
     }
+
 
     return new Date(decoded.exp * 1000);
   } catch (error) {

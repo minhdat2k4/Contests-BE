@@ -106,6 +106,18 @@ npm run prisma:deploy
 
 # Open Prisma Studio (database GUI)
 npm run prisma:studio
+
+# Seed database with sample data
+npm run prisma:seed
+
+# Undo/Delete all seed data (with confirmation)
+npm run prisma:undo-seed
+
+# Undo/Delete all seed data (force, no confirmation)
+npm run prisma:undo-seed-force
+
+# Advanced undo with selective table deletion
+npm run prisma:undo-seed-advanced
 ```
 
 ### Testing

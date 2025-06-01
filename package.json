@@ -20,9 +20,6 @@
     "prisma:undo-seed-force": "ts-node -r tsconfig-paths/register prisma/undo-seed.ts --force",
     "prisma:undo-seed-advanced": "ts-node -r tsconfig-paths/register prisma/undo-seed-advanced.ts",
     "test:db-connection": "ts-node -r tsconfig-paths/register scripts/test-db-connection.ts",
-    "docs:generate": "node scripts/generate-swagger-docs.js",
-    "docs:open": "start http://localhost:3000/api/v1/docs",
-    
     "clean": "rimraf node_modules package-lock.json dist",
     "clean:modules": "rimraf node_modules",
     "clean:dist": "rimraf dist",
@@ -41,8 +38,6 @@
   "dependencies": {
     "@prisma/client": "^6.8.2",
     "@types/nodemailer": "^6.4.17",
-    "@types/swagger-jsdoc": "^6.0.4",
-    "@types/swagger-ui-express": "^4.1.8",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -54,8 +49,6 @@
     "morgan": "^1.10.0",
     "nodemailer": "^7.0.3",
     "prisma": "^6.8.2",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
     "winston": "^3.17.0",
     "zod": "^3.25.30"
   },

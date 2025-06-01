@@ -4,7 +4,7 @@
     "lib": ["ES2020"],
     "module": "CommonJS",
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -26,18 +26,22 @@
     "exactOptionalPropertyTypes": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "baseUrl": "./src",
+    "baseUrl": ".",
+    // Định nghĩa các alias cho các thư mục trong dự án
     "paths": {
-      "@/*": ["*"],
-      "@/modules/*": ["modules/*"],
-      "@/utils/*": ["utils/*"],
-      "@/config/*": ["config/*"],
-      "@/middlewares/*": ["middlewares/*"],
-      "@/constants/*": ["constants/*"]
+      "@/*": ["src/*"],
+      "@/modules/*": ["src/modules/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/config/*": ["src/config/*"],
+      "@/middlewares/*": ["src/middlewares/*"],
+      "@/constants/*": ["src/constants/*"],
+      "@/seeders/*": ["prisma/seeders/*"]
     }
   },
+  //Những thư mục và file sẽ được biên dịch
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "prisma/**/*"
   ],
   "exclude": [
     "node_modules",

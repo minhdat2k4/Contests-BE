@@ -8,7 +8,6 @@ import { errorHandler, notFoundHandler } from "@/middlewares/errorHandler";
 import { logger } from "@/utils/logger";
 import { authRouter } from "@/modules/auth/auth.routes";
 import { aboutRouter } from "@/modules/about/about.routes";
-import { setupSwagger } from '@/config/swagger';
 
 // Load environment variables
 dotenv.config();
@@ -45,9 +44,6 @@ if (process.env.NODE_ENV === "development") {
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// Setup API documentation
-setupSwagger(app);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

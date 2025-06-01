@@ -1,10 +1,17 @@
-import { z } from "zod";
+import { nativeEnum, number, string, z } from "zod";
 import { Role } from "@prisma/client";
+export const CreateRefreshTokenShchema = z.object({
+  id: number(),
+  username: string(),
+  email: string(),
+  role: nativeEnum(Role),
+});
+
 export const LoginSchema = z.object({
   identifier: z
     .string({
       required_error: "Vui lòng nhập tên đăng nhập hoặc email",
-      invalid_type_error: "Yêu cầu nhập kí tự chuỗi ",
+      invalid_type_error: "Vui lòng nhập kí tự chuỗi ",
     })
     .min(1, "Vui lòng nhập tên đăng nhập hoặc email"),
   password: z
@@ -29,8 +36,14 @@ export const RegisterSchema = z.object({
     ),
   Role: z.nativeEnum(Role).default(Role.Judge).optional(),
 });
-export const ResetPasswordSchema = z.object({
-  email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ"),
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string({
+      required_error: "Vui lòng nhập email",
+      invalid_type_error: "Vui lòng nhập kí tự chuỗi ",
+    })
+    .min(1, "Vui lòng nhập email")
+    .email("Email không hợp lệ"),
 });
 export const UpdateUserSchema = z.object({
   email: z
@@ -40,8 +53,16 @@ export const UpdateUserSchema = z.object({
     .optional(),
   role: z.nativeEnum(Role).default(Role.Judge).optional(),
 });
-export const ChangePasswordSchema = z
-  .object({
+
+export const otpShema = forgotPasswordSchema.extend({
+  otp: z.number({
+    required_error: "Vui lòng nhập mã OTP",
+    invalid_type_error: "Vui lòng nhập kí tự số ",
+  }),
+});
+
+export const ResetPasswordShema = otpShema
+  .extend({
     newPassword: z
       .string()
       .min(8, "Mật khẩu mới là bắt buộc và phải có ít nhất 8 ký tự")
@@ -61,9 +82,10 @@ export const ChangePasswordSchema = z
     message: "Mật khẩu mới và xác nhận mật khẩu không khớp",
     path: ["confirmNewPassword"],
   });
-
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
-export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+export type forgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
-export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof ResetPasswordShema>;
+export type CreateRefreshTokenInput = z.infer<typeof CreateRefreshTokenShchema>;
+export type OtpInput = z.infer<typeof otpShema>;

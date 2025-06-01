@@ -1,22 +1,24 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken, extractTokenFromHeader, JwtPayload } from "@/utils/jwt";
-import { createError } from "@/middlewares/errorHandler";
 import { errorResponse } from "@/utils/response";
 import UserService from "@/modules/user/user.service";
 
+// Extend Express Request interface to include user property
 declare global {
   namespace Express {
+    interface User {
+      userId: number;
+      username: string;
+      email: string;
+      role: string;
+      isActive: boolean;
+    }
     interface Request {
-      user?: {
-        id: number;
-        username: string;
-        email: string;
-        role: string;
-        isActive: boolean;
-      };
+      user?: User;
     }
   }
 }
+
 export const authenticate = async (
   req: Request,
   res: Response,
@@ -29,7 +31,7 @@ export const authenticate = async (
       res.status(401).json(errorResponse("Access token is required"));
       return;
     }
-
+    console.log(token);
     // Verify token
     const payload: JwtPayload = verifyToken(token);
 
@@ -49,10 +51,11 @@ export const authenticate = async (
     //  Kiểm tra token hiện tại với token ở database
     if (user.token !== token) {
       res.status(401).json(errorResponse("Vui lòng đăng nhập lại"));
+      return;
     }
     // Attach user to request
     req.user = {
-      id: user.id,
+      userId: user.id,
       username: user.username,
       email: user.email,
       role: user.role,

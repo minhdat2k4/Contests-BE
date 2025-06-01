@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import { errorHandler, notFoundHandler } from "@/middlewares/errorHandler";
 import { logger } from "@/utils/logger";
 import { authRouter } from "@/modules/auth/auth.routes";
+import { aboutRouter } from "@/modules/about/about.routes";
 import { setupSwagger } from '@/config/swagger';
 
 // Load environment variables
@@ -88,6 +89,7 @@ app.get("/health", (req, res) => {
 
 // API routes
 app.use("/api/auth", authRouter);
+app.use("/api/about", aboutRouter);
 
 /**
  * @swagger
@@ -137,8 +139,9 @@ app.get("/api/v1", (req, res) => {
     version: '1.0.0',
     documentation: '/api/v1/docs',
     endpoints: {
-      auth: "/api/v1/auth",
-      users: "/api/v1/users",
+      auth: "/api/auth",
+      about: "/api/about",
+      users: "/api/users",
       health: "/health",
     },
   });

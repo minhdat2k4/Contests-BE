@@ -66,7 +66,6 @@ app.get("/api/v1", (req, res) => {
     success: true,
     message: 'Contest Backend API v1',
     version: '1.0.0',
-    documentation: '/api/v1/docs',
     endpoints: {
       auth: "/api/auth",
       about: "/api/about",

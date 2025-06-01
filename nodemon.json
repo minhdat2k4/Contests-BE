@@ -1,0 +1,14 @@
+{
+    "watch": [
+        "dist"
+    ],
+    "ignore": [
+        "dist/**/*.map",
+        "node_modules",
+        "src",
+        "*.test.js",
+        "*.spec.js"
+    ],
+    "ext": "js",
+    "delay": 500
+}

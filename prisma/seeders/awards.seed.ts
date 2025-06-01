@@ -1,4 +1,4 @@
-import { SeedParams } from "./seed.interface";
+import { SeedParams } from "@/types/seed";
 import { AwardType } from "@prisma/client";
 
 export default async function seedAwards({ prisma, logger }: SeedParams) {

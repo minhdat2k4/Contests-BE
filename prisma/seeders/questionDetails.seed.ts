@@ -1,4 +1,4 @@
-import { SeedParams } from "./seed.interface";
+import { SeedParams } from "@/types/seed";
 
 export default async function seedQuestionDetails({ prisma, logger }: SeedParams) {
     try {

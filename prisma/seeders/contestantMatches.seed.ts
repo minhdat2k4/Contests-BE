@@ -1,4 +1,4 @@
-import { SeedParams } from "./seed.interface";
+import { SeedParams } from "@/types/seed";
 import { ContestantMatchStatus } from "@prisma/client";
 
 export default async function seedContestantMatches({ prisma, logger }: SeedParams) {

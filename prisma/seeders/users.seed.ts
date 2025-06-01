@@ -1,5 +1,6 @@
+import { SeedParams } from "@/types/seed";
 import { hash } from "bcrypt";
-import { SeedParams } from "./seed.interface";
+
 
 export default async function seedUsers({ prisma, logger, env = process.env } : SeedParams) {
     try {

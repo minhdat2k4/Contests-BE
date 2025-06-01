@@ -1,4 +1,4 @@
-import { SeedParams } from "./seed.interface";
+import { SeedParams } from "@/types/seed";
 import { Difficulty, QuestionType } from "@prisma/client";
 
 export default async function seedQuestions({ prisma, logger }: SeedParams) {

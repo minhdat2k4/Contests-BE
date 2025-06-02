@@ -1,7 +1,7 @@
 import z from "zod";
-import { Role } from "@prisma/client";
+import { Role, User } from "@prisma/client";
 
-export const UpdateUserSchema = z.object({
+export const UserShema = z.object({
   email: z
     .string({
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
@@ -18,5 +18,20 @@ export const UpdateUserSchema = z.object({
   otpCode: z.number().optional(),
   otpExpiredAt: z.date().optional(),
 });
-
-export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
+export const RegisterSchema = z.object({
+  username: z
+    .string()
+    .min(1, "Vui lòng nhập tên đăng nhập")
+    .max(20, "Tên đăng nhập không được quá 20 ký tự"),
+  email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ"),
+  password: z
+    .string()
+    .min(8, "Mật khẩu là bắt buộc và phải có ít nhất 8 ký tự")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/,
+      "Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
+    ),
+  role: z.nativeEnum(Role).default(Role.Judge),
+});
+export type UserInput = z.infer<typeof UserShema>;
+export type RegisterInput = z.infer<typeof RegisterSchema>;

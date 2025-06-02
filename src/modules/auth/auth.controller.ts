@@ -4,6 +4,7 @@ import {
   forgotPasswordInput,
   OtpInput,
   ResetPasswordInput,
+  RegisterInput,
 } from "./auth.schema";
 import { Request, Response } from "express";
 import { logger } from "@/utils/logger";
@@ -13,33 +14,87 @@ import UserService from "../user/user.service";
 import { validateData } from "@/middlewares/validation";
 import { sendOtp } from "@/utils/email";
 import bcrypt from "bcrypt";
+
 export default class AuthController {
+  static async register(req: Request, res: Response): Promise<void> {
+    try {
+      const input: RegisterInput = req.body;
+      const extingUserName = await UserService.existingUserName(input.username);
+      if (extingUserName) {
+        logger.error(`Tên tài khoản  ${input.username} đã tồn tại`);
+        res.json(validateData("username", "Tên tài khoản đã tồn tại"));
+        return;
+      }
+      const extingEmail = await UserService.existingEmail(input.email);
+      if (extingEmail) {
+        logger.error(`Email ${input.email} đã tồn tại`);
+        res.json(validateData("email", "Email đã tồn tại"));
+        return;
+      }
+      const { confirmPassword, ...userInput } = input;
+      const hashedPassword = await bcrypt.hash(userInput.password, 10);
+      const user = await UserService.creatUser({
+        ...userInput,
+        password: hashedPassword,
+      });
+      res.json(successResponse(user, "Đăng kí tài khoản thành công"));
+      logger.info(`Đăng kí tài khoản thành công ${user}`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.json(errorResponse((error as Error).message));
+    }
+  }
   static async login(req: Request, res: Response): Promise<void> {
     try {
-      const data: LoginInput = req.body;
-      const result = await AuthService.login(data);
-      if (!result) {
-        res.json(errorResponse("Đăng nhập không thành công"));
+      const input: LoginInput = req.body;
+      const user = await AuthService.findUserByIdentifier(input.identifier);
+      if (!user) {
+        logger.error(`Tài khoản ${input.identifier} không tồn tại`);
+        res.json(validateData("identifier", "Tài khoản không tồn tại"));
+        return;
       }
+      const isPassword = await AuthService.isPassword(
+        input.password,
+        user.password
+      );
+      if (!isPassword) {
+        logger.error(`Tài khoản ${input.identifier} không tồn tại`);
+        res.json(validateData("password", "Sai mật khẩu "));
+        return;
+      }
+      const tokenData = {
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      };
+      const accessToken = await AuthService.accessToken(tokenData);
+      const refreshToken = await AuthService.refreshToken(tokenData);
       const updateAccessToken: any = {};
-      updateAccessToken.token = result.accessToken;
-      await UserService.UpdateUser(result.id, updateAccessToken);
-      res.cookie("accessToken", result.accessToken, {
+      updateAccessToken.token = accessToken;
+      await UserService.UpdateUser(user.id, updateAccessToken);
+      const refreshTokenInput = {
+        userId: user.id,
+        refreshToken: refreshToken,
+      };
+      await AuthService.CreateRefreshToken(refreshTokenInput);
+      res.cookie("accessToken", accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         maxAge: 1000 * 60 * 60,
       });
-      res.cookie("refreshToken", result.refreshToken, {
+      res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 30 * 60 * 60 * 100 * 24, //30 ngày
+        maxAge: 30 * 60 * 60 * 1000 * 24, // 30 ngày
       });
-      res.json(successResponse({ result }, "Đăng nhập thành công"));
-      logger.info(`Đăng nhập thành công`);
+      res.json(successResponse(null, "Đăng nhập thành công"));
+      logger.info(`${input.identifier} đăng nhập thành công`);
     } catch (error) {
-      res.status(400).json(error);
+      logger.error((error as Error).message);
+      res.json(errorResponse((error as Error).message));
     }
   }
   static async logout(req: Request, res: Response): Promise<void> {
@@ -48,7 +103,7 @@ export default class AuthController {
         throw new Error("Không tìm thấy người dùng ");
       }
       const userId: number = req.user.userId!;
-      await AuthService.logout(userId);
+      await UserService.UpdateUser(userId, { token: "" });
       await AuthService.deleteRefreshToken(userId);
       res.clearCookie("accessToken", {
         httpOnly: true,
@@ -60,12 +115,13 @@ export default class AuthController {
         sameSite: "lax",
         secure: process.env.NODE_ENV === "production",
       });
-
       res.json({
         success: true,
         message: "Đăng xuất thành công",
       });
+      logger.info(`${req.user.username} đăng xuất thành công`);
     } catch (error) {
+      logger.error((error as Error).message);
       res.json(errorResponse((error as Error).message));
     }
   }
@@ -98,15 +154,14 @@ export default class AuthController {
         maxAge: 60 * 1000 * 60,
         secure: process.env.NODE_ENV === "production",
       });
+      logger.info(`${payload.username} lấy token mới thành công`);
       res.json({
         success: true,
         message: "Lấy token mới thành công",
       });
     } catch (error) {
-      res.status(401).json({
-        success: false,
-        message: (error as Error).message || "Có lỗi xảy ra",
-      });
+      logger.error((error as Error).message);
+      res.json(errorResponse((error as Error).message));
     }
   }
   static async forgotPassword(req: Request, res: Response): Promise<void> {
@@ -139,53 +194,69 @@ export default class AuthController {
         success: true,
         message: "Gửi mã xác thực thành công",
       });
+      logger.info(` Gửi mã otp cho email ${input.email} thành công`);
     } catch (error) {
-      res.status(400).json({
-        susscess: false,
-        message: error,
-      });
+      logger.error((error as Error).message);
+      res.json(errorResponse((error as Error).message));
     }
   }
   static async verifyOtp(req: Request, res: Response): Promise<void> {
     try {
-      const otp: OtpInput = req.body;
-      const user = await UserService.getUserByEmail(otp.email);
+      const input: OtpInput = req.body;
+      const user = await UserService.getUserByEmail(input.email);
       if (!user) {
         res.json(validateData("email", "Không tìm thấy tài khoản"));
         return;
       }
-      if (!user.otpExpiredAt || new Date() > user.otpExpiredAt) {
-        throw new Error("Mã OTP đã hết hạn");
+      const isOtpExpired = await AuthService.isOtpExpired(
+        user.otpExpiredAt ?? undefined
+      );
+      if (isOtpExpired) {
+        res.json(validateData("otp", "Mã OTP đã hết hạn"));
+        return;
       }
-      if (!user.otpCode || String(otp.otp) !== user.otpCode) {
-        throw new Error("Mã OTP không chính xác");
+      const isOptCode = await AuthService.isOtpCode(
+        String(input.otp),
+        user.otpCode ?? ""
+      );
+      if (isOptCode) {
+        res.json(validateData("otp", "Mã OTP không chính xác"));
+        return;
       }
       res.json(successResponse(null, "Xác nhận OTP thành công"));
+      logger.info(`${user.username} xác nhận otp thành công`);
     } catch (error) {
+      logger.error((error as Error).message);
       res.json(errorResponse((error as Error).message));
     }
   }
   static async resetPassword(req: Request, res: Response): Promise<void> {
     try {
-      const reset: ResetPasswordInput = req.body;
-      const user = await UserService.getUserByEmail(reset.email);
+      const input: ResetPasswordInput = req.body;
+      const user = await UserService.getUserByEmail(input.email);
       if (!user) {
         throw new Error("Đổi mật khẩu thất bại");
       }
-      if (!user.otpCode || String(reset.otp) !== user.otpCode) {
+      const isOptCode = await AuthService.isOtpCode(
+        String(input.otp),
+        user.otpCode ?? ""
+      );
+      if (isOptCode) {
         throw new Error("Đổi mật khẩu thất bại");
       }
-      const hashPassword = await bcrypt.hash(reset.newPassword, 10);
+      const hashPassword = await bcrypt.hash(input.newPassword, 10);
       const data: any = {
-        email: reset.email,
-        otp: reset.otp,
+        email: input.email,
+        otp: input.otp,
         password: hashPassword,
         otpCode: null,
         otpExpiredAt: null,
       };
       await UserService.UpdateUser(user.id, data);
       res.json(successResponse(null, "Đổi mật khẩu thành công"));
+      logger.info(`${user.username} đổi mật khẩu thành công`);
     } catch (error) {
+      logger.error((error as Error).message);
       res.json(errorResponse((error as Error).message));
     }
   }

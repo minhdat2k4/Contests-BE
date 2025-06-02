@@ -1,14 +1,15 @@
 {
     "watch": [
-        "dist"
+        "src"
     ],
+    "ext": "ts,json",
     "ignore": [
-        "dist/**/*.map",
-        "node_modules",
-        "src",
-        "*.test.js",
-        "*.spec.js"
+        "src/**/*.test.ts",
+        "src/**/*.spec.ts"
     ],
-    "ext": "js",
-    "delay": 500
+    "exec": "ts-node -r tsconfig-paths/register src/server.ts",
+    "env": {
+        "NODE_ENV": "development"
+    },
+    "delay": 1000
 }

@@ -4,10 +4,10 @@ import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import { errorHandler, notFoundHandler } from "@/middlewares/errorHandler";
-import { logger } from "@/utils/logger";
-import { authRouter } from "@/modules/auth/auth.routes";
-import { aboutRouter } from "@/modules/about/about.routes";
+import { errorHandler, notFoundHandler } from "./middlewares/errorHandler";
+import { logger } from "./utils/logger";
+import { authRouter } from "./modules/auth/auth.routes";
+import { aboutRouter } from "./modules/about/about.routes";
 
 // Load environment variables
 dotenv.config();
@@ -58,7 +58,6 @@ app.get("/health", (req, res) => {
 // API routes
 app.use("/api/auth", authRouter);
 app.use("/api/about", aboutRouter);
-
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

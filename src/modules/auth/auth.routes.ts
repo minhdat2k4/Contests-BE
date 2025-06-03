@@ -6,7 +6,9 @@ import {
   forgotPasswordSchema,
   otpShema,
   ResetPasswordShema,
+  RegisterSchema,
 } from "./auth.schema";
+
 import { authenticate } from "@/middlewares/auth";
 const authRouter = Router();
 // public
@@ -22,10 +24,16 @@ authRouter.post(
   validateBody(ResetPasswordShema),
   AuthController.resetPassword
 );
+authRouter.post(
+  "/register",
+  validateBody(RegisterSchema),
+  AuthController.register
+);
 // private
 authRouter.post("/logout", authenticate, AuthController.logout);
 authRouter.post("/refresh-token", AuthController.refreshAccToken);
 authRouter.get("/abc", authenticate, (req, res) => {
   res.json("au");
 });
+authRouter.get("/profile", authenticate, AuthController.profile);
 export { authRouter };

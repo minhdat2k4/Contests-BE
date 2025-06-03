@@ -35,4 +35,5 @@ authRouter.post("/refresh-token", AuthController.refreshAccToken);
 authRouter.get("/abc", authenticate, (req, res) => {
   res.json("au");
 });
+authRouter.get("/profile", authenticate, AuthController.profile);
 export { authRouter };

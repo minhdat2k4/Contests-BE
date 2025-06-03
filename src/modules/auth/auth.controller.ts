@@ -260,4 +260,23 @@ export default class AuthController {
       res.json(errorResponse((error as Error).message));
     }
   }
+  static async profile(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      const user = req.user;
+      logger.info(`Truy cập hồ sơ ${req.user.username} thành công`);
+      res.json(
+        successResponse({
+          username: user.username,
+          email: user.email,
+          isActive: user.isActive,
+        })
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.json(errorResponse((error as Error).message));
+    }
+  }
 }

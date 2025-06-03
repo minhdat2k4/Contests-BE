@@ -2,8 +2,8 @@
 import 'module-alias/register';
 
 import app from './app';
-import { connectDatabase, disconnectDatabase } from '@/config/database';
-import { logger } from '@/utils/logger';
+import { connectDatabase, disconnectDatabase } from './config/database';
+import { logger } from './utils/logger';
 
 const PORT = process.env.PORT || 3000;
 

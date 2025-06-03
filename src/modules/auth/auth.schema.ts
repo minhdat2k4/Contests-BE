@@ -98,6 +98,11 @@ export const ResetPasswordShema = otpShema
     message: "Mật khẩu mới và xác nhận mật khẩu không khớp",
     path: ["confirmNewPassword"],
   });
+
+export const ChangePassWordShema = z.object({
+  currentPassword: z.string().min(1, "Vui lòng nhập mật khẩu củ"),
+});
+
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type forgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;

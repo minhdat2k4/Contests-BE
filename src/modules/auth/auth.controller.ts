@@ -5,6 +5,8 @@ import {
   OtpInput,
   ResetPasswordInput,
   RegisterInput,
+  ChangePassWordInput,
+  ChangeInfoInput,
 } from "./auth.schema";
 import { Request, Response } from "express";
 import { logger } from "@/utils/logger";
@@ -58,7 +60,7 @@ export default class AuthController {
         user.password
       );
       if (!isPassword) {
-        logger.error(`Tài khoản ${input.identifier} không tồn tại`);
+        logger.error(`Tài khoản ${input.identifier} nhập sai mật khẩu`);
         res.json(validateData("password", "Sai mật khẩu "));
         return;
       }
@@ -274,6 +276,58 @@ export default class AuthController {
           isActive: user.isActive,
         })
       );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.json(errorResponse((error as Error).message));
+    }
+  }
+  static async changePassWord(req: Request, res: Response): Promise<void> {
+    try {
+      const input: ChangePassWordInput = req.body;
+      if (!req.user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      const isPassWord = await AuthService.isPassword(
+        input.currentPassword,
+        req.user.password
+      );
+      if (!isPassWord) {
+        logger.error(
+          `Người dùng ${req.user.username} nhập sai mật khẩu hiện tại`
+        );
+        res.json(validateData("currentPassword", "Sai mật khẩu"));
+        return;
+      }
+      const hashedPassword = await bcrypt.hash(input.newPassword, 10);
+      await UserService.UpdateUser(req.user.userId, {
+        password: hashedPassword,
+      });
+      res.json(successResponse(null, "Đổi mật khẩu thành công"));
+      logger.info(`Người dùng ${req.user.username} đổi mật thành công`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.json(errorResponse((error as Error).message));
+    }
+  }
+  static async changeInfo(req: Request, res: Response): Promise<void> {
+    try {
+      const input: ChangeInfoInput = req.body;
+      if (!req.user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      const extisingEmail = await UserService.existingEmailForUpdate(
+        input.email,
+        req.user.userId
+      );
+      if (extisingEmail) {
+        res.json(validateData("email", "Email đã tồn tại"));
+        return;
+      }
+      await UserService.UpdateUser(req.user.userId, {
+        email: input.email,
+      });
+      logger.info(`Tài khoản ${req.user.username} thay đổi email thành công`);
+      res.json(successResponse(null, "Cập nhật email thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.json(errorResponse((error as Error).message));

@@ -7,6 +7,8 @@ import {
   otpShema,
   ResetPasswordShema,
   RegisterSchema,
+  ChangePassWordShema,
+  ChangeInfoShema,
 } from "./auth.schema";
 
 import { authenticate } from "@/middlewares/auth";
@@ -35,5 +37,18 @@ authRouter.post("/refresh-token", AuthController.refreshAccToken);
 authRouter.get("/abc", authenticate, (req, res) => {
   res.json("au");
 });
+authRouter.post(
+  "/change-password",
+  authenticate,
+  validateBody(ChangePassWordShema),
+  AuthController.changePassWord
+);
+authRouter.post(
+  "/change-info",
+  authenticate,
+  validateBody(ChangeInfoShema),
+  AuthController.changeInfo
+);
 authRouter.get("/profile", authenticate, AuthController.profile);
+
 export { authRouter };

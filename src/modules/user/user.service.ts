@@ -9,7 +9,7 @@ export default class UserService {
   }
   static async getUserById(
     id: number
-  ): Promise<Omit<User, "password" | "otpExpiredAt" | "otpCode"> | null> {
+  ): Promise<Omit<User, "otpExpiredAt" | "otpCode"> | null> {
     return prisma.user.findFirst({
       where: { id: id },
     });
@@ -66,6 +66,18 @@ export default class UserService {
       where: { username: username },
     });
     //  !! chuyên nó thành boolean
+    return !!user;
+  }
+  static async existingEmailForUpdate(
+    email: string,
+    userId: number
+  ): Promise<boolean> {
+    const user = await prisma.user.findFirst({
+      where: {
+        email: email,
+        NOT: { id: userId },
+      },
+    });
     return !!user;
   }
 }

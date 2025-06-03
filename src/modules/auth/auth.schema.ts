@@ -99,10 +99,35 @@ export const ResetPasswordShema = otpShema
     path: ["confirmNewPassword"],
   });
 
-export const ChangePassWordShema = z.object({
-  currentPassword: z.string().min(1, "Vui lòng nhập mật khẩu củ"),
-});
+export const ChangePassWordShema = z
+  .object({
+    currentPassword: z.string().min(1, "Vui lòng nhập mật khẩu hiện tại"),
+    newPassword: z
+      .string()
+      .min(8, "Mật khẩu mới là bắt buộc và phải có ít nhất 8 ký tự")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/,
+        "Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
+      ),
+    confirmNewPassword: z
+      .string()
+      .min(8, "Xác nhận mật khẩu mới là bắt buộc và phải có ít nhất 8 ký tự")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/,
+        "Xác nhận mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
+      ),
+  })
+  .refine(data => data.newPassword === data.confirmNewPassword, {
+    message: "Mật khẩu mới và xác nhận mật khẩu không khớp",
+    path: ["confirmNewPassword"],
+  });
 
+export const ChangeInfoShema = z.object({
+  email: z
+    .string()
+    .min(1, "Vui lòng nhập email")
+    .email("Vui lòng nhập đúng định dạng email"),
+});
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type forgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
@@ -110,3 +135,5 @@ export type ResetPasswordInput = z.infer<typeof ResetPasswordShema>;
 export type CreateRefreshTokenInput = z.infer<typeof CreateRefreshTokenShchema>;
 export type OtpInput = z.infer<typeof otpShema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
+export type ChangePassWordInput = z.infer<typeof ChangePassWordShema>;
+export type ChangeInfoInput = z.infer<typeof ChangeInfoShema>;

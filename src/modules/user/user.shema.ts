@@ -9,9 +9,11 @@ export const UserShema = z.object({
     .email("Vui lòng nhập đúng định dạng email")
     .optional(),
   role: z.nativeEnum(Role).optional(),
-  token: z.string({
-    invalid_type_error: "Vui lòng nhập kí tự chuỗi",
-  }),
+  token: z
+    .string({
+      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
+    })
+    .optional(),
   isAcitve: z.boolean().optional(),
   password: z.string().optional(),
   updateAt: z.date().optional(),

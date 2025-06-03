@@ -1,8 +1,8 @@
 import { User } from "@prisma/client";
 import { prisma } from "@/config/database";
-import { UserInput, RegisterInput } from "./user.shema";
+import { UserInput, CreatUserInput } from "./user.schema";
 export default class UserService {
-  static async creatUser(user: RegisterInput) {
+  static async creatUser(user: CreatUserInput) {
     return prisma.user.create({
       data: user,
     });

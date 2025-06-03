@@ -20,7 +20,7 @@ export const UserShema = z.object({
   otpCode: z.number().optional(),
   otpExpiredAt: z.date().optional(),
 });
-export const RegisterSchema = z.object({
+export const CreateUserShema = z.object({
   username: z
     .string()
     .min(1, "Vui lòng nhập tên đăng nhập")
@@ -36,4 +36,4 @@ export const RegisterSchema = z.object({
   role: z.nativeEnum(Role).default(Role.Judge),
 });
 export type UserInput = z.infer<typeof UserShema>;
-export type RegisterInput = z.infer<typeof RegisterSchema>;
+export type CreatUserInput = z.infer<typeof CreateUserShema>;

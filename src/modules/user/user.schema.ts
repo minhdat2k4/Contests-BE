@@ -73,10 +73,7 @@ export const UserQuerySchema = z.object({
     .min(2, "Từ khóa tìm kiếm phải có ít nhất 2 ký tự")
     .max(100, "Từ khóa tìm kiếm tối đa 100 ký tự")
     .optional(),
-  isActive: z
-    .string()
-    .optional()
-    .transform(val => val === "true"),
+  isActive: z.string().transform(val => val === "true"),
   role: z.nativeEnum(Role).optional(),
 });
 export type UserInput = z.infer<typeof UpdateUserSchema>;

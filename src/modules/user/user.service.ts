@@ -1,6 +1,7 @@
 import { User } from "@prisma/client";
 import { prisma } from "@/config/database";
 import { UserInput, CreateUserInput, UserQueryInput } from "./user.schema";
+import bcrypt from "bcrypt";
 export default class UserService {
   static async creatUser(user: CreateUserInput) {
     return prisma.user.create({
@@ -35,7 +36,8 @@ export default class UserService {
       updateData.otpExpiredAt = data.otpExpiredAt;
     }
     if (data.password !== undefined) {
-      updateData.password = data.password;
+      const hash = bcrypt.hash(data.password, 10);
+      updateData.password = hash;
     }
     return prisma.user.update({
       where: {
@@ -97,6 +99,9 @@ export default class UserService {
     const { page, limit, search, isActive, role } = UserQueryInput;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
+    if (role) {
+      whereClause.role = role;
+    }
     if (isActive !== undefined) {
       whereClause.isActive = isActive;
     }
@@ -107,9 +112,7 @@ export default class UserService {
         { email: { contains: keyword } },
       ]);
     }
-    if (role) {
-      whereClause.role = role;
-    }
+
     const users = await prisma.user.findMany({
       where: whereClause,
       skip: skip,

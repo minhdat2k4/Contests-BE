@@ -1,6 +1,10 @@
 import { prisma } from "@/config/database";
 import { School } from "@prisma/client";
-import { CreateSchoolInput, UpdateShoolInput } from "@/modules/School";
+import {
+  CreateSchoolInput,
+  UpdateShoolInput,
+  SchoolQueryInput,
+} from "@/modules/school";
 export default class SchoolService {
   static async existingEmail(email: string): Promise<boolean> {
     const school = await prisma.school.findUnique({
@@ -49,11 +53,100 @@ export default class SchoolService {
     if (data.address !== undefined) {
       updateData.address = data.address;
     }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
     return prisma.school.update({
       where: { id: id },
       data: {
         ...updateData,
       },
     });
+  }
+  static async existingEmailForUpdate(
+    email: string,
+    userId: number
+  ): Promise<boolean> {
+    const school = await prisma.school.findFirst({
+      where: {
+        email: email,
+        NOT: { id: userId },
+      },
+    });
+    return !!school;
+  }
+  static async existingPhoneForUpdate(
+    email: string,
+    userId: number
+  ): Promise<boolean> {
+    const school = await prisma.school.findFirst({
+      where: {
+        email: email,
+        NOT: { id: userId },
+      },
+    });
+    return !!school;
+  }
+  static async countClassBySchoolId(schoolId: number): Promise<number> {
+    return prisma.class.count({
+      where: {
+        schoolId: schoolId,
+      },
+    });
+  }
+  static async deleteSchool(id: number): Promise<School> {
+    return prisma.school.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
+  static async getAllShool(query: SchoolQueryInput): Promise<{
+    schools: School[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search, isActive } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive;
+    }
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { name: { contains: keyword } },
+        { email: { contains: keyword } },
+        { phone: { contains: keyword } },
+        { address: { contains: keyword } },
+      ]);
+    }
+
+    const schools = await prisma.school.findMany({
+      where: whereClause,
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
+    const total = schools.length;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      schools: schools,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 }

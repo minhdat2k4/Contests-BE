@@ -36,6 +36,7 @@ export default class UserController {
         id: user.id,
         username: user.username,
         email: user.email,
+        password: user.password,
         role: user.role,
         isActive: user.isActive,
       };
@@ -57,6 +58,7 @@ export default class UserController {
         id: user.id,
         username: user.username,
         email: user.email,
+        password: user.password,
         role: user.role,
         isActive: user.isActive,
       };
@@ -93,6 +95,7 @@ export default class UserController {
         username: userUpdate.username,
         email: userUpdate.email,
         role: userUpdate.role,
+        password: userUpdate.password,
         isActive: userUpdate.isActive,
       };
       res.json(successResponse(data, "Cập nhật tài khoản thành công"));

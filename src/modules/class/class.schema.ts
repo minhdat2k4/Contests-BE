@@ -31,7 +31,7 @@ export const CreateSchoolSchema = z.object({
     .max(255, "Địa chỉ tối đa 255 kí tự"),
 });
 
-export const SchoolIdShame = z.object({
+export const ClassIdShame = z.object({
   id: z
     .string()
     .transform(val => parseInt(val))
@@ -75,7 +75,7 @@ export const UpdeateSchoolShema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const SchoolQuerySchema = z.object({
+export const ClassQuerySchema = z.object({
   page: z
     .string()
     .transform(val => parseInt(val))
@@ -97,9 +97,14 @@ export const SchoolQuerySchema = z.object({
     .string()
     .optional()
     .transform(val => val === "true"),
+  schoolId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Id phải là số nguyên dương")
+    .optional(),
 });
 
 export type CreateSchoolInput = z.infer<typeof CreateSchoolSchema>;
-export type SchoolIdParams = z.infer<typeof SchoolIdShame>;
+export type ClassIdParams = z.infer<typeof ClassIdShame>;
 export type UpdateShoolInput = z.infer<typeof UpdeateSchoolShema>;
-export type SchoolQueryInput = z.infer<typeof SchoolQuerySchema>;
+export type ClassQueryInput = z.infer<typeof ClassQuerySchema>;

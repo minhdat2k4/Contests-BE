@@ -1,15 +1,27 @@
 import { Router } from "express";
-import { validateBody, validateParams } from "@/utils/validation";
-import { SchoolController } from "@/modules/School";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "@/utils/validation";
+import { SchoolController } from "@/modules/school";
 import {
   CreateSchoolSchema,
   SchoolIdShame,
+  SchoolQuerySchema,
   UpdeateSchoolShema,
 } from "./school.schema";
 import { authenticate, role } from "@/middlewares/auth";
-import { UpdateAboutInput } from "../../../dist/modules/about/about.schema";
 const schoolRouter = Router();
 // prive
+
+schoolRouter.get(
+  "/",
+  authenticate,
+  role("Admin"),
+  validateQuery(SchoolQuerySchema),
+  SchoolController.getAlls
+);
 
 schoolRouter.get(
   "/:id",
@@ -33,5 +45,17 @@ schoolRouter.patch(
   role("Admin"),
   validateBody(UpdeateSchoolShema),
   SchoolController.updateShool
+);
+schoolRouter.patch(
+  "/:id/toggle-active",
+  authenticate,
+  role("Admin"),
+  SchoolController.toggleActive
+);
+schoolRouter.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  SchoolController.deleteSchool
 );
 export { schoolRouter };

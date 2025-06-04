@@ -8,16 +8,10 @@ import {
   AboutIdSchema 
 } from "./about.schema";
 import { authenticate } from "@/middlewares/auth";
+import { uploadAboutImages } from "@/middlewares/multer/aboutMulter";
+import { handleUploadError } from "@/middlewares/multer/uploadErrorHandler";
 
 const aboutRouter = Router();
-
-// Create new about information
-aboutRouter.post(
-  "/",
-  authenticate,
-  validateBody(CreateAboutSchema),
-  AboutController.createAbout
-);
 
 // Get all about information with pagination
 aboutRouter.get(
@@ -36,8 +30,16 @@ aboutRouter.get(
 // Update about information
 aboutRouter.put(
   "/:id",
-  authenticate,
+  // authenticate,
   validateParams(AboutIdSchema),
+  (req, res, next) => {
+    uploadAboutImages(req, res, (error) => {
+      if (error) {
+        return handleUploadError(error, req, res, next);
+      }
+      next();
+    });
+  },
   validateBody(UpdateAboutSchema),
   AboutController.updateAbout
 );

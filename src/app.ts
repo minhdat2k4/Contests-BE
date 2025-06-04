@@ -9,7 +9,7 @@ import { logger } from "./utils/logger";
 import { authRouter } from "./modules/auth/auth.routes";
 import { aboutRouter } from "./modules/about/about.routes";
 import { userRouter } from "@/modules/user";
-import { schoolRouter } from "@/modules/school";
+// import { schoolRouter } from "@/modules/school"; // Temporarily commented out
 import { classRouter } from "@/modules/class";
 
 // Load environment variables
@@ -48,6 +48,9 @@ if (process.env.NODE_ENV === "development") {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Static files serving for uploads
+app.use("/uploads", express.static("uploads"));
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -62,7 +65,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/about", aboutRouter);
 app.use("/api/user", userRouter);
-app.use("/api/school", schoolRouter);
+// app.use("/api/school", schoolRouter); // Temporarily commented out
 app.use("/api/class", classRouter);
 
 // API documentation endpoint

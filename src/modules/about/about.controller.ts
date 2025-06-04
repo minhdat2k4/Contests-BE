@@ -90,7 +90,6 @@ export default class AboutController {
       );
     }
   }
-
   /**
    * Update about information
    */
@@ -98,7 +97,21 @@ export default class AboutController {
     try {
       const id = validateId(req.params.id);
       const data: UpdateAboutInput = req.body;
-      const result = await AboutService.updateAbout(id, data);
+      
+      // Get uploaded files from multer
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+      const processedFiles: { logo?: Express.Multer.File; banner?: Express.Multer.File } = {};
+      
+      if (files) {
+        if (files.logo && files.logo[0]) {
+          processedFiles.logo = files.logo[0];
+        }
+        if (files.banner && files.banner[0]) {
+          processedFiles.banner = files.banner[0];
+        }
+      }
+
+      const result = await AboutService.updateAbout(id, data, processedFiles);
 
       logger.info("About information updated successfully via API", { aboutId: id });
 

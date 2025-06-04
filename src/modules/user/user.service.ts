@@ -1,8 +1,8 @@
 import { User } from "@prisma/client";
 import { prisma } from "@/config/database";
-import { UserInput, CreatUserInput } from "./user.schema";
+import { UserInput, CreateUserInput } from "./user.schema";
 export default class UserService {
-  static async creatUser(user: CreatUserInput) {
+  static async creatUser(user: CreateUserInput) {
     return prisma.user.create({
       data: user,
     });
@@ -14,10 +14,7 @@ export default class UserService {
       where: { id: id },
     });
   }
-  static async UpdateUser(
-    id: number,
-    data: UserInput
-  ): Promise<Omit<User, "password" | "updatedAt">> {
+  static async UpdateUser(id: number, data: UserInput): Promise<User | null> {
     const updateData: any = {};
     if (data.email !== undefined) {
       updateData.email = data.email;
@@ -26,7 +23,7 @@ export default class UserService {
       updateData.token = data.token;
     }
     if (data.isAcitve !== undefined) {
-      updateData.isAcitve = data.isAcitve;
+      updateData.isActive = data.isAcitve;
     }
     if (data.role !== undefined) {
       updateData.role = data.role;

@@ -32,7 +32,6 @@ export const authenticate = async (
       res.status(401).json(errorResponse("Access token is required"));
       return;
     }
-    console.log(token);
     // Verify token
     const payload: JwtPayload = verifyToken(token);
 

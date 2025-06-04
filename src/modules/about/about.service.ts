@@ -2,7 +2,7 @@ import { CreateAboutInput, UpdateAboutInput, AboutQueryInput } from "./about.sch
 import prisma from "@/config/client";
 import { logger } from "@/utils/logger";
 import { PaginationMeta } from "@/utils/response";
-import { deleteOldFile, getFileUrl, getFilePath } from "@/middlewares/multer/aboutMulter";
+import { deleteOldFile, getAboutFileUrl, getAboutFilePath, getFileNameFromUrl } from "@/middlewares/multer/aboutMulter";
 import path from "path";
 
 export default class AboutService {
@@ -158,17 +158,15 @@ export default class AboutService {
         ...(data.email !== undefined && { email: data.email }),
         ...(data.fanpage !== undefined && { fanpage: data.fanpage }),
         ...(data.mapEmbedCode !== undefined && { mapEmbedCode: data.mapEmbedCode }),
-      };
-
-      // Handle logo upload
+      };      // Handle logo upload
       if (files?.logo) {
         // Delete old logo if exists
         if (existingAbout.logo) {
-          const oldLogoPath = getFilePath(path.basename(existingAbout.logo));
+          const oldLogoPath = getAboutFilePath(path.basename(existingAbout.logo));
           deleteOldFile(oldLogoPath);
         }
         // Set new logo URL
-        updateData.logo = getFileUrl(files.logo.filename);
+        updateData.logo = getAboutFileUrl(files.logo.filename);
         logger.info("Logo uploaded successfully", { filename: files.logo.filename });
       }
 
@@ -176,11 +174,11 @@ export default class AboutService {
       if (files?.banner) {
         // Delete old banner if exists
         if (existingAbout.banner) {
-          const oldBannerPath = getFilePath(path.basename(existingAbout.banner));
+          const oldBannerPath = getAboutFilePath(path.basename(existingAbout.banner));
           deleteOldFile(oldBannerPath);
         }
         // Set new banner URL
-        updateData.banner = getFileUrl(files.banner.filename);
+        updateData.banner = getAboutFileUrl(files.banner.filename);
         logger.info("Banner uploaded successfully", { filename: files.banner.filename });
       }
 
@@ -304,17 +302,15 @@ export default class AboutService {
           message: "Không tìm thấy thông tin giới thiệu để xóa vĩnh viễn",
           error: "About not found",
         };
-      }
-
-      // Delete associated files
+      }      // Delete associated files
       if (existingAbout.logo) {
-        const logoPath = getFilePath(path.basename(existingAbout.logo));
+        const logoPath = getAboutFilePath(path.basename(existingAbout.logo));
         deleteOldFile(logoPath);
         logger.info("Logo file deleted", { logoPath });
       }
 
       if (existingAbout.banner) {
-        const bannerPath = getFilePath(path.basename(existingAbout.banner));
+        const bannerPath = getAboutFilePath(path.basename(existingAbout.banner));
         deleteOldFile(bannerPath);
         logger.info("Banner file deleted", { bannerPath });
       }

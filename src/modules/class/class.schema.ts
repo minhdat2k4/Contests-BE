@@ -1,34 +1,18 @@
 import z from "zod";
-export const CreateSchoolSchema = z.object({
+export const CreateClassShema = z.object({
   name: z
     .string({
-      required_error: "Vui lòng nhập tên trường",
+      required_error: "Vui lòng nhập tên lớp",
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
-    .min(5, "Tên trường ít nhất 5 kí  tự ")
-    .max(255, "Tên trường tối đa 5 kí tự"),
-  email: z
-    .string({
-      required_error: "Vui lòng nhập tên eamil",
-      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
+    .min(1, "Vui lòng nhập tên lớp")
+    .max(255, "Tên lớp tối đa 255 kí tự"),
+  schoolId: z
+    .number({
+      required_error: "Vui lòng nhập id lớp",
+      invalid_type_error: "Id là một số nguyên",
     })
-    .min(1, "Vui lòng nhập email")
-    .max(255, "Tên email tối đa 255 kí tự")
-    .email("Vui lòng nhập đúng định dạng emaill"),
-  phone: z
-    .string({
-      required_error: "Vui lòng nhập số điên thoại",
-      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
-    })
-    .min(10, "Số điện thoại phải có 10 số")
-    .max(10, "Số điện thoại phải có 10 số"),
-  address: z
-    .string({
-      required_error: "Vui lòng nhập địa chỉ",
-      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
-    })
-    .min(1, "Vui lòng nhập địa chỉ")
-    .max(255, "Địa chỉ tối đa 255 kí tự"),
+    .refine(val => !NaN && val > 0, "Id lớp là một số nguyên dương"),
 });
 
 export const ClassIdShame = z.object({
@@ -104,7 +88,7 @@ export const ClassQuerySchema = z.object({
     .optional(),
 });
 
-export type CreateSchoolInput = z.infer<typeof CreateSchoolSchema>;
+export type CreateClassInput = z.infer<typeof CreateClassShema>;
 export type ClassIdParams = z.infer<typeof ClassIdShame>;
 export type UpdateShoolInput = z.infer<typeof UpdeateSchoolShema>;
 export type ClassQueryInput = z.infer<typeof ClassQuerySchema>;

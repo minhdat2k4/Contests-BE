@@ -1,15 +1,7 @@
 import { prisma } from "@/config/database";
 import { Class } from "@prisma/client";
-import { ClassQueryInput } from "@/modules/class";
+import { ClassQueryInput, CreateClassInput } from "@/modules/class";
 export default class ClassService {
-  // static async createSchool(data: CreateSchoolInput): Promise<School | null> {
-  //   return prisma.school.create({
-  //     data: {
-  //       ...data,
-  //     },
-  //   });
-  // }
-
   // static async updateSchool(
   //   id: number,
   //   data: UpdateShoolInput
@@ -47,6 +39,13 @@ export default class ClassService {
   static async getClassBy(data: any): Promise<Class | null> {
     return prisma.class.findFirst({
       where: {
+        ...data,
+      },
+    });
+  }
+  static async createClass(data: CreateClassInput): Promise<Class | null> {
+    return prisma.class.create({
+      data: {
         ...data,
       },
     });

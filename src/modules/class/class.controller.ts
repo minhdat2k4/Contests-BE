@@ -1,33 +1,13 @@
 import { Request, Response } from "express";
-import { ClassService, ClassQueryInput } from "@/modules/class";
-import { validateData } from "@/middlewares/validation";
+import {
+  ClassService,
+  ClassQueryInput,
+  CreateClassInput,
+} from "@/modules/class";
+import { SchoolService } from "@/modules/school";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 export default class ClassController {
-  // static async createSchool(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const input: CreateSchoolInput = req.body;
-  //     const existingEmail = await SchoolService.existingEmail(input.email);
-  //     if (existingEmail) {
-  //       res.json(validateData("email", "Email đã tồn tại"));
-  //       return;
-  //     }
-  //     const existingPhone = await SchoolService.existingPhone(input.phone);
-  //     if (existingPhone) {
-  //       res.json(validateData("phone", "Số điện thoại đã tồn tại"));
-  //       return;
-  //     }
-  //     const school = await SchoolService.createSchool(input);
-  //     if (!school) {
-  //       throw new Error("Thêm trường thất bại");
-  //     }
-  //     logger.info(`Thêm trường ${input.name} thành công`);
-  //     res.json(successResponse(school, "Thêm trường thành công"));
-  //   } catch (error) {
-  //     log((error as Error).message);
-  //     res.status(400).json({ error: (error as Error).message });
-  //   }
-  // }
   // static async updateShool(req: Request, res: Response): Promise<void> {
   //   try {
   //     const id = req.params.id;
@@ -120,6 +100,21 @@ export default class ClassController {
   //     res.status(400).json(errorResponse((error as Error).message));
   //   }
   // }
+  static async createClass(req: Request, res: Response): Promise<void> {
+    try {
+      const input: CreateClassInput = req.body;
+      const school = await SchoolService.getSchoolBy({ id: input.schoolId });
+      if (!school) {
+        throw new Error("Không tìm thấy trường");
+      }
+      const Class = await ClassService.createClass(input);
+      logger.info(`Thêm lớp ${input.name} thành công`);
+      res.json(successResponse(Class, `Thêm lớp ${input.name} thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
   static async getClassById(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;

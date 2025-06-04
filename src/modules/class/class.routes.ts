@@ -5,7 +5,11 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { ClassController } from "@/modules/class";
-import { ClassQuerySchema, ClassIdParams, ClassIdShame } from "./class.schema";
+import {
+  ClassQuerySchema,
+  CreateClassShema,
+  ClassIdShame,
+} from "./class.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const classRouter = Router();
 // prive
@@ -26,13 +30,13 @@ classRouter.get(
   ClassController.getClassById
 );
 
-// classRouter.post(
-//   "/",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(CreateclassSchema),
-//   classController.createclass
-// );
+classRouter.post(
+  "/",
+  authenticate,
+  role("Admin"),
+  validateBody(CreateClassShema),
+  ClassController.createClass
+);
 
 // classRouter.patch(
 //   "/:id",

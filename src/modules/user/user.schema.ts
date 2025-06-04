@@ -50,7 +50,9 @@ export const UserIdShema = z.object({
   id: z
     .string()
     .transform(val => parseInt(val))
-    .refine(val => isNaN(val), "Id phải là một số nguyên dương"),
+    .refine(val => !isNaN(val) && val > 0, {
+      message: "Id phải là một số nguyên dương",
+    }),
 });
 
 export const UserQuerySchema = z.object({

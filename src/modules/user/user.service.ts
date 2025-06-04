@@ -135,4 +135,16 @@ export default class UserService {
       },
     };
   }
+  static async deleteUser(id: number): Promise<User | null> {
+    return prisma.user.delete({
+      where: { id: id },
+    });
+  }
+  static async countGroupsByUserId(userId: number): Promise<number> {
+    return prisma.group.count({
+      where: {
+        userId: userId,
+      },
+    });
+  }
 }

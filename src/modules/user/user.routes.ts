@@ -60,3 +60,11 @@ userRouter.patch(
   role("Admin"),
   UserController.toggleActive
 );
+
+userRouter.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(UserIdShema),
+  UserController.deleteUser
+);

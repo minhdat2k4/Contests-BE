@@ -3,87 +3,43 @@ import {
   ClassService,
   ClassQueryInput,
   CreateClassInput,
+  UpdateClassInput,
 } from "@/modules/class";
 import { SchoolService } from "@/modules/school";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 export default class ClassController {
-  // static async updateShool(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const input: UpdateShoolInput = req.body;
-  //     const school = await SchoolService.getSchoolBy({ id: Number(id) });
-  //     if (!school) {
-  //       throw new Error("Không tìm thấy trường học ");
-  //     }
-  //     if (input.email) {
-  //       const existingEmail = await SchoolService.existingEmailForUpdate(
-  //         input.email,
-  //         school.id
-  //       );
-  //       if (existingEmail) {
-  //         res.json(validateData("email", "Email đã tồn tại"));
-  //         return;
-  //       }
-  //     }
-  //     if (input.phone) {
-  //       const existingPhone = await SchoolService.existingPhoneForUpdate(
-  //         input.phone,
-  //         school.id
-  //       );
-  //       if (existingPhone) {
-  //         res.json(validateData("phone", "Số điện thoại đã tồn tại"));
-  //         return;
-  //       }
-  //     }
-  //     const schoolUpdate = await SchoolService.updateSchool(Number(id), input);
-  //     if (!schoolUpdate) {
-  //       throw new Error("Cập nhật trường thất bại ");
-  //     }
-  //     res.json(
-  //       successResponse(
-  //         schoolUpdate,
-  //         `Cập nhật thông tin trường  ${school.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-  // static async toggleActive(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const school = await SchoolService.getSchoolBy({ id: Number(id) });
-  //     if (!school) {
-  //       throw new Error("Không tìm thấy trường học ");
-  //     }
-
-  //     const schoolUpdate = await SchoolService.updateSchool(Number(id), {
-  //       isActive: !school.isActive,
-  //     });
-  //     if (!schoolUpdate) {
-  //       throw new Error("Cập nhật trường thất bại ");
-  //     }
-
-  //     logger.info(`Cập nhật trạng thái trường  ${school.name} thành công`);
-  //     res.json(
-  //       successResponse(
-  //         schoolUpdate,
-  //         `Cập nhật trạng thái trường  ${school.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async toggleActive(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const Class = await ClassService.getClassBy({ id: Number(id) });
+      if (!Class) {
+        throw new Error("Không tìm thấy lớp học ");
+      }
+      const updateClass = await ClassService.updateClass(Number(id), {
+        isActive: !Class.isActive,
+      });
+      if (!updateClass) {
+        throw new Error("Cập nhật trạng thái lớp thất bại ");
+      }
+      logger.info(`Cập nhật trạng thái lớp  ${Class.name} thành công`);
+      res.json(
+        successResponse(
+          updateClass,
+          `Cập nhật trạng thái lớp ${Class.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
   // static async deleteSchool(req: Request, res: Response): Promise<void> {
   //   try {
   //     const id = req.params.id;
   //     const school = await SchoolService.getSchoolBy({ id: Number(id) });
   //     if (!school) {
-  //       throw new Error("Không tìm thấy trường học ");
+  //       throw new Error("Không tìm thấy lớp học ");
   //     }
   //     const countClass = await SchoolService.countClassBySchoolId(school.id);
   //     if (countClass > 0) {
@@ -100,6 +56,34 @@ export default class ClassController {
   //     res.status(400).json(errorResponse((error as Error).message));
   //   }
   // }
+  static async updateClass(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const input: UpdateClassInput = req.body;
+      if (input.schoolId) {
+        const school = await SchoolService.getSchoolBy({ id: input.schoolId });
+        if (!school) {
+          throw new Error("Không tìm thấy trường");
+        }
+      }
+      const Class = await ClassService.getClassBy({ id: Number(id) });
+      if (!Class) {
+        throw new Error("Không tìm thấy lớp");
+      }
+      console.log("đ", Class);
+      const updateClass = await ClassService.updateClass(Number(id), input);
+      if (!updateClass) {
+        throw new Error("Cập nhật lớp thất bại");
+      }
+      logger.info(`Cập nhật lớp  ${Class.name} thành công`);
+      res.json(
+        successResponse(updateClass, `Cập nhật lớp ${Class.name} thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
   static async createClass(req: Request, res: Response): Promise<void> {
     try {
       const input: CreateClassInput = req.body;
@@ -108,6 +92,9 @@ export default class ClassController {
         throw new Error("Không tìm thấy trường");
       }
       const Class = await ClassService.createClass(input);
+      if (!Class) {
+        throw new Error(`Thêm lớp ${input.name} thành công`);
+      }
       logger.info(`Thêm lớp ${input.name} thành công`);
       res.json(successResponse(Class, `Thêm lớp ${input.name} thành công`));
     } catch (error) {

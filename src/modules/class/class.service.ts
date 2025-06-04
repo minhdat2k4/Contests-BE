@@ -1,34 +1,32 @@
 import { prisma } from "@/config/database";
 import { Class } from "@prisma/client";
-import { ClassQueryInput, CreateClassInput } from "@/modules/class";
+import {
+  ClassQueryInput,
+  CreateClassInput,
+  UpdateClassInput,
+} from "@/modules/class";
 export default class ClassService {
-  // static async updateSchool(
-  //   id: number,
-  //   data: UpdateShoolInput
-  // ): Promise<School | null> {
-  //   const updateData: any = {};
-  //   if (data.phone !== undefined) {
-  //     updateData.name = data.name;
-  //   }
-  //   if (data.email !== undefined) {
-  //     updateData.email = data.email;
-  //   }
-  //   if (data.phone !== undefined) {
-  //     updateData.phone = data.phone;
-  //   }
-  //   if (data.address !== undefined) {
-  //     updateData.address = data.address;
-  //   }
-  //   if (data.isActive !== undefined) {
-  //     updateData.isActive = data.isActive;
-  //   }
-  //   return prisma.school.update({
-  //     where: { id: id },
-  //     data: {
-  //       ...updateData,
-  //     },
-  //   });
-  // }
+  static async updateClass(
+    id: number,
+    data: UpdateClassInput
+  ): Promise<Class | null> {
+    const updateData: any = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+    if (data.schoolId !== undefined) {
+      updateData.schoolId = data.schoolId;
+    }
+    return prisma.class.update({
+      where: { id: id },
+      data: {
+        ...updateData,
+      },
+    });
+  }
   // static async deleteSchool(id: number): Promise<School> {
   //   return prisma.school.delete({
   //     where: {

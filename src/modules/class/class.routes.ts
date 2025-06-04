@@ -9,6 +9,7 @@ import {
   ClassQuerySchema,
   CreateClassShema,
   ClassIdShame,
+  UpdeateClasshema,
 } from "./class.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const classRouter = Router();
@@ -38,19 +39,21 @@ classRouter.post(
   ClassController.createClass
 );
 
-// classRouter.patch(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(UpdeateclassShema),
-//   classController.updateShool
-// );
-// classRouter.patch(
-//   "/:id/toggle-active",
-//   authenticate,
-//   role("Admin"),
-//   classController.toggleActive
-// );
+classRouter.patch(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdeateClasshema),
+  validateParams(ClassIdShame),
+  ClassController.updateClass
+);
+
+classRouter.patch(
+  "/:id/toggle-active",
+  authenticate,
+  role("Admin"),
+  ClassController.toggleActive
+);
 // classRouter.delete(
 //   "/:id",
 //   authenticate,

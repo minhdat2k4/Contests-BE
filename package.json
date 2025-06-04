@@ -25,7 +25,8 @@
         "clean:modules": "rimraf node_modules",
         "clean:dist": "rimraf dist",
         "clean:lock": "rimraf package-lock.json",
-        "test-about-upload": "ts-node -r tsconfig-paths/register scripts/test-about-upload.ts"
+        "test-about-upload": "ts-node -r tsconfig-paths/register scripts/test-about-upload.ts",
+        "check-about" : "ts-node -r tsconfig-paths/register scripts/check-about.ts"
     },
     "keywords": [
         "nodejs",

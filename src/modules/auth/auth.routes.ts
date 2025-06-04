@@ -1,5 +1,6 @@
 import { Router } from "express";
 import AuthController from "./auth.controller";
+import { role } from "@/middlewares/auth";
 import { validateBody } from "@/utils/validation";
 import {
   LoginSchema,
@@ -50,5 +51,12 @@ authRouter.post(
   AuthController.changeInfo
 );
 authRouter.get("/profile", authenticate, AuthController.profile);
-
+// Admin
+authRouter.get("/admin", authenticate, role("Admin"), (req, res) => {
+  res.json("Chào Admin");
+});
+// Judge
+authRouter.get("/judge", authenticate, role("Judge"), (req, res) => {
+  res.json("Chào Trọng tài ");
+});
 export { authRouter };

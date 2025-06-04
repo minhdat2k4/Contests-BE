@@ -32,7 +32,6 @@ export const authenticate = async (
       res.status(401).json(errorResponse("Access token is required"));
       return;
     }
-    console.log(token);
     // Verify token
     const payload: JwtPayload = verifyToken(token);
 
@@ -74,3 +73,17 @@ export const authenticate = async (
     next(error);
   }
 };
+
+export const role =
+  (...roles: String[]) =>
+  (req: Request, res: Response, next: NextFunction): void => {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json(errorResponse(`Vui lòng đăng nhập lại`));
+      return;
+    }
+    if (!roles.includes(user.role)) {
+      res.status(403).json(errorResponse(`Không có quyền truy cập`));
+    }
+    next();
+  };

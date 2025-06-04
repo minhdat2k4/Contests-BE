@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { number, z } from "zod";
 import { Role } from "@prisma/client";
 
 export const UpdateUserSchema = z.object({
@@ -46,6 +46,38 @@ export const CreateUserSchema = z.object({
   role: z.nativeEnum(Role).default("Judge"),
 });
 
+export const UserIdShema = z.object({
+  id: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, {
+      message: "Id phải là một số nguyên dương",
+    }),
+});
+
+export const UserQuerySchema = z.object({
+  page: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
+    .optional()
+    .default("10"),
+  search: z
+    .string()
+    .min(2, "Từ khóa tìm kiếm phải có ít nhất 2 ký tự")
+    .max(100, "Từ khóa tìm kiếm tối đa 100 ký tự")
+    .optional(),
+  isActive: z.string().transform(val => val === "true"),
+  role: z.nativeEnum(Role).optional(),
+});
 export type UserInput = z.infer<typeof UpdateUserSchema>;
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
+export type UserIdInput = z.infer<typeof UserIdShema>;
+export type UserQueryInput = z.infer<typeof UserQuerySchema>;

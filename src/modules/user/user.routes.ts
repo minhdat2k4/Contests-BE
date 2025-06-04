@@ -1,12 +1,42 @@
 import { Router } from "express";
 import { authenticate, role } from "@/middlewares/auth";
 import { UserController } from "@/modules/user";
-import { CreateUserSchema, UpdateUserSchema } from "./user.schema";
-import { validateBody } from "@/utils/validation";
+import {
+  CreateUserSchema,
+  UpdateUserSchema,
+  UserIdShema,
+  UserQuerySchema,
+} from "./user.schema";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "@/utils/validation";
 const userRouter = Router();
 export { userRouter };
 // Prive(schema)
-userRouter.get("/:id", authenticate, role("Admin"), UserController.getUserById);
+userRouter.get(
+  "/get-roles",
+  authenticate,
+  role("Admin"),
+  UserController.getRoles
+);
+
+userRouter.get(
+  "/:id",
+  authenticate,
+  validateParams(UserIdShema),
+  role("Admin"),
+  UserController.getUserById
+);
+
+userRouter.get(
+  "/",
+  authenticate,
+  validateQuery(UserQuerySchema),
+  role("Admin"),
+  UserController.getAllUsers
+);
 
 userRouter.post(
   "/",
@@ -29,4 +59,12 @@ userRouter.patch(
   authenticate,
   role("Admin"),
   UserController.toggleActive
+);
+
+userRouter.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(UserIdShema),
+  UserController.deleteUser
 );

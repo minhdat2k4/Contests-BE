@@ -1,10 +1,15 @@
 import { Request, Response } from "express";
-import { UserService, CreateUserInput, UpdateUserInput } from "@/modules/user";
+import {
+  UserService,
+  CreateUserInput,
+  UpdateUserInput,
+  UserQueryInput,
+} from "@/modules/user";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { validateData } from "@/middlewares/validation";
 import bcrypt from "bcrypt";
-import { role } from "@/middlewares/auth";
+import { Role } from "@prisma/client";
 
 export default class UserController {
   static async creatUser(req: Request, res: Response): Promise<void> {
@@ -31,6 +36,7 @@ export default class UserController {
         id: user.id,
         username: user.username,
         email: user.email,
+        password: user.password,
         role: user.role,
         isActive: user.isActive,
       };
@@ -52,6 +58,7 @@ export default class UserController {
         id: user.id,
         username: user.username,
         email: user.email,
+        password: user.password,
         role: user.role,
         isActive: user.isActive,
       };
@@ -88,6 +95,7 @@ export default class UserController {
         username: userUpdate.username,
         email: userUpdate.email,
         role: userUpdate.role,
+        password: userUpdate.password,
         isActive: userUpdate.isActive,
       };
       res.json(successResponse(data, "Cập nhật tài khoản thành công"));
@@ -121,6 +129,74 @@ export default class UserController {
         successResponse(data, "Cập nhật trạng thái hoạt động thành công")
       );
       logger.info(`Cập nhật trạng thái hoạt động ${user.username} thành công`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async getRoles(req: Request, res: Response): Promise<void> {
+    try {
+      const roles = Object.values(Role);
+      logger.info(`Lấy danh sách vai trò người dùng thành công`);
+      res.json(successResponse(roles, "Lấy danh sách vai trò thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async getAllUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const query: UserQueryInput = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: (req.query.search as string) || undefined,
+        isActive:
+          req.query.isActive !== undefined
+            ? req.query.isActive === "true"
+            : true,
+        role:
+          req.query.role === "Admin"
+            ? "Admin"
+            : req.query.role === "Judge"
+            ? "Judge"
+            : undefined,
+      };
+
+      const data = await UserService.getAllUser(query);
+      if (!data) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      logger.info(`Lấy danh sách người dùng thành công`);
+      res.json(
+        successResponse(
+          { user: data.users, pagination: data.pagination },
+          "Lấy danh sách người dùng thành công"
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async deleteUser(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const user = await UserService.getUserById(Number(id));
+      if (!user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      const countGroups = await UserService.countGroupsByUserId(user.id);
+      if (countGroups > 0) {
+        throw new Error(
+          `Không thể xoá ${user.username} này vì họ là trọng tài của ${countGroups} trận đấu`
+        );
+      }
+      const deleted = await UserService.deleteUser(user.id);
+      if (!deleted) {
+        throw new Error("Xoá người dùng thất bại");
+      }
+      res.json(successResponse({}, "Xoá người dùng thành công"));
+      logger.info(`Xoá người dùng ${user.username} thành công`);
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

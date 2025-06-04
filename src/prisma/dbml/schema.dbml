@@ -405,7 +405,7 @@ Enum ControlValue {
   zoomOut
 }
 
-Ref: RefreshTokens.userId > Users.id
+Ref: RefreshTokens.userId > Users.id [delete: Cascade]
 
 Ref: Classes.schoolId > Schools.id [delete: Restrict]
 

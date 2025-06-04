@@ -1,6 +1,7 @@
 import { User } from "@prisma/client";
 import { prisma } from "@/config/database";
-import { UserInput, CreateUserInput } from "./user.schema";
+import { UserInput, CreateUserInput, UserQueryInput } from "./user.schema";
+import bcrypt from "bcrypt";
 export default class UserService {
   static async creatUser(user: CreateUserInput) {
     return prisma.user.create({
@@ -35,7 +36,8 @@ export default class UserService {
       updateData.otpExpiredAt = data.otpExpiredAt;
     }
     if (data.password !== undefined) {
-      updateData.password = data.password;
+      const hash = bcrypt.hash(data.password, 10);
+      updateData.password = hash;
     }
     return prisma.user.update({
       where: {
@@ -76,5 +78,76 @@ export default class UserService {
       },
     });
     return !!user;
+  }
+  static async getAllUser(UserQueryInput: UserQueryInput): Promise<{
+    users: Array<{
+      id: number;
+      username: string;
+      email: string;
+      role: string;
+      isActive: boolean;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search, isActive, role } = UserQueryInput;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+    if (role) {
+      whereClause.role = role;
+    }
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive;
+    }
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { username: { contains: keyword } },
+        { email: { contains: keyword } },
+      ]);
+    }
+
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        isActive: true,
+      },
+    });
+    return {
+      users: users,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: users.length,
+        totalPages: Math.ceil(users.length / limit),
+        hasNext: page < Math.ceil(users.length / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
+  static async deleteUser(id: number): Promise<User | null> {
+    return prisma.user.delete({
+      where: { id: id },
+    });
+  }
+  static async countGroupsByUserId(userId: number): Promise<number> {
+    return prisma.group.count({
+      where: {
+        userId: userId,
+      },
+    });
   }
 }

@@ -10,22 +10,7 @@ export const validateBody = (schema: ZodSchema) => {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        // Log chi tiết lỗi Zod
-        logger.warn({
-          error: "Validation error",
-          details: error.errors,
-          ip: req.ip,
-          method: req.method,
-          url: req.originalUrl,
-          service: "contest-be",
-          timestamp: new Date().toISOString(),
-        });
-        // Trả về lỗi chi tiết cho FE
-        res.status(400).json({
-          success: false,
-          message: "Validation error",
-          errors: error.errors,
-        });
+        next(error);
       } else {
         next(createError("VALIDATION_ERROR", 400));
       }

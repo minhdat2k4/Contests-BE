@@ -36,6 +36,7 @@ export default class UserController {
         id: user.id,
         username: user.username,
         email: user.email,
+        password: user.password,
         role: user.role,
         isActive: user.isActive,
       };
@@ -57,6 +58,7 @@ export default class UserController {
         id: user.id,
         username: user.username,
         email: user.email,
+        password: user.password,
         role: user.role,
         isActive: user.isActive,
       };
@@ -93,6 +95,7 @@ export default class UserController {
         username: userUpdate.username,
         email: userUpdate.email,
         role: userUpdate.role,
+        password: userUpdate.password,
         isActive: userUpdate.isActive,
       };
       res.json(successResponse(data, "Cập nhật tài khoản thành công"));
@@ -156,8 +159,9 @@ export default class UserController {
             ? "Admin"
             : req.query.role === "Judge"
             ? "Judge"
-            : "Admin",
+            : undefined,
       };
+
       const data = await UserService.getAllUser(query);
       if (!data) {
         throw new Error("Không tìm thấy người dùng");
@@ -169,6 +173,30 @@ export default class UserController {
           "Lấy danh sách người dùng thành công"
         )
       );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async deleteUser(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const user = await UserService.getUserById(Number(id));
+      if (!user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      const countGroups = await UserService.countGroupsByUserId(user.id);
+      if (countGroups > 0) {
+        throw new Error(
+          `Không thể xoá ${user.username} này vì họ là trọng tài của ${countGroups} trận đấu`
+        );
+      }
+      const deleted = await UserService.deleteUser(user.id);
+      if (!deleted) {
+        throw new Error("Xoá người dùng thất bại");
+      }
+      res.json(successResponse({}, "Xoá người dùng thành công"));
+      logger.info(`Xoá người dùng ${user.username} thành công`);
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

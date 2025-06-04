@@ -54,10 +54,11 @@ classRouter.patch(
   role("Admin"),
   ClassController.toggleActive
 );
-// classRouter.delete(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   classController.deleteclass
-// );
+classRouter.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(ClassIdShame),
+  ClassController.deleteClass
+);
 export { classRouter };

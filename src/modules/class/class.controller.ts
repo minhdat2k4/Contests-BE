@@ -34,28 +34,39 @@ export default class ClassController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
-  // static async deleteSchool(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const school = await SchoolService.getSchoolBy({ id: Number(id) });
-  //     if (!school) {
-  //       throw new Error("Không tìm thấy lớp học ");
-  //     }
-  //     const countClass = await SchoolService.countClassBySchoolId(school.id);
-  //     if (countClass > 0) {
-  //       throw new Error(`Trường này hiện có ${countClass} lớp không thể xóa`);
-  //     }
-  //     const deleteShool = await SchoolService.deleteSchool(school.id);
-  //     if (!deleteShool) {
-  //       throw new Error(`Xóa trường ${school.name} thất bại `);
-  //     }
-  //     logger.info(`Xóa ${school.name} thành công`);
-  //     res.json(successResponse(null, `Xóa ${school.name} thành công`));
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async deleteClass(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const Class = await ClassService.getClassBy({ id: Number(id) });
+      if (!Class) {
+        throw new Error("Không tìm thấy lớp học ");
+      }
+      const [countClassVieo, countStudent] = await Promise.all([
+        ClassService.countClassVieoByClassId(id),
+        ClassService.countClassStudentClassId(id),
+      ]);
+
+      if (countClassVieo > 0) {
+        throw new Error(
+          `Lớp này hiện có ${countClassVieo} video lớp tham gia cuộc thi không thể xóa`
+        );
+      }
+      if (countStudent > 0) {
+        throw new Error(
+          `Lớp này hiện có ${countStudent} sinh viên không thể xóa `
+        );
+      }
+      const deleteClass = await ClassService.deleteClass(Class.id);
+      if (!deleteClass) {
+        throw new Error(`Xóa lớp ${Class.name} thất bại `);
+      }
+      logger.info(`Xóa lớp ${Class.name} thành công`);
+      res.json(successResponse(null, `Xóa lớp ${Class.name} thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
   static async updateClass(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;

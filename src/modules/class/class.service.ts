@@ -27,13 +27,13 @@ export default class ClassService {
       },
     });
   }
-  // static async deleteSchool(id: number): Promise<School> {
-  //   return prisma.school.delete({
-  //     where: {
-  //       id: id,
-  //     },
-  //   });
-  // }
+  static async deleteClass(id: number): Promise<Class> {
+    return prisma.class.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
   static async getClassBy(data: any): Promise<Class | null> {
     return prisma.class.findFirst({
       where: {
@@ -95,5 +95,19 @@ export default class ClassService {
         hasPrev: page > 1,
       },
     };
+  }
+  static async countClassVieoByClassId(id: number) {
+    return prisma.classVideo.count({
+      where: {
+        classId: id,
+      },
+    });
+  }
+  static async countClassStudentClassId(id: number) {
+    return prisma.student.count({
+      where: {
+        classId: id,
+      },
+    });
   }
 }

@@ -1,10 +1,15 @@
 import { Request, Response } from "express";
-import { UserService, CreateUserInput, UpdateUserInput } from "@/modules/user";
+import {
+  UserService,
+  CreateUserInput,
+  UpdateUserInput,
+  UserQueryInput,
+} from "@/modules/user";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { validateData } from "@/middlewares/validation";
 import bcrypt from "bcrypt";
-import { role } from "@/middlewares/auth";
+import { Role } from "@prisma/client";
 
 export default class UserController {
   static async creatUser(req: Request, res: Response): Promise<void> {
@@ -121,6 +126,49 @@ export default class UserController {
         successResponse(data, "Cập nhật trạng thái hoạt động thành công")
       );
       logger.info(`Cập nhật trạng thái hoạt động ${user.username} thành công`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async getRoles(req: Request, res: Response): Promise<void> {
+    try {
+      const roles = Object.values(Role);
+      logger.info(`Lấy danh sách vai trò người dùng thành công`);
+      res.json(successResponse(roles, "Lấy danh sách vai trò thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async getAllUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const query: UserQueryInput = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: (req.query.search as string) || undefined,
+        isActive:
+          req.query.isActive !== undefined
+            ? req.query.isActive === "true"
+            : true,
+        role:
+          req.query.role === "Admin"
+            ? "Admin"
+            : req.query.role === "Judge"
+            ? "Judge"
+            : "Admin",
+      };
+      const data = await UserService.getAllUser(query);
+      if (!data) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      logger.info(`Lấy danh sách người dùng thành công`);
+      res.json(
+        successResponse(
+          { user: data.users, pagination: data.pagination },
+          "Lấy danh sách người dùng thành công"
+        )
+      );
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

@@ -45,3 +45,8 @@ prisma/migrations/
 tmp/
 temp/
 src/modules/user/user.controller.ts
+
+# Uploads directories except uploads/about
+uploads/**/*
+!uploads/about/
+!uploads/about/*

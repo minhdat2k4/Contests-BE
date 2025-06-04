@@ -10,9 +10,11 @@ Table Users {
   role Role [not null]
   isActive Boolean [not null, default: true]
   token String
-  groups Groups [not null]
+  otpCode String
+  otpExpiredAt DateTime
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
+  groups Groups [not null]
   refreshToken RefreshTokens [not null]
 }
 

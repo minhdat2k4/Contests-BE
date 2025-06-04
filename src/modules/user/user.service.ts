@@ -1,25 +1,20 @@
-import { User, Role } from "@prisma/client";
+import { User } from "@prisma/client";
 import { prisma } from "@/config/database";
-import { UpdateUserInput } from "./user.shema";
-import { isDate } from "util/types";
+import { UserInput, CreateUserInput } from "./user.schema";
 export default class UserService {
-  static async getUserById(id: number) {
-    const user: Omit<User, "password"> | null = await prisma.user.findFirst({
-      where: { id: id },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        isActive: true,
-        role: true,
-        token: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+  static async creatUser(user: CreateUserInput) {
+    return prisma.user.create({
+      data: user,
     });
-    return user;
   }
-  static async UpdateUser(id: number, data: UpdateUserInput) {
+  static async getUserById(
+    id: number
+  ): Promise<Omit<User, "otpExpiredAt" | "otpCode"> | null> {
+    return prisma.user.findFirst({
+      where: { id: id },
+    });
+  }
+  static async UpdateUser(id: number, data: UserInput): Promise<User | null> {
     const updateData: any = {};
     if (data.email !== undefined) {
       updateData.email = data.email;
@@ -28,21 +23,58 @@ export default class UserService {
       updateData.token = data.token;
     }
     if (data.isAcitve !== undefined) {
-      updateData.isAcitve = data.isAcitve;
+      updateData.isActive = data.isAcitve;
     }
     if (data.role !== undefined) {
       updateData.role = data.role;
     }
-    const user: Omit<User, "password" | "updatedAt"> = await prisma.user.update(
-      {
-        where: {
-          id: id,
-        },
-        data: {
-          ...updateData,
-        },
-      }
-    );
-    return user;
+    if (data.otpCode !== undefined) {
+      updateData.otpCode = data.otpCode;
+    }
+    if (data.otpExpiredAt !== undefined) {
+      updateData.otpExpiredAt = data.otpExpiredAt;
+    }
+    if (data.password !== undefined) {
+      updateData.password = data.password;
+    }
+    return prisma.user.update({
+      where: {
+        id: id,
+      },
+      data: {
+        ...updateData,
+      },
+    });
+  }
+  static async getUserByEmail(email: string): Promise<User | null> {
+    return prisma.user.findUnique({
+      where: { email: email },
+    });
+  }
+  static async existingEmail(email: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({
+      where: { email: email },
+    });
+    //  !! chuyên nó thành boolean
+    return !!user;
+  }
+  static async existingUserName(username: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({
+      where: { username: username },
+    });
+    //  !! chuyên nó thành boolean
+    return !!user;
+  }
+  static async existingEmailForUpdate(
+    email: string,
+    userId: number
+  ): Promise<boolean> {
+    const user = await prisma.user.findFirst({
+      where: {
+        email: email,
+        NOT: { id: userId },
+      },
+    });
+    return !!user;
   }
 }

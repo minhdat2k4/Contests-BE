@@ -9,6 +9,8 @@ import { logger } from "./utils/logger";
 import { authRouter } from "./modules/auth/auth.routes";
 import { aboutRouter } from "./modules/about/about.routes";
 import { userRouter } from "@/modules/user";
+import { schoolRouter } from "@/modules/School";
+
 // Load environment variables
 dotenv.config();
 
@@ -59,6 +61,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/about", aboutRouter);
 app.use("/api/user", userRouter);
+app.use("/api/school", schoolRouter);
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {
   res.status(200).json({

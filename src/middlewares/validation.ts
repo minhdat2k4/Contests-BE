@@ -41,7 +41,6 @@ export const validateBody = (
           field: err.path.join("."),
           message: err.message,
         }));
-
         res.status(400).json(validationErrorResponse(errors));
         return;
       }

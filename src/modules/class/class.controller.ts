@@ -42,8 +42,8 @@ export default class ClassController {
         throw new Error("Không tìm thấy lớp học ");
       }
       const [countClassVieo, countStudent] = await Promise.all([
-        ClassService.countClassVieoByClassId(id),
-        ClassService.countClassStudentClassId(id),
+        ClassService.countClassVieoByClassId(Number(id)),
+        ClassService.countClassStudentClassId(Number(id)),
       ]);
 
       if (countClassVieo > 0) {

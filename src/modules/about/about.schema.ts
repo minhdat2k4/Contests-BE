@@ -35,6 +35,16 @@ export const CreateAboutSchema = z.object({
   mapEmbedCode: z
     .string()
     .optional(),
+    
+  logo: z
+    .string()
+    .max(255, "Đường dẫn logo không được quá 255 ký tự")
+    .optional(),
+    
+  banner: z
+    .string()
+    .max(255, "Đường dẫn banner không được quá 255 ký tự")
+    .optional(),
 });
 
 // Update About schema
@@ -69,6 +79,16 @@ export const UpdateAboutSchema = z.object({
     
   mapEmbedCode: z
     .string()
+    .optional(),
+    
+  logo: z
+    .string()
+    .max(255, "Đường dẫn logo không được quá 255 ký tự")
+    .optional(),
+    
+  banner: z
+    .string()
+    .max(255, "Đường dẫn banner không được quá 255 ký tự")
     .optional(),
 });
 

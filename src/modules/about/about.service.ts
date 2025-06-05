@@ -2,6 +2,8 @@ import { CreateAboutInput, UpdateAboutInput, AboutQueryInput } from "./about.sch
 import prisma from "@/config/client";
 import { logger } from "@/utils/logger";
 import { PaginationMeta } from "@/utils/response";
+import { deleteOldFile, getAboutFileUrl, getAboutFilePath, getFileNameFromUrl } from "@/middlewares/multer/aboutMulter";
+import path from "path";
 
 export default class AboutService {
   
@@ -127,13 +129,12 @@ export default class AboutService {
       };
     }
   }
-
   /**
    * Update about information
    */
-  static async updateAbout(id: number, data: UpdateAboutInput) {
+  static async updateAbout(id: number, data: UpdateAboutInput, files?: { logo?: Express.Multer.File; banner?: Express.Multer.File }) {
     try {
-      logger.info("Updating about information", { id, data });
+      logger.info("Updating about information", { id, data, files: files ? Object.keys(files) : [] });
 
       // Check if about exists
       const existingAbout = await prisma.about.findUnique({
@@ -149,21 +150,46 @@ export default class AboutService {
         };
       }
 
+      // Prepare update data
+      const updateData: any = {
+        ...(data.schoolName && { schoolName: data.schoolName }),
+        ...(data.website !== undefined && { website: data.website }),
+        ...(data.departmentName !== undefined && { departmentName: data.departmentName }),
+        ...(data.email !== undefined && { email: data.email }),
+        ...(data.fanpage !== undefined && { fanpage: data.fanpage }),
+        ...(data.mapEmbedCode !== undefined && { mapEmbedCode: data.mapEmbedCode }),
+      };      // Handle logo upload
+      if (files?.logo) {
+        // Delete old logo if exists
+        if (existingAbout.logo) {
+          const oldLogoPath = getAboutFilePath(path.basename(existingAbout.logo));
+          deleteOldFile(oldLogoPath);
+        }
+        // Set new logo URL
+        updateData.logo = getAboutFileUrl(files.logo.filename);
+        logger.info("Logo uploaded successfully", { filename: files.logo.filename });
+      }
+
+      // Handle banner upload
+      if (files?.banner) {
+        // Delete old banner if exists
+        if (existingAbout.banner) {
+          const oldBannerPath = getAboutFilePath(path.basename(existingAbout.banner));
+          deleteOldFile(oldBannerPath);
+        }
+        // Set new banner URL
+        updateData.banner = getAboutFileUrl(files.banner.filename);
+        logger.info("Banner uploaded successfully", { filename: files.banner.filename });
+      }
+
       // Update the about information
       const updatedAbout = await prisma.about.update({
         where: { id },
-        data: {
-          ...(data.schoolName && { schoolName: data.schoolName }),
-          ...(data.website !== undefined && { website: data.website }),
-          ...(data.departmentName !== undefined && { departmentName: data.departmentName }),
-          ...(data.email !== undefined && { email: data.email }),
-          ...(data.fanpage !== undefined && { fanpage: data.fanpage }),
-          ...(data.mapEmbedCode !== undefined && { mapEmbedCode: data.mapEmbedCode }),
-        },
+        data: updateData,
       });
 
       logger.info("About information updated successfully", { aboutId: updatedAbout.id });
-      return updatedAbout;    } catch (error: any) {
+      return updatedAbout;} catch (error: any) {
       if (error.success === false) {
         throw error;
       }
@@ -257,7 +283,6 @@ export default class AboutService {
       };
     }
   }
-
   /**
    * Hard delete about information (permanent deletion)
    */
@@ -277,6 +302,17 @@ export default class AboutService {
           message: "Không tìm thấy thông tin giới thiệu để xóa vĩnh viễn",
           error: "About not found",
         };
+      }      // Delete associated files
+      if (existingAbout.logo) {
+        const logoPath = getAboutFilePath(path.basename(existingAbout.logo));
+        deleteOldFile(logoPath);
+        logger.info("Logo file deleted", { logoPath });
+      }
+
+      if (existingAbout.banner) {
+        const bannerPath = getAboutFilePath(path.basename(existingAbout.banner));
+        deleteOldFile(bannerPath);
+        logger.info("Banner file deleted", { bannerPath });
       }
 
       // Permanently delete
@@ -285,7 +321,7 @@ export default class AboutService {
       });
 
       logger.info("About information permanently deleted", { id });
-      return { id, message: "Thông tin giới thiệu đã được xóa vĩnh viễn" };    } catch (error: any) {
+      return { id, message: "Thông tin giới thiệu đã được xóa vĩnh viễn" };} catch (error: any) {
       if (error.success === false) {
         throw error;
       }

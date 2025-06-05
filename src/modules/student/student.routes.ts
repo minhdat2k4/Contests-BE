@@ -48,17 +48,18 @@ studentRouter.patch(
   StudentController.updateStudent
 );
 
-// studentRouter.patch(
-//   "/:id/toggle-active",
-//   authenticate,
-//   role("Admin"),
-//   ClassController.toggleActive
-// );
-// studentRouter.delete(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(ClassIdShame),
-//   ClassController.deleteClass
-// );
+studentRouter.patch(
+  "/:id/toggle-active",
+  authenticate,
+  role("Admin"),
+  validateParams(StudentIdShame),
+  StudentController.toggleActive
+);
+studentRouter.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(StudentIdShame),
+  StudentController.deleteStudent
+);
 export { studentRouter };

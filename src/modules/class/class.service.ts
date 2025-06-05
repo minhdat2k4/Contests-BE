@@ -4,7 +4,9 @@ import {
   ClassQueryInput,
   CreateClassInput,
   UpdateClassInput,
+  Classes,
 } from "@/modules/class";
+import { nativeEnum } from "zod";
 export default class ClassService {
   static async updateClass(
     id: number,
@@ -49,7 +51,7 @@ export default class ClassService {
     });
   }
   static async getAllClass(query: ClassQueryInput): Promise<{
-    classes: Class[];
+    classes: Classes[];
     pagination: {
       page: number;
       limit: number;
@@ -72,18 +74,34 @@ export default class ClassService {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
         { name: { contains: keyword } },
+        { school: { name: { contains: keyword } } },
       ]);
     }
 
-    const classes = await prisma.class.findMany({
+    const classRaw = await prisma.class.findMany({
       where: whereClause,
       skip: skip,
       take: limit,
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        school: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
+    const classes = classRaw.map(key => ({
+      id: key.id,
+      name: key.name,
+      isActive: key.isActive,
+      shoolName: key.school?.name ?? null,
+    }));
     const total = await prisma.class.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
-
     return {
       classes: classes,
       pagination: {

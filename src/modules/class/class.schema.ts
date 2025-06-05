@@ -1,4 +1,11 @@
 import z from "zod";
+export const ClassShema = z.object({
+  id: z.number(),
+  name: z.string(),
+  isActive: z.boolean(),
+  shoolName: z.string(),
+});
+
 export const CreateClassShema = z.object({
   name: z
     .string({
@@ -75,3 +82,4 @@ export type CreateClassInput = z.infer<typeof CreateClassShema>;
 export type ClassIdParams = z.infer<typeof ClassIdShame>;
 export type UpdateClassInput = z.infer<typeof UpdeateClasshema>;
 export type ClassQueryInput = z.infer<typeof ClassQuerySchema>;
+export type Classes = z.infer<typeof ClassShema>;

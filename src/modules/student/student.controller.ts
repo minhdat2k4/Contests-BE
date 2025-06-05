@@ -5,68 +5,65 @@ import {
   StudentQueryInput,
   UpdateStudentInput,
 } from "@/modules/student";
-import { ClassController, ClassService } from "@/modules/class";
+import { ClassService } from "@/modules/class";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 export default class StudentController {
-  // static async toggleActive(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Class = await ClassService.getClassBy({ id: Number(id) });
-  //     if (!Class) {
-  //       throw new Error("Không tìm thấy lớp học ");
-  //     }
-  //     const updateClass = await ClassService.updateClass(Number(id), {
-  //       isActive: !Class.isActive,
-  //     });
-  //     if (!updateClass) {
-  //       throw new Error("Cập nhật trạng thái lớp thất bại ");
-  //     }
-  //     logger.info(`Cập nhật trạng thái lớp  ${Class.name} thành công`);
-  //     res.json(
-  //       successResponse(
-  //         updateClass,
-  //         `Cập nhật trạng thái lớp ${Class.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-  // static async deleteClass(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Class = await ClassService.getClassBy({ id: Number(id) });
-  //     if (!Class) {
-  //       throw new Error("Không tìm thấy lớp học ");
-  //     }
-  //     const [countClassVieo, countStudent] = await Promise.all([
-  //       ClassService.countClassVieoByClassId(Number(id)),
-  //       ClassService.countClassStudentClassId(Number(id)),
-  //     ]);
-
-  //     if (countClassVieo > 0) {
-  //       throw new Error(
-  //         `Lớp này hiện có ${countClassVieo} video lớp tham gia cuộc thi không thể xóa`
-  //       );
-  //     }
-  //     if (countStudent > 0) {
-  //       throw new Error(
-  //         `Lớp này hiện có ${countStudent} sinh viên không thể xóa `
-  //       );
-  //     }
-  //     const deleteClass = await ClassService.deleteClass(Class.id);
-  //     if (!deleteClass) {
-  //       throw new Error(`Xóa lớp ${Class.name} thất bại `);
-  //     }
-  //     logger.info(`Xóa lớp ${Class.name} thành công`);
-  //     res.json(successResponse(null, `Xóa lớp ${Class.name} thành công`));
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async toggleActive(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const student = await StudentService.getStudentBy({ id: Number(id) });
+      if (!student) {
+        throw new Error("Không tìm thấy sinh viên");
+      }
+      const updateStudent = await StudentService.updateStudent(Number(id), {
+        isActive: !student.isActive,
+      });
+      if (!updateStudent) {
+        throw new Error("Cập nhật trạng thái sinh viên  thất bại");
+      }
+      logger.info(
+        `Cập nhật trạng thái sinh viên  ${updateStudent.fullName} thành công`
+      );
+      res.json(
+        successResponse(
+          updateStudent,
+          `Cập nhật trạng thái sinh viên ${updateStudent.fullName} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async deleteStudent(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const student = await StudentService.getStudentBy({ id: Number(id) });
+      if (!student) {
+        throw new Error("Không tìm thấy sinh viên ");
+      }
+      const countContestant = await StudentService.countContestantStudentId(
+        Number(id)
+      );
+      if (countContestant > 0) {
+        throw new Error(
+          `Sinh viên này hiện đang tham gia ${countContestant} cuộc thi không thể xóa`
+        );
+      }
+      const deleteStudent = await StudentService.deleteStudent(Number(id));
+      if (!deleteStudent) {
+        throw new Error(`Xóa sinh viên ${student.fullName} thất bại `);
+      }
+      logger.info(`Xóa sinh viên ${student.fullName} thành công`);
+      res.json(
+        successResponse(null, `Xóa sinh viên ${student.fullName} thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
   static async updateStudent(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;

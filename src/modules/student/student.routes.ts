@@ -5,7 +5,12 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { StudentController } from "@/modules/student";
-import { CreateStudentShema, StudentQuerySchema } from "./student.schema";
+import {
+  CreateStudentShema,
+  StudentQuerySchema,
+  StudentIdParams,
+  StudentIdShame,
+} from "./student.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const studentRouter = Router();
 // prive
@@ -22,8 +27,8 @@ studentRouter.get(
   "/:id",
   authenticate,
   role("Admin"),
-  validateParams(ClassIdShame),
-  ClassController.getClassById
+  validateParams(StudentIdShame),
+  StudentController.getStudentById
 );
 
 studentRouter.post(

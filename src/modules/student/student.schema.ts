@@ -1,4 +1,5 @@
 import z from "zod";
+import { Student } from "@prisma/client";
 export const CreateStudentShema = z.object({
   fullName: z
     .string({
@@ -24,7 +25,7 @@ export const CreateStudentShema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const ClassIdShame = z.object({
+export const StudentIdShame = z.object({
   id: z
     .string()
     .transform(val => parseInt(val))
@@ -50,7 +51,7 @@ export const UpdeateClasshema = z.object({
     .optional(),
 });
 
-export const ClassQuerySchema = z.object({
+export const StudentQuerySchema = z.object({
   page: z
     .string()
     .transform(val => parseInt(val))
@@ -72,14 +73,14 @@ export const ClassQuerySchema = z.object({
     .string()
     .optional()
     .transform(val => val === "true"),
-  schoolId: z
+  classId: z
     .string()
     .transform(val => parseInt(val))
-    .refine(val => !isNaN(val) && val > 0, "Id phải là số nguyên dương")
+    .refine(val => !isNaN(val) && val > 0, "Id lớp phải là số nguyên dương")
     .optional(),
 });
 
 export type CreateStudentInput = z.infer<typeof CreateStudentShema>;
-export type ClassIdParams = z.infer<typeof ClassIdShame>;
+export type StudentIdParams = z.infer<typeof StudentIdShame>;
 export type UpdateClassInput = z.infer<typeof UpdeateClasshema>;
-export type ClassQueryInput = z.infer<typeof ClassQuerySchema>;
+export type StudentQueryInput = z.infer<typeof StudentQuerySchema>;

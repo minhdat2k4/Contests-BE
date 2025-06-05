@@ -5,26 +5,26 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { StudentController } from "@/modules/student";
-import { CreateStudentShema } from "./student.schema";
+import { CreateStudentShema, StudentQuerySchema } from "./student.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const studentRouter = Router();
 // prive
 
-// studentRouter.get(
-//   "/",
-//   authenticate,
-//   role("Admin"),
-//   validateQuery(ClassQuerySchema),
-//   ClassController.getAlls
-// );
+studentRouter.get(
+  "/",
+  authenticate,
+  role("Admin"),
+  validateQuery(StudentQuerySchema),
+  StudentController.getAlls
+);
 
-// studentRouter.get(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(ClassIdShame),
-//   ClassController.getClassById
-// );
+studentRouter.get(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(ClassIdShame),
+  ClassController.getClassById
+);
 
 studentRouter.post(
   "/",

@@ -1,6 +1,6 @@
 import { prisma } from "@/config/database";
 import { Student } from "@prisma/client";
-import { CreateStudentInput } from "@/modules/student";
+import { CreateStudentInput, StudentQueryInput } from "@/modules/student";
 export default class StudentService {
   // static async updateClass(
   //   id: number,
@@ -13,7 +13,7 @@ export default class StudentService {
   //   if (data.isActive !== undefined) {
   //     updateData.isActive = data.isActive;
   //   }
-  //   if (data.schoolId !== undefined) {
+  //   if (data.classId !== undefined) {
   //     updateData.schoolId = data.schoolId;
   //   }
   //   return prisma.class.update({
@@ -30,61 +30,7 @@ export default class StudentService {
   //     },
   //   });
   // }
-  // static async getClassBy(data: any): Promise<Class | null> {
-  //   return prisma.class.findFirst({
-  //     where: {
-  //       ...data,
-  //     },
-  //   });
-  // }
-  // static async getAllClass(query: ClassQueryInput): Promise<{
-  //   classes: Class[];
-  //   pagination: {
-  //     page: number;
-  //     limit: number;
-  //     total: number;
-  //     totalPages: number;
-  //     hasNext: boolean;
-  //     hasPrev: boolean;
-  //   };
-  // }> {
-  //   const { page, limit, search, isActive, schoolId } = query;
-  //   const skip = (page - 1) * limit;
-  //   const whereClause: any = {};
-  //   if (isActive !== undefined) {
-  //     whereClause.isActive = isActive;
-  //   }
-  //   if (schoolId !== undefined) {
-  //     whereClause.schoolId = schoolId;
-  //   }
-  //   if (search) {
-  //     const keywords = search.trim().split(/\s+/);
-  //     whereClause.OR = keywords.flatMap((keyword: string) => [
-  //       { name: { contains: keyword } },
-  //     ]);
-  //   }
 
-  //   const classes = await prisma.class.findMany({
-  //     where: whereClause,
-  //     skip: skip,
-  //     take: limit,
-  //     orderBy: { createdAt: "desc" },
-  //   });
-  //   const total = classes.length;
-  //   const totalPages = Math.ceil(total / limit);
-
-  //   return {
-  //     classes: classes,
-  //     pagination: {
-  //       page: page,
-  //       limit: limit,
-  //       total: total,
-  //       totalPages: totalPages,
-  //       hasNext: page < totalPages,
-  //       hasPrev: page > 1,
-  //     },
-  //   };
-  // }
   // static async countClassVieoByClassId(id: number) {
   //   return prisma.classVideo.count({
   //     where: {
@@ -99,6 +45,62 @@ export default class StudentService {
   //     },
   //   });
   // }
+
+  static async getStudentBy(data: any): Promise<Student | null> {
+    return prisma.student.findFirst({
+      where: {
+        ...data,
+      },
+    });
+  }
+  static async getAllStudent(query: StudentQueryInput): Promise<{
+    students: Student[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search, isActive, classId } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive;
+    }
+    if (classId !== undefined) {
+      whereClause.classId = classId;
+    }
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { fullName: { contains: keyword } },
+        { studentCode: { contains: keyword } },
+      ]);
+    }
+
+    const students = await prisma.student.findMany({
+      where: whereClause,
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
+    const total = students.length;
+    const totalPages = Math.ceil(total / limit);
+    return {
+      students: students,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
   static async createClass(data: CreateStudentInput): Promise<Student | null> {
     return prisma.student.create({
       data: {

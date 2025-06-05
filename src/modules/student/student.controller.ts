@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { CreateStudentInput, StudentService } from "@/modules/student";
+import {
+  CreateStudentInput,
+  StudentService,
+  StudentQueryInput,
+} from "@/modules/student";
 import { ClassService } from "@/modules/class";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
@@ -91,50 +95,55 @@ export default class StudentController {
   //   }
   // }
 
-  // static async getClassById(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Class = await ClassService.getClassBy({ id: Number(id) });
-  //     if (!Class) {
-  //       throw new Error("Không tìm thấy lớp học ");
-  //     }
-  //     logger.info(`Lấy thông tin lớp ${Class.name} thành công`);
-  //     res.json(
-  //       successResponse(Class, `Lấy thông tin lớp ${Class.name} thành công`)
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-  // static async getAlls(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const query: ClassQueryInput = {
-  //       page: parseInt(req.query.page as string) || 1,
-  //       limit: parseInt(req.query.limit as string) || 10,
-  //       search: (req.query.search as string) || undefined,
-  //       schoolId: parseInt(req.query.schoolId as string) || undefined,
-  //       isActive:
-  //         req.query.isActive !== undefined
-  //           ? req.query.isActive === "true"
-  //           : true,
-  //     };
-  //     const data = await ClassService.getAllClass(query);
-  //     if (!data) {
-  //       throw new Error("Không tìm thấy lớp học ");
-  //     }
-  //     logger.info(`Lấy danh sách lớp học thành công`);
-  //     res.json(
-  //       successResponse(
-  //         { classes: data.classes, pagination: data.pagination },
-  //         "Lấy danh sách lớp học thành công"
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async getStudentById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const student = await StudentService.getStudentBy({ id: Number(id) });
+      if (!student) {
+        throw new Error("Không tìm thấy sinh viên ");
+      }
+      logger.info(`Lấy thông tin sinh viên ${student.fullName} thành công`);
+      res.json(
+        successResponse(
+          student,
+          `Lấy thông tin sinh viên ${student.fullName} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getAlls(req: Request, res: Response): Promise<void> {
+    try {
+      const query: StudentQueryInput = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: (req.query.search as string) || undefined,
+        classId: parseInt(req.query.classId as string) || undefined,
+        isActive:
+          req.query.isActive !== undefined
+            ? req.query.isActive === "true"
+            : true,
+      };
+      const data = await StudentService.getAllStudent(query);
+      if (!data) {
+        throw new Error("Không tìm thấy sinh viên ");
+      }
+      logger.info(`Lấy danh sách sinh viên thành công`);
+      res.json(
+        successResponse(
+          { students: data.students, pagination: data.pagination },
+          "Lấy danh sinh viên thành công"
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
   static async createStudent(req: Request, res: Response): Promise<void> {
     try {
       const input: CreateStudentInput = req.body;

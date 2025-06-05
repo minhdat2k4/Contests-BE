@@ -9,6 +9,8 @@ import { logger } from "./utils/logger";
 import { authRouter } from "./modules/auth/auth.routes";
 import { aboutRouter } from "./modules/about/about.routes";
 import { userRouter } from "@/modules/user";
+import { schoolRouter } from "@/modules/school";
+import { studentRouter } from "@/modules/student";
 // import { schoolRouter } from "@/modules/school"; // Temporarily commented out
 import { classRouter } from "@/modules/class";
 
@@ -65,8 +67,9 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/about", aboutRouter);
 app.use("/api/user", userRouter);
-// app.use("/api/school", schoolRouter); // Temporarily commented out
+app.use("/api/school", schoolRouter);
 app.use("/api/class", classRouter);
+app.use("/api/student", studentRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

@@ -126,14 +126,15 @@ export default class UserService {
         isActive: true,
       },
     });
+    const total = await prisma.user.count({ where: whereClause });
     return {
       users: users,
       pagination: {
         page: page,
         limit: limit,
-        total: users.length,
-        totalPages: Math.ceil(users.length / limit),
-        hasNext: page < Math.ceil(users.length / limit),
+        total: total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
         hasPrev: page > 1,
       },
     };

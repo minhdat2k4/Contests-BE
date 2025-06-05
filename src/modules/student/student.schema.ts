@@ -32,23 +32,32 @@ export const StudentIdShame = z.object({
     .refine(val => !isNaN(val) && val > 0, "Id là 1 số nguyên dương "),
 });
 
-export const UpdeateClasshema = z.object({
-  name: z
+export const UpdateStundentShema = z.object({
+  fullName: z
     .string({
-      required_error: "Vui lòng nhập tên lớp",
+      required_error: "Vui lòng nhập họ và tên",
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
-    .min(1, "Vui lòng nhập tên lớp")
+    .min(1, "Vui lòng nhập tên họ và tên")
     .max(255, "Tên lớp tối đa 255 kí tự")
     .optional(),
-  isActive: z.boolean().optional(),
-  schoolId: z
+  classId: z
     .number({
-      required_error: "Vui lòng nhập id trường",
-      invalid_type_error: "Id trường là một số nguyên",
+      required_error: "Vui lòng nhập id lớp",
+      invalid_type_error: "Id lớp là một số nguyên",
     })
-    .refine(val => !NaN && val > 0, "Id trường là một số nguyên dương")
+    .refine(val => !NaN && val > 0, "Id lớp là một số nguyên dương")
     .optional(),
+  studentCode: z
+    .string({
+      required_error: "Vui lòng nhập mã số sinh viên",
+      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
+    })
+    .min(1, "Vui lòng nhập tên họ và tên")
+    .max(12, "Tên lớp tối đa 12 kí tự")
+    .optional()
+    .optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const StudentQuerySchema = z.object({
@@ -72,7 +81,8 @@ export const StudentQuerySchema = z.object({
   isActive: z
     .string()
     .optional()
-    .transform(val => val === "true"),
+    .transform(val => val === "true")
+    .optional(),
   classId: z
     .string()
     .transform(val => parseInt(val))
@@ -82,5 +92,5 @@ export const StudentQuerySchema = z.object({
 
 export type CreateStudentInput = z.infer<typeof CreateStudentShema>;
 export type StudentIdParams = z.infer<typeof StudentIdShame>;
-export type UpdateClassInput = z.infer<typeof UpdeateClasshema>;
+export type UpdateStudentInput = z.infer<typeof UpdateStundentShema>;
 export type StudentQueryInput = z.infer<typeof StudentQuerySchema>;

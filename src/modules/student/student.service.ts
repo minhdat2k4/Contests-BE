@@ -1,28 +1,35 @@
 import { prisma } from "@/config/database";
-import { Student } from "@prisma/client";
-import { CreateStudentInput, StudentQueryInput } from "@/modules/student";
+import { Student, Class } from "@prisma/client";
+import {
+  CreateStudentInput,
+  StudentQueryInput,
+  UpdateStudentInput,
+} from "@/modules/student";
 export default class StudentService {
-  // static async updateClass(
-  //   id: number,
-  //   data: UpdateClassInput
-  // ): Promise<Class | null> {
-  //   const updateData: any = {};
-  //   if (data.name !== undefined) {
-  //     updateData.name = data.name;
-  //   }
-  //   if (data.isActive !== undefined) {
-  //     updateData.isActive = data.isActive;
-  //   }
-  //   if (data.classId !== undefined) {
-  //     updateData.schoolId = data.schoolId;
-  //   }
-  //   return prisma.class.update({
-  //     where: { id: id },
-  //     data: {
-  //       ...updateData,
-  //     },
-  //   });
-  // }
+  static async updateStudent(
+    id: number,
+    data: UpdateStudentInput
+  ): Promise<Student | null> {
+    const updateData: any = {};
+    if (data.fullName !== undefined) {
+      updateData.fullName = data.fullName;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+    if (data.classId !== undefined) {
+      updateData.classId = data.classId;
+    }
+    if (data.studentCode !== undefined) {
+      updateData.studentCode = data.studentCode;
+    }
+    return prisma.student.update({
+      where: { id: id },
+      data: {
+        ...updateData,
+      },
+    });
+  }
   // static async deleteClass(id: number): Promise<Class> {
   //   return prisma.class.delete({
   //     where: {
@@ -76,7 +83,7 @@ export default class StudentService {
     if (search) {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
-        { fullName: { contains: keyword } },
+        { fullfullName: { contains: keyword } },
         { studentCode: { contains: keyword } },
       ]);
     }
@@ -87,7 +94,7 @@ export default class StudentService {
       take: limit,
       orderBy: { createdAt: "desc" },
     });
-    const total = students.length;
+    const total = await prisma.student.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
     return {
       students: students,

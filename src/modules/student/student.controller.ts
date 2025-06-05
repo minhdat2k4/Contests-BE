@@ -3,8 +3,9 @@ import {
   CreateStudentInput,
   StudentService,
   StudentQueryInput,
+  UpdateStudentInput,
 } from "@/modules/student";
-import { ClassService } from "@/modules/class";
+import { ClassController, ClassService } from "@/modules/class";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 export default class StudentController {
@@ -66,34 +67,40 @@ export default class StudentController {
   //     res.status(400).json(errorResponse((error as Error).message));
   //   }
   // }
-  // static async updateClass(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const input: UpdateClassInput = req.body;
-  //     if (input.schoolId) {
-  //       const school = await SchoolService.getSchoolBy({ id: input.schoolId });
-  //       if (!school) {
-  //         throw new Error("Không tìm thấy trường");
-  //       }
-  //     }
-  //     const Class = await ClassService.getClassBy({ id: Number(id) });
-  //     if (!Class) {
-  //       throw new Error("Không tìm thấy lớp");
-  //     }
-  //     console.log("đ", Class);
-  //     const updateClass = await ClassService.updateClass(Number(id), input);
-  //     if (!updateClass) {
-  //       throw new Error("Cập nhật lớp thất bại");
-  //     }
-  //     logger.info(`Cập nhật lớp  ${Class.name} thành công`);
-  //     res.json(
-  //       successResponse(updateClass, `Cập nhật lớp ${Class.name} thành công`)
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async updateStudent(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const input: UpdateStudentInput = req.body;
+      if (input.classId) {
+        const school = await ClassService.getClassBy({ id: input.classId });
+        if (!school) {
+          throw new Error("Không tìm thấy lớp");
+        }
+      }
+      const student = await StudentService.getStudentBy({ id: Number(id) });
+      if (!student) {
+        throw new Error("Không tìm thấy sinh viên");
+      }
+      console.log(input);
+      const updateStudent = await StudentService.updateStudent(
+        Number(id),
+        input
+      );
+      if (!updateStudent) {
+        throw new Error("Cập nhật sinh viên  thất bại");
+      }
+      logger.info(`Cập nhật sinh viên  ${updateStudent.fullName} thành công`);
+      res.json(
+        successResponse(
+          updateStudent,
+          `Cập nhật sinh viên ${updateStudent.fullName} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 
   static async getStudentById(req: Request, res: Response): Promise<void> {
     try {

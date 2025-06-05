@@ -8,8 +8,8 @@ import { StudentController } from "@/modules/student";
 import {
   CreateStudentShema,
   StudentQuerySchema,
-  StudentIdParams,
   StudentIdShame,
+  UpdateStundentShema,
 } from "./student.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const studentRouter = Router();
@@ -39,14 +39,14 @@ studentRouter.post(
   StudentController.createStudent
 );
 
-// studentRouter.patch(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(UpdeateClasshema),
-//   validateParams(ClassIdShame),
-//   ClassController.updateClass
-// );
+studentRouter.patch(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdateStundentShema),
+  validateParams(StudentIdShame),
+  StudentController.updateStudent
+);
 
 // studentRouter.patch(
 //   "/:id/toggle-active",

@@ -134,9 +134,8 @@ export default class SchoolService {
       take: limit,
       orderBy: { createdAt: "desc" },
     });
-    const total = schools.length;
+    const total = await prisma.school.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
-
     return {
       schools: schools,
       pagination: {

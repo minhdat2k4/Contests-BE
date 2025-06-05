@@ -81,7 +81,7 @@ export default class ClassService {
       take: limit,
       orderBy: { createdAt: "desc" },
     });
-    const total = classes.length;
+    const total = await prisma.class.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
 
     return {

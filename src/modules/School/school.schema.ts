@@ -96,7 +96,8 @@ export const SchoolQuerySchema = z.object({
   isActive: z
     .string()
     .optional()
-    .transform(val => val === "true"),
+    .transform(val => val === "true")
+    .optional(),
 });
 
 export type CreateSchoolInput = z.infer<typeof CreateSchoolSchema>;

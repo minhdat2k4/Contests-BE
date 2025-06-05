@@ -5,7 +5,12 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { ClassController } from "@/modules/class";
-import { ClassQuerySchema, ClassIdParams, ClassIdShame } from "./class.schema";
+import {
+  ClassQuerySchema,
+  CreateClassShema,
+  ClassIdShame,
+  UpdeateClasshema,
+} from "./class.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const classRouter = Router();
 // prive
@@ -26,31 +31,34 @@ classRouter.get(
   ClassController.getClassById
 );
 
-// classRouter.post(
-//   "/",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(CreateclassSchema),
-//   classController.createclass
-// );
+classRouter.post(
+  "/",
+  authenticate,
+  role("Admin"),
+  validateBody(CreateClassShema),
+  ClassController.createClass
+);
 
-// classRouter.patch(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(UpdeateclassShema),
-//   classController.updateShool
-// );
-// classRouter.patch(
-//   "/:id/toggle-active",
-//   authenticate,
-//   role("Admin"),
-//   classController.toggleActive
-// );
-// classRouter.delete(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   classController.deleteclass
-// );
+classRouter.patch(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdeateClasshema),
+  validateParams(ClassIdShame),
+  ClassController.updateClass
+);
+
+classRouter.patch(
+  "/:id/toggle-active",
+  authenticate,
+  role("Admin"),
+  ClassController.toggleActive
+);
+classRouter.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(ClassIdShame),
+  ClassController.deleteClass
+);
 export { classRouter };

@@ -1,18 +1,26 @@
 import z from "zod";
-export const CreateClassShema = z.object({
-  name: z
+export const CreateStudentShema = z.object({
+  fullName: z
     .string({
-      required_error: "Vui lòng nhập tên lớp",
+      required_error: "Vui lòng nhập họ và tên",
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
-    .min(1, "Vui lòng nhập tên lớp")
+    .min(1, "Vui lòng nhập tên họ và tên")
     .max(255, "Tên lớp tối đa 255 kí tự"),
-  schoolId: z
+  classId: z
     .number({
-      required_error: "Vui lòng nhập id trường",
-      invalid_type_error: "Id là một số nguyên",
+      required_error: "Vui lòng nhập id lớp",
+      invalid_type_error: "Id lớp là một số nguyên",
     })
-    .refine(val => !NaN && val > 0, "Id trường là một số nguyên dương"),
+    .refine(val => !NaN && val > 0, "Id lớp là một số nguyên dương"),
+  studentCode: z
+    .string({
+      required_error: "Vui lòng nhập mã số sinh viên",
+      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
+    })
+    .min(1, "Vui lòng nhập tên họ và tên")
+    .max(12, "Tên lớp tối đa 12 kí tự")
+    .optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -71,7 +79,7 @@ export const ClassQuerySchema = z.object({
     .optional(),
 });
 
-export type CreateClassInput = z.infer<typeof CreateClassShema>;
+export type CreateStudentInput = z.infer<typeof CreateStudentShema>;
 export type ClassIdParams = z.infer<typeof ClassIdShame>;
 export type UpdateClassInput = z.infer<typeof UpdeateClasshema>;
 export type ClassQueryInput = z.infer<typeof ClassQuerySchema>;

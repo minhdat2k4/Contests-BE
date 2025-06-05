@@ -6,7 +6,7 @@ export const CreateSchoolSchema = z.object({
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
     .min(5, "Tên trường ít nhất 5 kí  tự ")
-    .max(255, "Tên trường tối đa 5 kí tự"),
+    .max(255, "Tên trường tối đa 255 kí tự"),
   email: z
     .string({
       required_error: "Vui lòng nhập tên eamil",
@@ -45,7 +45,7 @@ export const UpdeateSchoolShema = z.object({
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
     .min(5, "Tên trường ít nhất 5 kí  tự ")
-    .max(255, "Tên trường tối đa 5 kí tự")
+    .max(255, "Tên trường tối đa 255 kí tự")
     .optional(),
   email: z
     .string({

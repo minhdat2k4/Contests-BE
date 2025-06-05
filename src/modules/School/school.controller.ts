@@ -108,7 +108,7 @@ export default class SchoolController {
         isActive: !school.isActive,
       });
       if (!schoolUpdate) {
-        throw new Error("Cập nhật trường thất bại ");
+        throw new Error("Cập nhật trạng thái trường thất bại ");
       }
 
       logger.info(`Cập nhật trạng thái trường  ${school.name} thành công`);

@@ -4,6 +4,7 @@ import {
   CreateStudentInput,
   StudentQueryInput,
   UpdateStudentInput,
+  Students,
 } from "@/modules/student";
 export default class StudentService {
   static async updateStudent(
@@ -30,28 +31,21 @@ export default class StudentService {
       },
     });
   }
-  // static async deleteClass(id: number): Promise<Class> {
-  //   return prisma.class.delete({
-  //     where: {
-  //       id: id,
-  //     },
-  //   });
-  // }
+  static async deleteStudent(id: number): Promise<Student> {
+    return prisma.student.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
 
-  // static async countClassVieoByClassId(id: number) {
-  //   return prisma.classVideo.count({
-  //     where: {
-  //       classId: id,
-  //     },
-  //   });
-  // }
-  // static async countClassStudentClassId(id: number) {
-  //   return prisma.student.count({
-  //     where: {
-  //       classId: id,
-  //     },
-  //   });
-  // }
+  static async countContestantStudentId(id: number) {
+    return prisma.contestant.count({
+      where: {
+        studentId: id,
+      },
+    });
+  }
 
   static async getStudentBy(data: any): Promise<Student | null> {
     return prisma.student.findFirst({
@@ -61,7 +55,7 @@ export default class StudentService {
     });
   }
   static async getAllStudent(query: StudentQueryInput): Promise<{
-    students: Student[];
+    students: Students[];
     pagination: {
       page: number;
       limit: number;
@@ -85,15 +79,34 @@ export default class StudentService {
       whereClause.OR = keywords.flatMap((keyword: string) => [
         { fullfullName: { contains: keyword } },
         { studentCode: { contains: keyword } },
+        { class: { name: { contains: keyword } } },
       ]);
     }
 
-    const students = await prisma.student.findMany({
+    const studentRaw = await prisma.student.findMany({
       where: whereClause,
       skip: skip,
       take: limit,
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        fullName: true,
+        studentCode: true,
+        isActive: true,
+        class: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
+    const students = studentRaw.map(k => ({
+      id: k.id,
+      fullName: k.fullName,
+      studentCode: k.studentCode ?? undefined,
+      isActive: k.isActive,
+      className: k.class?.name ?? null,
+    }));
     const total = await prisma.student.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
     return {

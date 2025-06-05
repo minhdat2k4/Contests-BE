@@ -102,7 +102,7 @@ export default class SchoolService {
     });
   }
   static async getAllShool(query: SchoolQueryInput): Promise<{
-    schools: School[];
+    schools: Omit<School, "createdAt" | "updatedAt">[];
     pagination: {
       page: number;
       limit: number;
@@ -133,6 +133,14 @@ export default class SchoolService {
       skip: skip,
       take: limit,
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        address: true,
+        isActive: true,
+      },
     });
     const total = await prisma.school.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);

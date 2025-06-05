@@ -1,5 +1,14 @@
 import z from "zod";
 import { Student } from "@prisma/client";
+
+export const StudentShame = z.object({
+  id: z.number(),
+  fullName: z.string(),
+  studentCode: z.string().optional(),
+  isActive: z.boolean(),
+  className: z.string(),
+});
+
 export const CreateStudentShema = z.object({
   fullName: z
     .string({
@@ -94,3 +103,4 @@ export type CreateStudentInput = z.infer<typeof CreateStudentShema>;
 export type StudentIdParams = z.infer<typeof StudentIdShame>;
 export type UpdateStudentInput = z.infer<typeof UpdateStundentShema>;
 export type StudentQueryInput = z.infer<typeof StudentQuerySchema>;
+export type Students = z.infer<typeof StudentShame>;

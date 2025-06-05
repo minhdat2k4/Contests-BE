@@ -67,7 +67,7 @@ export const ClassQuerySchema = z.object({
   schoolId: z
     .string()
     .transform(val => parseInt(val))
-    .refine(val => !isNaN(val) && val > 0, "Id phải là số nguyên dương")
+    .refine(val => !isNaN(val) && val > 0, "Id lớp phải là số nguyên dương")
     .optional(),
 });
 

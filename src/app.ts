@@ -13,6 +13,7 @@ import { schoolRouter } from "@/modules/school";
 import { studentRouter } from "@/modules/student";
 // import { schoolRouter } from "@/modules/school"; // Temporarily commented out
 import { classRouter } from "@/modules/class";
+import { questionTopicRoutes } from "@/modules/questionTopic";
 
 // Load environment variables
 dotenv.config();
@@ -70,6 +71,7 @@ app.use("/api/user", userRouter);
 app.use("/api/school", schoolRouter);
 app.use("/api/class", classRouter);
 app.use("/api/student", studentRouter);
+app.use("/api/question-topics", questionTopicRoutes);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

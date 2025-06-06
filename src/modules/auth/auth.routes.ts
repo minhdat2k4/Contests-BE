@@ -34,7 +34,7 @@ authRouter.post(
 );
 // private
 authRouter.post("/logout", authenticate, AuthController.logout);
-authRouter.post("/refresh-token", AuthController.refreshAccToken);
+authRouter.get("/refresh-token", AuthController.refreshAccToken);
 authRouter.get("/abc", authenticate, (req, res) => {
   res.json("au");
 });

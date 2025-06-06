@@ -16,6 +16,7 @@ import UserService from "../user/user.service";
 import { validateData } from "@/middlewares/validation";
 import { sendOtp } from "@/utils/email";
 import bcrypt from "bcrypt";
+import { role } from "@/middlewares/auth";
 
 export default class AuthController {
   static async register(req: Request, res: Response): Promise<void> {
@@ -24,13 +25,15 @@ export default class AuthController {
       const extingUserName = await UserService.existingUserName(input.username);
       if (extingUserName) {
         logger.error(`Tên tài khoản  ${input.username} đã tồn tại`);
-        res.json(validateData("username", "Tên tài khoản đã tồn tại"));
+        res
+          .status(400)
+          .json(validateData("username", "Tên tài khoản đã tồn tại"));
         return;
       }
       const extingEmail = await UserService.existingEmail(input.email);
       if (extingEmail) {
         logger.error(`Email ${input.email} đã tồn tại`);
-        res.json(validateData("email", "Email đã tồn tại"));
+        res.status(400).json(validateData("email", "Email đã tồn tại"));
         return;
       }
       const { confirmPassword, ...userInput } = input;
@@ -52,7 +55,9 @@ export default class AuthController {
       const user = await AuthService.findUserByIdentifier(input.identifier);
       if (!user) {
         logger.error(`Tài khoản ${input.identifier} không tồn tại`);
-        res.json(validateData("identifier", "Tài khoản không tồn tại"));
+        res
+          .status(400)
+          .json(validateData("identifier", "Tài khoản không tồn tại"));
         return;
       }
       const isPassword = await AuthService.isPassword(
@@ -61,7 +66,7 @@ export default class AuthController {
       );
       if (!isPassword) {
         logger.error(`Tài khoản ${input.identifier} nhập sai mật khẩu`);
-        res.json(validateData("password", "Sai mật khẩu "));
+        res.status(400).json(validateData("password", "Sai mật khẩu "));
         return;
       }
       const tokenData = {
@@ -92,7 +97,12 @@ export default class AuthController {
         sameSite: "lax",
         maxAge: 30 * 60 * 60 * 1000 * 24, // 30 ngày
       });
-      res.json(successResponse(null, "Đăng nhập thành công"));
+      res.json(
+        successResponse(
+          { role: user.role, accessToken },
+          "Đăng nhập thành công"
+        )
+      );
       logger.info(`${input.identifier} đăng nhập thành công`);
     } catch (error) {
       logger.error((error as Error).message);
@@ -163,7 +173,7 @@ export default class AuthController {
       });
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(401).json(errorResponse((error as Error).message));
     }
   }
   static async forgotPassword(req: Request, res: Response): Promise<void> {
@@ -171,7 +181,7 @@ export default class AuthController {
       const input: forgotPasswordInput = req.body;
       const user = await UserService.getUserByEmail(input.email);
       if (!user) {
-        res.json(validateData("email", "Không tìm thấy tài khoản"));
+        res.status(400).json(validateData("email", "Không tìm thấy tài khoản"));
         return;
       }
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -207,14 +217,14 @@ export default class AuthController {
       const input: OtpInput = req.body;
       const user = await UserService.getUserByEmail(input.email);
       if (!user) {
-        res.json(validateData("email", "Không tìm thấy tài khoản"));
+        res.status(400).json(validateData("email", "Không tìm thấy tài khoản"));
         return;
       }
       const isOtpExpired = await AuthService.isOtpExpired(
         user.otpExpiredAt ?? undefined
       );
       if (isOtpExpired) {
-        res.json(validateData("otp", "Mã OTP đã hết hạn"));
+        res.status(400).json(validateData("otp", "Mã OTP đã hết hạn"));
         return;
       }
       const isOptCode = await AuthService.isOtpCode(
@@ -222,7 +232,7 @@ export default class AuthController {
         user.otpCode ?? ""
       );
       if (isOptCode) {
-        res.json(validateData("otp", "Mã OTP không chính xác"));
+        res.status(400).json(validateData("otp", "Mã OTP không chính xác"));
         return;
       }
       res.json(successResponse(null, "Xác nhận OTP thành công"));
@@ -274,6 +284,7 @@ export default class AuthController {
           username: user.username,
           email: user.email,
           isActive: user.isActive,
+          role: user.role,
         })
       );
     } catch (error) {
@@ -295,7 +306,7 @@ export default class AuthController {
         logger.error(
           `Người dùng ${req.user.username} nhập sai mật khẩu hiện tại`
         );
-        res.json(validateData("currentPassword", "Sai mật khẩu"));
+        res.status(400).json(validateData("currentPassword", "Sai mật khẩu"));
         return;
       }
       const hashedPassword = await bcrypt.hash(input.newPassword, 10);
@@ -320,7 +331,7 @@ export default class AuthController {
         req.user.userId
       );
       if (extisingEmail) {
-        res.json(validateData("email", "Email đã tồn tại"));
+        res.status(400).json(validateData("email", "Email đã tồn tại"));
         return;
       }
       await UserService.UpdateUser(req.user.userId, {

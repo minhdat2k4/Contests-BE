@@ -15,12 +15,12 @@ export default class SchoolController {
       const input: CreateSchoolInput = req.body;
       const existingEmail = await SchoolService.existingEmail(input.email);
       if (existingEmail) {
-        res.json(validateData("email", "Email đã tồn tại"));
+        res.status(400).json(validateData("email", "Email đã tồn tại"));
         return;
       }
       const existingPhone = await SchoolService.existingPhone(input.phone);
       if (existingPhone) {
-        res.json(validateData("phone", "Số điện thoại đã tồn tại"));
+        res.status(400).json(validateData("phone", "Số điện thoại đã tồn tại"));
         return;
       }
       const school = await SchoolService.createSchool(input);
@@ -67,7 +67,7 @@ export default class SchoolController {
           school.id
         );
         if (existingEmail) {
-          res.json(validateData("email", "Email đã tồn tại"));
+          res.status(400).json(validateData("email", "Email đã tồn tại"));
           return;
         }
       }
@@ -77,7 +77,9 @@ export default class SchoolController {
           school.id
         );
         if (existingPhone) {
-          res.json(validateData("phone", "Số điện thoại đã tồn tại"));
+          res
+            .status(400)
+            .json(validateData("phone", "Số điện thoại đã tồn tại"));
           return;
         }
       }

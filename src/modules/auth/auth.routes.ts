@@ -21,7 +21,11 @@ authRouter.post(
   validateBody(forgotPasswordSchema),
   AuthController.forgotPassword
 );
-authRouter.post("/very-otp", validateBody(otpShema), AuthController.verifyOtp);
+authRouter.post(
+  "/verify-otp",
+  validateBody(otpShema),
+  AuthController.verifyOtp
+);
 authRouter.post(
   "/reset-password",
   validateBody(ResetPasswordShema),
@@ -34,7 +38,7 @@ authRouter.post(
 );
 // private
 authRouter.post("/logout", authenticate, AuthController.logout);
-authRouter.post("/refresh-token", AuthController.refreshAccToken);
+authRouter.get("/refresh-token", AuthController.refreshAccToken);
 authRouter.get("/abc", authenticate, (req, res) => {
   res.json("au");
 });

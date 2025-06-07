@@ -36,7 +36,7 @@ export default class UserService {
       updateData.otpExpiredAt = data.otpExpiredAt;
     }
     if (data.password !== undefined) {
-      const hash = bcrypt.hash(data.password, 10);
+      const hash = await bcrypt.hash(data.password, 10);
       updateData.password = hash;
     }
     return prisma.user.update({

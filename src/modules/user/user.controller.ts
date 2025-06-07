@@ -19,12 +19,14 @@ export default class UserController {
         input.username
       );
       if (existingUserName) {
-        res.json(validateData("username", "Tên tài khoản đã tồn tại"));
+        res
+          .status(400)
+          .json(validateData("username", "Tên tài khoản đã tồn tại"));
         return;
       }
       const existingEmail = await UserService.existingEmail(input.email);
       if (existingEmail) {
-        res.json(validateData("email", "Email đã tồn tại"));
+        res.status(400).json(validateData("email", "Email đã tồn tại"));
         return;
       }
       const hashPassword = await bcrypt.hash(input.password, 10);
@@ -80,7 +82,7 @@ export default class UserController {
           Number(id)
         );
         if (existingEmail) {
-          res.json(validateData("email", "Email này đã tồn tại"));
+          res.status(400).json(validateData("email", "Email này đã tồn tại"));
         }
       }
       if (!user) {

@@ -71,9 +71,9 @@ export const UpdateUserSchema = z.object({
 });
 
 export const otpShema = forgotPasswordSchema.extend({
-  otp: z.number({
+  otp: z.string({
     required_error: "Vui lòng nhập mã OTP",
-    invalid_type_error: "Vui lòng nhập kí tự số ",
+    invalid_type_error: "Vui lòng nhập kí tự chuỗi ",
   }),
 });
 

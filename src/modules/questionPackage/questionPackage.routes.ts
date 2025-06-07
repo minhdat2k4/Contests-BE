@@ -12,7 +12,7 @@ import {
 const questionPackageRouter = Router();
 
 // Apply authentication middleware to all routes
-// router.use(authenticate);
+questionPackageRouter.use(authenticate);
 
 /**
  * @route POST /api/question-packages

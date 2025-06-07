@@ -9,17 +9,17 @@ import {
   QuestionTopicQuerySchema,
 } from "./questionTopic.schema";
 
-const router = Router();
+const questionRouter = Router();
 
 // Apply authentication middleware to all routes
-// router.use(authenticate);
+questionRouter.use(authenticate);
 
 /**
  * @route POST /api/question-topics
  * @description Create a new question topic
  * @access Private (Admin/Judge)
  */
-router.post(
+questionRouter.post(
   "/",
   validateBody(CreateQuestionTopicSchema),
   QuestionTopicController.createQuestionTopic
@@ -30,7 +30,7 @@ router.post(
  * @description Get all question topics with pagination and filtering
  * @access Private (Admin/Judge)
  */
-router.get(
+questionRouter.get(
   "/",
   validateQuery(QuestionTopicQuerySchema),
   QuestionTopicController.getAllQuestionTopics
@@ -41,7 +41,7 @@ router.get(
  * @description Get all active question topics (for dropdown)
  * @access Private (Admin/Judge)
  */
-router.get(
+questionRouter.get(
   "/active",
   QuestionTopicController.getActiveQuestionTopics
 );
@@ -51,7 +51,7 @@ router.get(
  * @description Get question topic by ID
  * @access Private (Admin/Judge)
  */
-router.get(
+questionRouter.get(
   "/:id",
   validateParams(QuestionTopicIdSchema),
   QuestionTopicController.getQuestionTopicById
@@ -62,7 +62,7 @@ router.get(
  * @description Update question topic
  * @access Private (Admin/Judge)
  */
-router.put(
+questionRouter.put(
   "/:id",
   validateParams(QuestionTopicIdSchema),
   validateBody(UpdateQuestionTopicSchema),
@@ -74,10 +74,10 @@ router.put(
  * @description Soft delete question topic
  * @access Private (Admin/Judge)
  */
-router.delete(
+questionRouter.delete(
   "/:id",
   validateParams(QuestionTopicIdSchema),
   QuestionTopicController.deleteQuestionTopic
 );
 
-export default router;
+export default questionRouter;

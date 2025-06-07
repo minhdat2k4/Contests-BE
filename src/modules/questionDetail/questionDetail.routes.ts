@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { validateBody, validateQuery, validateParams } from "@/middlewares/validation";
 import QuestionDetailController from "./questionDetail.controller";
+import { authenticate } from "@/middlewares/auth";
 import {
   CreateQuestionDetailSchema,
   UpdateQuestionDetailSchema,
@@ -11,6 +12,9 @@ import {
 } from "./questionDetail.schema";
 
 const questionDetailRouter = Router();
+
+// Apply authentication middleware to all routes
+questionDetailRouter.use(authenticate);
 
 /**
  * @route POST /api/question-details

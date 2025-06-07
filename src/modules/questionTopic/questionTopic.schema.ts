@@ -62,11 +62,20 @@ export const QuestionTopicQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
+// Batch Delete Question Topics Schema
+export const BatchDeleteQuestionTopicsSchema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải cung cấp ít nhất một ID")
+    .max(100, "Không thể xóa quá 100 mục cùng lúc"),
+});
+
 // TypeScript types
 export type CreateQuestionTopicInput = z.infer<typeof CreateQuestionTopicSchema>;
 export type UpdateQuestionTopicInput = z.infer<typeof UpdateQuestionTopicSchema>;
-export type QuestionTopicQueryInput = z.infer<typeof QuestionTopicQuerySchema>;
 export type QuestionTopicIdInput = z.infer<typeof QuestionTopicIdSchema>;
+export type QuestionTopicQueryInput = z.infer<typeof QuestionTopicQuerySchema>;
+export type BatchDeleteQuestionTopicsInput = z.infer<typeof BatchDeleteQuestionTopicsSchema>;
 
 // Response types
 export interface QuestionTopicResponse {
@@ -84,5 +93,16 @@ export interface QuestionTopicDetailResponse extends QuestionTopicResponse {
     plainText: string;
     questionType: string;
     difficulty: string;
+  }>;
+}
+
+export interface BatchDeleteResponse {
+  totalRequested: number;
+  successful: number;
+  failed: number;
+  successfulIds: number[];
+  failedIds: Array<{
+    id: number;
+    reason: string;
   }>;
 }

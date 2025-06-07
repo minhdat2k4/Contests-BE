@@ -9,6 +9,7 @@ import {
   UpdateQuestionTopicInput,
   QuestionTopicQueryInput,
   QuestionTopicIdInput,
+  BatchDeleteQuestionTopicsInput,
 } from "./questionTopic.schema";
 
 export default class QuestionTopicController {
@@ -249,7 +250,6 @@ export default class QuestionTopicController {
       );
     }
   }
-
   /**
    * Get active question topics for dropdown
    */
@@ -266,6 +266,44 @@ export default class QuestionTopicController {
       res.status(500).json(
         errorResponse(
           "Lỗi server khi lấy danh sách chủ đề câu hỏi hoạt động",
+          ERROR_CODES.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+  }
+
+  /**
+   * Batch delete question topics
+   */
+  static async batchDeleteQuestionTopics(req: Request, res: Response): Promise<void> {
+    try {
+      const data: BatchDeleteQuestionTopicsInput = req.body;
+
+      logger.info(`Attempting to batch delete ${data.ids.length} question topics`);
+
+      const result = await QuestionTopicService.batchDeleteQuestionTopics(data);
+
+      logger.info(`Batch delete completed: ${result.successful} successful, ${result.failed} failed`);
+
+      // Return success even if some items failed - client needs to handle partial failures
+      res.status(200).json(
+        successResponse(
+          result,
+          `Xóa hàng loạt hoàn tất: ${result.successful}/${result.totalRequested} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error("Error in batch delete question topics:", error);
+        if (error instanceof CustomError) {
+        res.status(error.statusCode).json(
+          errorResponse(error.message, error.code)
+        );
+        return;
+      }
+
+      res.status(500).json(
+        errorResponse(
+          "Lỗi server khi xóa hàng loạt chủ đề câu hỏi",
           ERROR_CODES.INTERNAL_SERVER_ERROR
         )
       );

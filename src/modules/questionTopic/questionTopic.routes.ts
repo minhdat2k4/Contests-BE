@@ -7,6 +7,7 @@ import {
   UpdateQuestionTopicSchema,
   QuestionTopicIdSchema,
   QuestionTopicQuerySchema,
+  BatchDeleteQuestionTopicsSchema,
 } from "./questionTopic.schema";
 
 const questionRouter = Router();
@@ -78,6 +79,17 @@ questionRouter.delete(
   "/:id",
   validateParams(QuestionTopicIdSchema),
   QuestionTopicController.deleteQuestionTopic
+);
+
+/**
+ * @route POST /api/question-topics/batch-delete
+ * @description Batch delete question topics
+ * @access Private (Admin/Judge)
+ */
+questionRouter.post(
+  "/batch-delete",
+  validateBody(BatchDeleteQuestionTopicsSchema),
+  QuestionTopicController.batchDeleteQuestionTopics
 );
 
 export default questionRouter;

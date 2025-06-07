@@ -6,6 +6,8 @@ import {
   QuestionTopicQueryInput,
   QuestionTopicResponse,
   QuestionTopicDetailResponse,
+  BatchDeleteQuestionTopicsInput,
+  BatchDeleteResponse,
 } from "./questionTopic.schema";
 
 export default class QuestionTopicService {
@@ -209,5 +211,68 @@ export default class QuestionTopicService {
       },
       orderBy: { name: "asc" },
     });
+  }
+
+  /**
+   * Batch delete question topics (soft delete)
+   */
+  static async batchDeleteQuestionTopics(
+    data: BatchDeleteQuestionTopicsInput
+  ): Promise<BatchDeleteResponse> {
+    const { ids } = data;
+    const successfulIds: number[] = [];
+    const failedIds: Array<{ id: number; reason: string }> = [];
+
+    // Process each ID individually to handle partial failures
+    for (const id of ids) {
+      try {
+        // Check if question topic exists and is not already deleted
+        const questionTopic = await prisma.questionTopic.findFirst({
+          where: { id, isActive: true },
+        });
+
+        if (!questionTopic) {
+          failedIds.push({
+            id,
+            reason: "Chủ đề câu hỏi không tồn tại hoặc đã bị xóa",
+          });
+          continue;
+        }
+
+        // Check if there are active questions associated with this topic
+        const questionsCount = await prisma.question.count({
+          where: { questionTopicId: id, isActive: true },
+        });
+
+        if (questionsCount > 0) {
+          failedIds.push({
+            id,
+            reason: `Không thể xóa chủ đề có ${questionsCount} câu hỏi đang hoạt động`,
+          });
+          continue;
+        }
+
+        // Soft delete the question topic
+        await prisma.questionTopic.update({
+          where: { id },
+          data: { isActive: false },
+        });
+
+        successfulIds.push(id);
+      } catch (error) {
+        failedIds.push({
+          id,
+          reason: "Lỗi hệ thống khi xóa chủ đề câu hỏi",
+        });
+      }
+    }
+
+    return {
+      totalRequested: ids.length,
+      successful: successfulIds.length,
+      failed: failedIds.length,
+      successfulIds,
+      failedIds,
+    };
   }
 }

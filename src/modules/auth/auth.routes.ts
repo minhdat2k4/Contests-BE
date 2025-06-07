@@ -21,7 +21,11 @@ authRouter.post(
   validateBody(forgotPasswordSchema),
   AuthController.forgotPassword
 );
-authRouter.post("/very-otp", validateBody(otpShema), AuthController.verifyOtp);
+authRouter.post(
+  "/verify-otp",
+  validateBody(otpShema),
+  AuthController.verifyOtp
+);
 authRouter.post(
   "/reset-password",
   validateBody(ResetPasswordShema),

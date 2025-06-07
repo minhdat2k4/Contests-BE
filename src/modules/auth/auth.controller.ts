@@ -46,7 +46,7 @@ export default class AuthController {
       logger.info(`Đăng kí tài khoản thành công ${user}`);
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async login(req: Request, res: Response): Promise<void> {
@@ -106,7 +106,7 @@ export default class AuthController {
       logger.info(`${input.identifier} đăng nhập thành công`);
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async logout(req: Request, res: Response): Promise<void> {
@@ -134,7 +134,7 @@ export default class AuthController {
       logger.info(`${req.user.username} đăng xuất thành công`);
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async refreshAccToken(req: Request, res: Response): Promise<void> {
@@ -181,8 +181,7 @@ export default class AuthController {
       const input: forgotPasswordInput = req.body;
       const user = await UserService.getUserByEmail(input.email);
       if (!user) {
-        res.status(400).json(validateData("email", "Không tìm thấy tài khoản"));
-        return;
+        throw new Error("Không tìm thấy tài khoản");
       }
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiredAt = new Date(Date.now() + 2 * 60 * 1000);
@@ -209,7 +208,7 @@ export default class AuthController {
       logger.info(` Gửi mã otp cho email ${input.email} thành công`);
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async verifyOtp(req: Request, res: Response): Promise<void> {
@@ -217,29 +216,26 @@ export default class AuthController {
       const input: OtpInput = req.body;
       const user = await UserService.getUserByEmail(input.email);
       if (!user) {
-        res.status(400).json(validateData("email", "Không tìm thấy tài khoản"));
-        return;
+        throw new Error("Không tìm thấy tài khoản");
       }
       const isOtpExpired = await AuthService.isOtpExpired(
         user.otpExpiredAt ?? undefined
       );
       if (isOtpExpired) {
-        res.status(400).json(validateData("otp", "Mã OTP đã hết hạn"));
-        return;
+        throw new Error("Mã OTP đã hết hạn");
       }
       const isOptCode = await AuthService.isOtpCode(
         String(input.otp),
         user.otpCode ?? ""
       );
       if (isOptCode) {
-        res.status(400).json(validateData("otp", "Mã OTP không chính xác"));
-        return;
+        throw new Error("Mã OTP không chính xác");
       }
       res.json(successResponse(null, "Xác nhận OTP thành công"));
       logger.info(`${user.username} xác nhận otp thành công`);
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async resetPassword(req: Request, res: Response): Promise<void> {
@@ -256,11 +252,10 @@ export default class AuthController {
       if (isOptCode) {
         throw new Error("Đổi mật khẩu thất bại");
       }
-      const hashPassword = await bcrypt.hash(input.newPassword, 10);
       const data: any = {
         email: input.email,
         otp: input.otp,
-        password: hashPassword,
+        password: input.newPassword,
         otpCode: null,
         otpExpiredAt: null,
       };
@@ -269,7 +264,7 @@ export default class AuthController {
       logger.info(`${user.username} đổi mật khẩu thành công`);
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async profile(req: Request, res: Response): Promise<void> {
@@ -289,7 +284,7 @@ export default class AuthController {
       );
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async changePassWord(req: Request, res: Response): Promise<void> {
@@ -317,7 +312,7 @@ export default class AuthController {
       logger.info(`Người dùng ${req.user.username} đổi mật thành công`);
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async changeInfo(req: Request, res: Response): Promise<void> {
@@ -341,7 +336,7 @@ export default class AuthController {
       res.json(successResponse(null, "Cập nhật email thành công"));
     } catch (error) {
       logger.error((error as Error).message);
-      res.json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
 }

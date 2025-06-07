@@ -6,6 +6,8 @@ import {
   QuestionPackageQueryInput,
   QuestionPackageResponse,
   QuestionPackageDetailResponse,
+  BatchDeleteQuestionPackagesInput,
+  BatchDeleteResponse,
 } from "./questionPackage.schema";
 
 export default class QuestionPackageService {
@@ -241,5 +243,81 @@ export default class QuestionPackageService {
       },
       orderBy: { name: "asc" },
     });
+  }
+
+  /**
+   * Batch delete question packages (soft delete)
+   */
+  static async batchDeleteQuestionPackages(
+    data: BatchDeleteQuestionPackagesInput
+  ): Promise<BatchDeleteResponse> {
+    const { ids } = data;
+    const successfulIds: number[] = [];
+    const failedIds: Array<{ id: number; reason: string }> = [];
+
+    // Process each ID individually to handle partial failures
+    for (const id of ids) {
+      try {
+        // Check if question package exists and is not already deleted
+        const questionPackage = await prisma.questionPackage.findFirst({
+          where: { id, isActive: true },
+        });
+
+        if (!questionPackage) {
+          failedIds.push({
+            id,
+            reason: "Gói câu hỏi không tồn tại hoặc đã bị xóa",
+          });
+          continue;
+        }
+
+        // Check if there are active question details associated with this package
+        const questionDetailsCount = await prisma.questionDetail.count({
+          where: { questionPackageId: id, isActive: true },
+        });
+
+        if (questionDetailsCount > 0) {
+          failedIds.push({
+            id,
+            reason: `Không thể xóa gói câu hỏi có ${questionDetailsCount} câu hỏi đang hoạt động`,
+          });
+          continue;
+        }
+
+        // Check if there are active matches using this package
+        const matchesCount = await prisma.match.count({
+          where: { questionPackageId: id, isActive: true },
+        });
+
+        if (matchesCount > 0) {
+          failedIds.push({
+            id,
+            reason: `Không thể xóa gói câu hỏi đang được sử dụng trong ${matchesCount} trận đấu`,
+          });
+          continue;
+        }
+
+        // Soft delete the question package
+        await prisma.questionPackage.update({
+          where: { id },
+          data: { isActive: false },
+        });
+
+        successfulIds.push(id);
+      } catch (error) {
+        failedIds.push({
+          id,
+          reason: "Lỗi hệ thống khi xóa gói câu hỏi",
+        });
+      }
+    }
+
+    return {
+      totalRequested: ids.length,
+      successful: successfulIds.length,
+      failed: failedIds.length,
+      successfulIds,
+      failedIds,
+    };
   }
 }

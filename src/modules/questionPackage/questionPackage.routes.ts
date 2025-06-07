@@ -7,6 +7,7 @@ import {
   UpdateQuestionPackageSchema,
   QuestionPackageIdSchema,
   QuestionPackageQuerySchema,
+  BatchDeleteQuestionPackagesSchema,
 } from "./questionPackage.schema";
 
 const questionPackageRouter = Router();
@@ -78,6 +79,17 @@ questionPackageRouter.delete(
   "/:id",
   validateParams(QuestionPackageIdSchema),
   QuestionPackageController.deleteQuestionPackage
+);
+
+/**
+ * @route POST /api/question-packages/batch-delete
+ * @description Batch delete question packages
+ * @access Private (Admin/Judge)
+ */
+questionPackageRouter.post(
+  "/batch-delete",
+  validateBody(BatchDeleteQuestionPackagesSchema),
+  QuestionPackageController.batchDeleteQuestionPackages
 );
 
 export { questionPackageRouter };

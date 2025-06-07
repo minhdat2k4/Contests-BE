@@ -9,6 +9,7 @@ import {
   UpdateQuestionPackageInput,
   QuestionPackageQueryInput,
   QuestionPackageIdInput,
+  BatchDeleteQuestionPackagesInput,
 } from "./questionPackage.schema";
 
 export default class QuestionPackageController {
@@ -254,7 +255,6 @@ export default class QuestionPackageController {
       );
     }
   }
-
   /**
    * Get active question packages for dropdown
    */
@@ -271,6 +271,44 @@ export default class QuestionPackageController {
       res.status(500).json(
         errorResponse(
           "Lỗi server khi lấy danh sách gói câu hỏi hoạt động",
+          ERROR_CODES.INTERNAL_SERVER_ERROR
+        )
+      );
+    }
+  }
+
+  /**
+   * Batch delete question packages
+   */
+  static async batchDeleteQuestionPackages(req: Request, res: Response): Promise<void> {
+    try {
+      const data: BatchDeleteQuestionPackagesInput = req.body;
+
+      logger.info(`Attempting to batch delete ${data.ids.length} question packages`);
+
+      const result = await QuestionPackageService.batchDeleteQuestionPackages(data);
+
+      logger.info(`Batch delete completed: ${result.successful} successful, ${result.failed} failed`);
+
+      // Return success even if some items failed - client needs to handle partial failures
+      res.status(200).json(
+        successResponse(
+          result,
+          `Xóa hàng loạt hoàn tất: ${result.successful}/${result.totalRequested} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error("Error in batch delete question packages:", error);
+        if (error instanceof CustomError) {
+        res.status(error.statusCode).json(
+          errorResponse(error.message, error.code)
+        );
+        return;
+      }
+
+      res.status(500).json(
+        errorResponse(
+          "Lỗi server khi xóa hàng loạt gói câu hỏi",
           ERROR_CODES.INTERNAL_SERVER_ERROR
         )
       );

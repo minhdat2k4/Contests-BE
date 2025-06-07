@@ -15,6 +15,7 @@ import { studentRouter } from "@/modules/student";
 import { classRouter } from "@/modules/class";
 import { questionTopicRoutes } from "@/modules/questionTopic";
 import { questionPackageRouter } from "@/modules/questionPackage";
+import { questionDetailRouter } from "@/modules/questionDetail";
 
 // Load environment variables
 dotenv.config();
@@ -74,6 +75,7 @@ app.use("/api/class", classRouter);
 app.use("/api/student", studentRouter);
 app.use("/api/question-topics", questionTopicRoutes);
 app.use("/api/question-packages", questionPackageRouter);
+app.use("/api/question-details", questionDetailRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

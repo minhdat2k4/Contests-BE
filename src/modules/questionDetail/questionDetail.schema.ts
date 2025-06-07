@@ -1,0 +1,200 @@
+import { z } from "zod";
+
+// Create Question Detail Schema
+export const CreateQuestionDetailSchema = z.object({
+  questionId: z
+    .number()
+    .int()
+    .positive("ID câu hỏi phải là số nguyên dương"),
+  questionPackageId: z
+    .number()
+    .int()
+    .positive("ID gói câu hỏi phải là số nguyên dương"),
+  questionOrder: z
+    .number()
+    .int()
+    .positive("Thứ tự câu hỏi phải là số nguyên dương"),
+  isActive: z.boolean().optional().default(true),
+});
+
+// Update Question Detail Schema
+export const UpdateQuestionDetailSchema = z.object({
+  questionOrder: z
+    .number()
+    .int()
+    .positive("Thứ tự câu hỏi phải là số nguyên dương")
+    .optional(),
+  isActive: z.boolean().optional(),
+});
+
+// Question Detail Composite ID Schema
+export const QuestionDetailIdSchema = z.object({
+  questionId: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "ID câu hỏi phải là số nguyên dương",
+    }),
+  questionPackageId: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "ID gói câu hỏi phải là số nguyên dương",
+    }),
+});
+
+// Bulk Create Question Details Schema
+export const BulkCreateQuestionDetailsSchema = z.object({
+  questionPackageId: z
+    .number()
+    .int()
+    .positive("ID gói câu hỏi phải là số nguyên dương"),
+  questions: z
+    .array(
+      z.object({
+        questionId: z
+          .number()
+          .int()
+          .positive("ID câu hỏi phải là số nguyên dương"),
+        questionOrder: z
+          .number()
+          .int()
+          .positive("Thứ tự câu hỏi phải là số nguyên dương"),
+      })
+    )
+    .min(1, "Phải có ít nhất một câu hỏi")
+    .max(50, "Không thể thêm quá 50 câu hỏi cùng lúc"),
+});
+
+// Query Schema for filtering and pagination
+export const QuestionDetailQuerySchema = z.object({
+  page: z
+    .string()
+    .optional()
+    .default("1")
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "Trang phải là số nguyên dương",
+    }),
+  limit: z
+    .string()
+    .optional()
+    .default("10")
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0 && val <= 100, {
+      message: "Giới hạn phải là số nguyên dương và không quá 100",
+    }),
+  questionPackageId: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined) return undefined;
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    })
+    .refine((val) => val === undefined || val > 0, {
+      message: "ID gói câu hỏi phải là số nguyên dương",
+    }),
+  questionId: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined) return undefined;
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    })
+    .refine((val) => val === undefined || val > 0, {
+      message: "ID câu hỏi phải là số nguyên dương",
+    }),
+  search: z.string().optional(),
+  isActive: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined) return undefined;
+      return val === "true";
+    }),
+  sortBy: z.enum(["questionOrder", "createdAt", "updatedAt"]).optional().default("questionOrder"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
+});
+
+// Reorder Questions Schema
+export const ReorderQuestionsSchema = z.object({
+  questionPackageId: z
+    .number()
+    .int()
+    .positive("ID gói câu hỏi phải là số nguyên dương"),
+  reorders: z
+    .array(
+      z.object({
+        questionId: z
+          .number()
+          .int()
+          .positive("ID câu hỏi phải là số nguyên dương"),
+        newOrder: z
+          .number()
+          .int()
+          .positive("Thứ tự mới phải là số nguyên dương"),
+      })
+    )
+    .min(1, "Phải có ít nhất một câu hỏi để sắp xếp lại")
+    .max(50, "Không thể sắp xếp lại quá 50 câu hỏi cùng lúc"),
+});
+
+// TypeScript types
+export type CreateQuestionDetailInput = z.infer<typeof CreateQuestionDetailSchema>;
+export type UpdateQuestionDetailInput = z.infer<typeof UpdateQuestionDetailSchema>;
+export type QuestionDetailIdInput = z.infer<typeof QuestionDetailIdSchema>;
+export type QuestionDetailQueryInput = z.infer<typeof QuestionDetailQuerySchema>;
+export type BulkCreateQuestionDetailsInput = z.infer<typeof BulkCreateQuestionDetailsSchema>;
+export type ReorderQuestionsInput = z.infer<typeof ReorderQuestionsSchema>;
+
+// Response types
+export interface QuestionDetailResponse {
+  questionId: number;
+  questionPackageId: number;
+  questionOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  question: {
+    id: number;
+    plainText: string;
+    questionType: string;
+    difficulty: string;
+    defaultTime: number;
+    score: number;
+  };
+  questionPackage: {
+    id: number;
+    name: string;
+    isActive: boolean;
+  };
+}
+
+export interface QuestionDetailListResponse {
+  questionId: number;
+  questionPackageId: number;
+  questionOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  question: {
+    id: number;
+    plainText: string;
+    questionType: string;
+    difficulty: string;
+  };
+  questionPackage: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface QuestionDetailStatsResponse {
+  totalQuestionDetails: number;
+  activeQuestionDetails: number;
+  uniqueQuestions: number;
+  uniquePackages: number;
+  averageQuestionsPerPackage: number;
+}

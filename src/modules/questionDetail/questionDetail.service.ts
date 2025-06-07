@@ -1,0 +1,502 @@
+import { prisma } from "@/config/database";
+import { QuestionDetail } from "@prisma/client";
+import {
+  CreateQuestionDetailInput,
+  UpdateQuestionDetailInput,
+  QuestionDetailQueryInput,
+  QuestionDetailResponse,
+  QuestionDetailListResponse,
+  QuestionDetailStatsResponse,
+  BulkCreateQuestionDetailsInput,
+  ReorderQuestionsInput,
+} from "./questionDetail.schema";
+
+export default class QuestionDetailService {
+  /**
+   * Create a new question detail relationship
+   */
+  static async createQuestionDetail(
+    data: CreateQuestionDetailInput
+  ): Promise<QuestionDetail> {
+    return prisma.questionDetail.create({
+      data: {
+        questionId: data.questionId,
+        questionPackageId: data.questionPackageId,
+        questionOrder: data.questionOrder,
+        isActive: data.isActive ?? true,
+      },
+    });
+  }
+
+  /**
+   * Get question detail by composite key
+   */
+  static async getQuestionDetailById(
+    questionId: number,
+    questionPackageId: number
+  ): Promise<QuestionDetailResponse | null> {
+    const questionDetail = await prisma.questionDetail.findFirst({
+      where: {
+        questionId,
+        questionPackageId,
+      },
+      include: {
+        question: {
+          select: {
+            id: true,
+            plainText: true,
+            questionType: true,
+            difficulty: true,
+            defaultTime: true,
+            score: true,
+          },
+        },
+        questionPackage: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    if (!questionDetail) return null;
+
+    return {
+      questionId: questionDetail.questionId,
+      questionPackageId: questionDetail.questionPackageId,
+      questionOrder: questionDetail.questionOrder,
+      isActive: questionDetail.isActive,
+      createdAt: questionDetail.createdAt,
+      updatedAt: questionDetail.updatedAt,
+      question: questionDetail.question,
+      questionPackage: questionDetail.questionPackage,
+    };
+  }
+
+  /**
+   * Update question detail
+   */
+  static async updateQuestionDetail(
+    questionId: number,
+    questionPackageId: number,
+    data: UpdateQuestionDetailInput
+  ): Promise<QuestionDetail | null> {
+    const updateData: any = {};
+
+    if (data.questionOrder !== undefined) {
+      updateData.questionOrder = data.questionOrder;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+
+    return prisma.questionDetail.update({
+      where: {
+        questionId_questionPackageId: {
+          questionId,
+          questionPackageId,
+        },
+      },
+      data: updateData,
+    });
+  }
+
+  /**
+   * Remove question from package (delete)
+   */
+  static async deleteQuestionDetail(
+    questionId: number,
+    questionPackageId: number
+  ): Promise<QuestionDetail | null> {
+    return prisma.questionDetail.delete({
+      where: {
+        questionId_questionPackageId: {
+          questionId,
+          questionPackageId,
+        },
+      },
+    });
+  }
+
+  /**
+   * Soft delete question detail (set isActive to false)
+   */
+  static async softDeleteQuestionDetail(
+    questionId: number,
+    questionPackageId: number
+  ): Promise<QuestionDetail | null> {
+    return prisma.questionDetail.update({
+      where: {
+        questionId_questionPackageId: {
+          questionId,
+          questionPackageId,
+        },
+      },
+      data: { isActive: false },
+    });
+  }
+
+  /**
+   * Check if question detail exists
+   */
+  static async questionDetailExists(
+    questionId: number,
+    questionPackageId: number
+  ): Promise<boolean> {
+    const questionDetail = await prisma.questionDetail.findFirst({
+      where: {
+        questionId,
+        questionPackageId,
+      },
+    });
+    return !!questionDetail;
+  }
+
+  /**
+   * Check if question order already exists in the package
+   */
+  static async questionOrderExists(
+    questionPackageId: number,
+    questionOrder: number,
+    excludeQuestionId?: number
+  ): Promise<boolean> {
+    const whereClause: any = {
+      questionPackageId,
+      questionOrder,
+      isActive: true,
+    };
+
+    if (excludeQuestionId) {
+      whereClause.NOT = { questionId: excludeQuestionId };
+    }
+
+    const questionDetail = await prisma.questionDetail.findFirst({
+      where: whereClause,
+    });
+    return !!questionDetail;
+  }
+
+  /**
+   * Get all question details with pagination and filtering
+   */
+  static async getAllQuestionDetails(
+    queryInput: QuestionDetailQueryInput
+  ): Promise<{
+    questionDetails: QuestionDetailListResponse[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, questionPackageId, questionId, search, isActive, sortBy, sortOrder } = queryInput;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const whereClause: any = {};
+
+    if (questionPackageId !== undefined) {
+      whereClause.questionPackageId = questionPackageId;
+    }
+
+    if (questionId !== undefined) {
+      whereClause.questionId = questionId;
+    }
+
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive;
+    }
+
+    if (search) {
+      whereClause.OR = [
+        {
+          question: {
+            plainText: {
+              contains: search,
+            },
+          },
+        },
+        {
+          questionPackage: {
+            name: {
+              contains: search,
+            },
+          },
+        },
+      ];
+    }
+
+    // Count total records
+    const total = await prisma.questionDetail.count({
+      where: whereClause,
+    });
+
+    // Get paginated results
+    const questionDetails = await prisma.questionDetail.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      include: {
+        question: {
+          select: {
+            id: true,
+            plainText: true,
+            questionType: true,
+            difficulty: true,
+          },
+        },
+        questionPackage: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      questionDetails: questionDetails.map((detail) => ({
+        questionId: detail.questionId,
+        questionPackageId: detail.questionPackageId,
+        questionOrder: detail.questionOrder,
+        isActive: detail.isActive,
+        createdAt: detail.createdAt,
+        updatedAt: detail.updatedAt,
+        question: detail.question,
+        questionPackage: detail.questionPackage,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
+
+  /**
+   * Get questions by package ID with ordering
+   */
+  static async getQuestionsByPackageId(
+    questionPackageId: number,
+    includeInactive: boolean = false
+  ): Promise<QuestionDetailListResponse[]> {
+    const whereClause: any = { questionPackageId };
+    
+    if (!includeInactive) {
+      whereClause.isActive = true;
+    }
+
+    const questionDetails = await prisma.questionDetail.findMany({
+      where: whereClause,
+      orderBy: { questionOrder: "asc" },
+      include: {
+        question: {
+          select: {
+            id: true,
+            plainText: true,
+            questionType: true,
+            difficulty: true,
+          },
+        },
+        questionPackage: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return questionDetails.map((detail) => ({
+      questionId: detail.questionId,
+      questionPackageId: detail.questionPackageId,
+      questionOrder: detail.questionOrder,
+      isActive: detail.isActive,
+      createdAt: detail.createdAt,
+      updatedAt: detail.updatedAt,
+      question: detail.question,
+      questionPackage: detail.questionPackage,
+    }));
+  }
+
+  /**
+   * Get packages by question ID
+   */
+  static async getPackagesByQuestionId(
+    questionId: number,
+    includeInactive: boolean = false
+  ): Promise<QuestionDetailListResponse[]> {
+    const whereClause: any = { questionId };
+    
+    if (!includeInactive) {
+      whereClause.isActive = true;
+    }
+
+    const questionDetails = await prisma.questionDetail.findMany({
+      where: whereClause,
+      orderBy: { questionOrder: "asc" },
+      include: {
+        question: {
+          select: {
+            id: true,
+            plainText: true,
+            questionType: true,
+            difficulty: true,
+          },
+        },
+        questionPackage: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return questionDetails.map((detail) => ({
+      questionId: detail.questionId,
+      questionPackageId: detail.questionPackageId,
+      questionOrder: detail.questionOrder,
+      isActive: detail.isActive,
+      createdAt: detail.createdAt,
+      updatedAt: detail.updatedAt,
+      question: detail.question,
+      questionPackage: detail.questionPackage,
+    }));
+  }
+
+  /**
+   * Bulk create question details
+   */
+  static async bulkCreateQuestionDetails(
+    data: BulkCreateQuestionDetailsInput
+  ): Promise<QuestionDetail[]> {
+    const { questionPackageId, questions } = data;
+
+    const questionDetailsData = questions.map((q) => ({
+      questionId: q.questionId,
+      questionPackageId,
+      questionOrder: q.questionOrder,
+      isActive: true,
+    }));
+
+    return prisma.$transaction(
+      questionDetailsData.map((detail) =>
+        prisma.questionDetail.create({ data: detail })
+      )
+    );
+  }
+
+  /**
+   * Reorder questions in a package
+   */
+  static async reorderQuestions(
+    data: ReorderQuestionsInput
+  ): Promise<QuestionDetail[]> {
+    const { questionPackageId, reorders } = data;
+
+    return prisma.$transaction(
+      reorders.map(({ questionId, newOrder }) =>
+        prisma.questionDetail.update({
+          where: {
+            questionId_questionPackageId: {
+              questionId,
+              questionPackageId,
+            },
+          },
+          data: { questionOrder: newOrder },
+        })
+      )
+    );
+  }
+
+  /**
+   * Get next available question order for a package
+   */
+  static async getNextQuestionOrder(questionPackageId: number): Promise<number> {
+    const maxOrder = await prisma.questionDetail.findFirst({
+      where: { questionPackageId, isActive: true },
+      orderBy: { questionOrder: "desc" },
+      select: { questionOrder: true },
+    });
+
+    return (maxOrder?.questionOrder || 0) + 1;
+  }
+
+  /**
+   * Get question detail statistics
+   */
+  static async getQuestionDetailStats(): Promise<QuestionDetailStatsResponse> {
+    const [totalCount, activeCount, uniqueQuestions, uniquePackages] = await Promise.all([
+      prisma.questionDetail.count(),
+      prisma.questionDetail.count({ where: { isActive: true } }),
+      prisma.questionDetail.groupBy({
+        by: ["questionId"],
+        where: { isActive: true },
+      }),
+      prisma.questionDetail.groupBy({
+        by: ["questionPackageId"],
+        where: { isActive: true },
+      }),
+    ]);
+
+    const uniqueQuestionCount = uniqueQuestions.length;
+    const uniquePackageCount = uniquePackages.length;
+    const averageQuestionsPerPackage = uniquePackageCount > 0 
+      ? Math.round((activeCount / uniquePackageCount) * 100) / 100
+      : 0;
+
+    return {
+      totalQuestionDetails: totalCount,
+      activeQuestionDetails: activeCount,
+      uniqueQuestions: uniqueQuestionCount,
+      uniquePackages: uniquePackageCount,
+      averageQuestionsPerPackage,
+    };
+  }
+
+  /**
+   * Remove all questions from a package
+   */
+  static async removeAllQuestionsFromPackage(
+    questionPackageId: number
+  ): Promise<{ count: number }> {
+    const result = await prisma.questionDetail.deleteMany({
+      where: { questionPackageId },
+    });
+    return result;
+  }
+
+  /**
+   * Check if question exists in the system
+   */
+  static async questionExists(questionId: number): Promise<boolean> {
+    const question = await prisma.question.findFirst({
+      where: { id: questionId },
+    });
+    return !!question;
+  }
+
+  /**
+   * Check if question package exists in the system
+   */
+  static async questionPackageExists(questionPackageId: number): Promise<boolean> {
+    const questionPackage = await prisma.questionPackage.findFirst({
+      where: { id: questionPackageId },
+    });
+    return !!questionPackage;
+  }
+}

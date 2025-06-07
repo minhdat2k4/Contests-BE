@@ -13,6 +13,9 @@ import { handleUploadError } from "@/middlewares/multer/uploadErrorHandler";
 
 const aboutRouter = Router();
 
+// Apply authentication middleware to all routes
+aboutRouter.use(authenticate);
+
 // Get all about information with pagination
 aboutRouter.get(
   "/",

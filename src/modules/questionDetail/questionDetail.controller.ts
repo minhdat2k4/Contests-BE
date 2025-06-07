@@ -9,6 +9,7 @@ import {
   QuestionDetailQueryInput,
   BulkCreateQuestionDetailsInput,
   ReorderQuestionsInput,
+  BatchDeleteQuestionDetailsInput,
 } from "./questionDetail.schema";
 
 export default class QuestionDetailController {
@@ -825,8 +826,32 @@ export default class QuestionDetailController {
             details: "Đã xảy ra lỗi không mong muốn",
           },
           timestamp: new Date().toISOString(),
-        });
-      }
+        });      }
+    }
+  }
+
+  /**
+   * Batch delete question details
+   */
+  static async batchDeleteQuestionDetails(req: Request, res: Response): Promise<void> {
+    try {
+      const data: BatchDeleteQuestionDetailsInput = req.body;
+
+      logger.info(`Attempting to batch delete ${data.items.length} question details`);
+
+      const result = await QuestionDetailService.batchDeleteQuestionDetails(data);
+
+      logger.info(`Batch delete completed: ${result.successful} successful, ${result.failed} failed`);
+
+      // Return success even if some items failed - client needs to handle partial failures
+      res.status(200).json({
+        success: true,
+        message: `Xóa hàng loạt hoàn tất: ${result.successful}/${result.totalRequested} thành công`,
+        data: result,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      QuestionDetailController.handleErrorResponse(res, error);
     }
   }
 }

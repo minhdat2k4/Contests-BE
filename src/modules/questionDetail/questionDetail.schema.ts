@@ -141,6 +141,17 @@ export const ReorderQuestionsSchema = z.object({
     .max(50, "Không thể sắp xếp lại quá 50 câu hỏi cùng lúc"),
 });
 
+// Batch Delete Question Details Schema
+export const BatchDeleteQuestionDetailsSchema = z.object({
+  items: z
+    .array(z.object({
+      questionId: z.number().int().positive("ID câu hỏi phải là số nguyên dương"),
+      questionPackageId: z.number().int().positive("ID gói câu hỏi phải là số nguyên dương"),
+    }))
+    .min(1, "Phải cung cấp ít nhất một mục để xóa")
+    .max(100, "Không thể xóa quá 100 mục cùng lúc"),
+});
+
 // TypeScript types
 export type CreateQuestionDetailInput = z.infer<typeof CreateQuestionDetailSchema>;
 export type UpdateQuestionDetailInput = z.infer<typeof UpdateQuestionDetailSchema>;
@@ -148,6 +159,7 @@ export type QuestionDetailIdInput = z.infer<typeof QuestionDetailIdSchema>;
 export type QuestionDetailQueryInput = z.infer<typeof QuestionDetailQuerySchema>;
 export type BulkCreateQuestionDetailsInput = z.infer<typeof BulkCreateQuestionDetailsSchema>;
 export type ReorderQuestionsInput = z.infer<typeof ReorderQuestionsSchema>;
+export type BatchDeleteQuestionDetailsInput = z.infer<typeof BatchDeleteQuestionDetailsSchema>;
 
 // Response types
 export interface QuestionDetailResponse {
@@ -157,19 +169,6 @@ export interface QuestionDetailResponse {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-  question: {
-    id: number;
-    plainText: string;
-    questionType: string;
-    difficulty: string;
-    defaultTime: number;
-    score: number;
-  };
-  questionPackage: {
-    id: number;
-    name: string;
-    isActive: boolean;
-  };
 }
 
 export interface QuestionDetailListResponse {
@@ -197,4 +196,19 @@ export interface QuestionDetailStatsResponse {
   uniqueQuestions: number;
   uniquePackages: number;
   averageQuestionsPerPackage: number;
+}
+
+export interface BatchDeleteResponse {
+  totalRequested: number;
+  successful: number;
+  failed: number;
+  successfulItems: Array<{
+    questionId: number;
+    questionPackageId: number;
+  }>;
+  failedItems: Array<{
+    questionId: number;
+    questionPackageId: number;
+    reason: string;
+  }>;
 }

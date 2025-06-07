@@ -9,6 +9,8 @@ import {
   QuestionDetailStatsResponse,
   BulkCreateQuestionDetailsInput,
   ReorderQuestionsInput,
+  BatchDeleteQuestionDetailsInput,
+  BatchDeleteResponse,
 } from "./questionDetail.schema";
 
 export default class QuestionDetailService {
@@ -27,14 +29,13 @@ export default class QuestionDetailService {
       },
     });
   }
-
   /**
    * Get question detail by composite key
    */
   static async getQuestionDetailById(
     questionId: number,
     questionPackageId: number
-  ): Promise<QuestionDetailResponse | null> {
+  ): Promise<QuestionDetailListResponse | null> {
     const questionDetail = await prisma.questionDetail.findFirst({
       where: {
         questionId,
@@ -489,7 +490,6 @@ export default class QuestionDetailService {
     });
     return !!question;
   }
-
   /**
    * Check if question package exists in the system
    */
@@ -498,5 +498,101 @@ export default class QuestionDetailService {
       where: { id: questionPackageId },
     });
     return !!questionPackage;
+  }
+
+  /**
+   * Batch delete question details
+   */
+  static async batchDeleteQuestionDetails(
+    data: BatchDeleteQuestionDetailsInput
+  ): Promise<BatchDeleteResponse> {
+    const result: BatchDeleteResponse = {
+      totalRequested: data.items.length,
+      successful: 0,
+      failed: 0,
+      successfulItems: [],
+      failedItems: [],
+    };
+
+    // Process each question detail individually
+    for (const item of data.items) {
+      try {
+        // Check if the question detail exists and is active
+        const existingDetail = await prisma.questionDetail.findFirst({
+          where: {
+            questionId: item.questionId,
+            questionPackageId: item.questionPackageId,
+            isActive: true,
+          },
+        });
+
+        if (!existingDetail) {
+          result.failed++;
+          result.failedItems.push({
+            questionId: item.questionId,
+            questionPackageId: item.questionPackageId,
+            reason: "Chi tiết câu hỏi không tồn tại hoặc đã bị xóa trước đó",
+          });
+          continue;
+        }        // Check if this question detail is being used in any active matches
+        const activeMatches = await prisma.contestantMatch.findFirst({
+          where: {
+            match: {
+              questionPackage: {
+                questionDetails: {
+                  some: {
+                    questionId: item.questionId,
+                    questionPackageId: item.questionPackageId,
+                  },
+                },
+              },
+              isActive: true,
+              status: {
+                in: ["upcoming", "ongoing"],
+              },
+            },
+          },
+        });
+
+        if (activeMatches) {
+          result.failed++;
+          result.failedItems.push({
+            questionId: item.questionId,
+            questionPackageId: item.questionPackageId,
+            reason: "Không thể xóa chi tiết câu hỏi đang được sử dụng trong trận đấu đang hoạt động",
+          });
+          continue;
+        }
+
+        // Perform soft delete
+        await prisma.questionDetail.update({
+          where: {
+            questionId_questionPackageId: {
+              questionId: item.questionId,
+              questionPackageId: item.questionPackageId,
+            },
+          },
+          data: {
+            isActive: false,
+            updatedAt: new Date(),
+          },
+        });
+
+        result.successful++;
+        result.successfulItems.push({
+          questionId: item.questionId,
+          questionPackageId: item.questionPackageId,
+        });
+      } catch (error) {
+        result.failed++;
+        result.failedItems.push({
+          questionId: item.questionId,
+          questionPackageId: item.questionPackageId,
+          reason: `Lỗi khi xóa: ${error instanceof Error ? error.message : "Lỗi không xác định"}`,
+        });
+      }
+    }
+
+    return result;
   }
 }

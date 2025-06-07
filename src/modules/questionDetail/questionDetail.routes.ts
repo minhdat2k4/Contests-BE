@@ -9,6 +9,7 @@ import {
   QuestionDetailQuerySchema,
   BulkCreateQuestionDetailsSchema,
   ReorderQuestionsSchema,
+  BatchDeleteQuestionDetailsSchema,
 } from "./questionDetail.schema";
 
 const questionDetailRouter = Router();
@@ -139,6 +140,17 @@ questionDetailRouter.delete(
 questionDetailRouter.patch(
   "/:questionId/:questionPackageId/deactivate",
   QuestionDetailController.softDeleteQuestionDetail
+);
+
+/**
+ * @route POST /api/question-details/batch-delete
+ * @description Batch delete question details
+ * @access Private (Admin/Judge)
+ */
+questionDetailRouter.post(
+  "/batch-delete",
+  validateBody(BatchDeleteQuestionDetailsSchema),
+  QuestionDetailController.batchDeleteQuestionDetails
 );
 
 export { questionDetailRouter };

@@ -89,6 +89,647 @@ interface BatchDeleteResponse {
 - **Auth**: Required (Admin/Judge) 
 - **Input**: `{ items: Array<{ questionId: number, questionPackageId: number }> }`
 
+## JSON Request/Response Examples
+
+### Question Topics Batch Delete
+
+#### Request Format
+```json
+POST /api/question-topics/batch-delete
+Content-Type: application/json
+Authorization: Bearer <your-jwt-token>
+
+{
+  "ids": [1, 2, 3, 4, 5]
+}
+```
+
+#### Successful Response (All items deleted)
+```json
+{
+  "success": true,
+  "message": "Batch delete completed successfully",
+  "data": {
+    "totalRequested": 5,
+    "successful": 5,
+    "failed": 0,
+    "successfulItems": [
+      { "id": 1 },
+      { "id": 2 },
+      { "id": 3 },
+      { "id": 4 },
+      { "id": 5 }
+    ],
+    "failedItems": []
+  }
+}
+```
+
+#### Partial Success Response
+```json
+{
+  "success": true,
+  "message": "Batch delete completed with some failures",
+  "data": {
+    "totalRequested": 5,
+    "successful": 3,
+    "failed": 2,
+    "successfulItems": [
+      { "id": 1 },
+      { "id": 3 },
+      { "id": 5 }
+    ],
+    "failedItems": [
+      {
+        "id": 2,
+        "reason": "Không thể xóa chủ đề này vì đang có câu hỏi sử dụng"
+      },
+      {
+        "id": 4,
+        "reason": "Không tìm thấy chủ đề câu hỏi với ID: 4"
+      }
+    ]
+  }
+}
+```
+
+### Question Packages Batch Delete
+
+#### Request Format
+```json
+POST /api/question-packages/batch-delete
+Content-Type: application/json
+Authorization: Bearer <your-jwt-token>
+
+{
+  "ids": [10, 20, 30]
+}
+```
+
+#### Successful Response
+```json
+{
+  "success": true,
+  "message": "Batch delete completed successfully",
+  "data": {
+    "totalRequested": 3,
+    "successful": 3,
+    "failed": 0,
+    "successfulItems": [
+      { "id": 10 },
+      { "id": 20 },
+      { "id": 30 }
+    ],
+    "failedItems": []
+  }
+}
+```
+
+#### Response with Business Rule Violations
+```json
+{
+  "success": true,
+  "message": "Batch delete completed with some failures",
+  "data": {
+    "totalRequested": 3,
+    "successful": 1,
+    "failed": 2,
+    "successfulItems": [
+      { "id": 30 }
+    ],
+    "failedItems": [
+      {
+        "id": 10,
+        "reason": "Không thể xóa gói câu hỏi này vì đang có chi tiết câu hỏi sử dụng"
+      },
+      {
+        "id": 20,
+        "reason": "Không thể xóa gói câu hỏi này vì đang được sử dụng trong trận đấu"
+      }
+    ]
+  }
+}
+```
+
+### Question Details Batch Delete
+
+#### Request Format
+```json
+POST /api/question-details/batch-delete
+Content-Type: application/json
+Authorization: Bearer <your-jwt-token>
+
+{
+  "items": [
+    {
+      "questionId": 1,
+      "questionPackageId": 10
+    },
+    {
+      "questionId": 2,
+      "questionPackageId": 10
+    },
+    {
+      "questionId": 3,
+      "questionPackageId": 20
+    }
+  ]
+}
+```
+
+#### Successful Response
+```json
+{
+  "success": true,
+  "message": "Batch delete completed successfully",
+  "data": {
+    "totalRequested": 3,
+    "successful": 3,
+    "failed": 0,
+    "successfulItems": [
+      {
+        "questionId": 1,
+        "questionPackageId": 10
+      },
+      {
+        "questionId": 2,
+        "questionPackageId": 10
+      },
+      {
+        "questionId": 3,
+        "questionPackageId": 20
+      }
+    ],
+    "failedItems": []
+  }
+}
+```
+
+#### Response with Active Match Usage
+```json
+{
+  "success": true,
+  "message": "Batch delete completed with some failures",
+  "data": {
+    "totalRequested": 3,
+    "successful": 2,
+    "failed": 1,
+    "successfulItems": [
+      {
+        "questionId": 1,
+        "questionPackageId": 10
+      },
+      {
+        "questionId": 3,
+        "questionPackageId": 20
+      }
+    ],
+    "failedItems": [
+      {
+        "questionId": 2,
+        "questionPackageId": 10,
+        "reason": "Không thể xóa chi tiết câu hỏi này vì đang được sử dụng trong trận đấu"
+      }
+    ]
+  }
+}
+```
+
+### Error Responses
+
+#### Validation Error (400)
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": {
+    "field": "ids",
+    "message": "Phải cung cấp ít nhất một ID"
+  }
+}
+```
+
+#### Authentication Error (401)
+```json
+{
+  "success": false,
+  "message": "Access token is required"
+}
+```
+
+#### Authorization Error (403)
+```json
+{
+  "success": false,
+  "message": "Không có quyền truy cập"
+}
+```
+
+#### Server Error (500)
+```json
+{
+  "success": false,
+  "message": "Internal server error",
+  "error": "Database connection failed"
+}
+```
+
+### Input Validation Rules
+
+#### Question Topics & Packages
+- **ids**: Array of positive integers
+- **Minimum**: 1 item
+- **Maximum**: 100 items
+- **Example**: `{"ids": [1, 2, 3]}`
+
+#### Question Details
+- **items**: Array of objects with questionId and questionPackageId
+- **questionId**: Positive integer
+- **questionPackageId**: Positive integer
+- **Minimum**: 1 item
+- **Maximum**: 100 items
+- **Example**: `{"items": [{"questionId": 1, "questionPackageId": 10}]}`
+
+## cURL Testing Examples
+
+### Question Topics Batch Delete
+```bash
+curl -X POST http://localhost:3000/api/question-topics/batch-delete \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "ids": [1, 2, 3]
+  }'
+```
+
+### Question Packages Batch Delete
+```bash
+curl -X POST http://localhost:3000/api/question-packages/batch-delete \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "ids": [10, 20, 30]
+  }'
+```
+
+### Question Details Batch Delete
+```bash
+curl -X POST http://localhost:3000/api/question-details/batch-delete \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "items": [
+      {
+        "questionId": 1,
+        "questionPackageId": 10
+      },
+      {
+        "questionId": 2,
+        "questionPackageId": 20
+      }
+    ]
+  }'
+```
+
+### PowerShell Examples
+```powershell
+# Question Topics
+$headers = @{
+    "Content-Type" = "application/json"
+    "Authorization" = "Bearer YOUR_JWT_TOKEN"
+}
+
+$body = @{
+    ids = @(1, 2, 3)
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/question-topics/batch-delete" `
+                  -Method POST `
+                  -Headers $headers `
+                  -Body $body
+
+# Question Packages
+$body = @{
+    ids = @(10, 20, 30)
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/question-packages/batch-delete" `
+                  -Method POST `
+                  -Headers $headers `
+                  -Body $body
+
+# Question Details
+$body = @{
+    items = @(
+        @{ questionId = 1; questionPackageId = 10 },
+        @{ questionId = 2; questionPackageId = 20 }
+    )
+} | ConvertTo-Json -Depth 3
+
+Invoke-RestMethod -Uri "http://localhost:3000/api/question-details/batch-delete" `
+                  -Method POST `
+                  -Headers $headers `                  -Body $body
+```
+
+## Postman Collection Example
+
+### Environment Variables
+Create a Postman environment with:
+- `baseUrl`: `http://localhost:3000`
+- `authToken`: Your JWT token
+
+### Question Topics Batch Delete
+```json
+{
+  "info": {
+    "name": "Question Topics Batch Delete",
+    "description": "Delete multiple question topics"
+  },
+  "request": {
+    "method": "POST",
+    "header": [
+      {
+        "key": "Content-Type",
+        "value": "application/json"
+      },
+      {
+        "key": "Authorization",
+        "value": "Bearer {{authToken}}"
+      }
+    ],
+    "url": {
+      "raw": "{{baseUrl}}/api/question-topics/batch-delete",
+      "host": ["{{baseUrl}}"],
+      "path": ["api", "question-topics", "batch-delete"]
+    },
+    "body": {
+      "mode": "raw",
+      "raw": "{\n  \"ids\": [1, 2, 3, 4, 5]\n}"
+    }
+  }
+}
+```
+
+### Question Packages Batch Delete
+```json
+{
+  "info": {
+    "name": "Question Packages Batch Delete",
+    "description": "Delete multiple question packages"
+  },
+  "request": {
+    "method": "POST",
+    "header": [
+      {
+        "key": "Content-Type",
+        "value": "application/json"
+      },
+      {
+        "key": "Authorization",
+        "value": "Bearer {{authToken}}"
+      }
+    ],
+    "url": {
+      "raw": "{{baseUrl}}/api/question-packages/batch-delete",
+      "host": ["{{baseUrl}}"],
+      "path": ["api", "question-packages", "batch-delete"]
+    },
+    "body": {
+      "mode": "raw",
+      "raw": "{\n  \"ids\": [10, 20, 30]\n}"
+    }
+  }
+}
+```
+
+### Question Details Batch Delete
+```json
+{
+  "info": {
+    "name": "Question Details Batch Delete",
+    "description": "Delete multiple question details"
+  },
+  "request": {
+    "method": "POST",
+    "header": [
+      {
+        "key": "Content-Type",
+        "value": "application/json"
+      },
+      {
+        "key": "Authorization",
+        "value": "Bearer {{authToken}}"
+      }
+    ],
+    "url": {
+      "raw": "{{baseUrl}}/api/question-details/batch-delete",
+      "host": ["{{baseUrl}}"],
+      "path": ["api", "question-details", "batch-delete"]
+    },
+    "body": {
+      "mode": "raw",
+      "raw": "{\n  \"items\": [\n    {\n      \"questionId\": 1,\n      \"questionPackageId\": 10\n    },\n    {\n      \"questionId\": 2,\n      \"questionPackageId\": 10\n    },\n    {\n      \"questionId\": 3,\n      \"questionPackageId\": 20\n    }\n  ]\n}"
+    }
+  }
+}
+```
+
+## Response Status Codes
+
+| Status Code | Description | Example Scenario |
+|-------------|-------------|------------------|
+| **200** | Success | All items deleted successfully or partial success with detailed results |
+| **400** | Bad Request | Invalid input data, validation errors |
+| **401** | Unauthorized | Missing or invalid authentication token |
+| **403** | Forbidden | User doesn't have required permissions |
+| **500** | Internal Server Error | Database connection issues, unexpected server errors |
+
+## Common Error Scenarios & Troubleshooting
+
+### 1. Validation Errors (400)
+
+#### Empty IDs Array
+```json
+// Request
+{
+  "ids": []
+}
+
+// Response
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": {
+    "field": "ids", 
+    "message": "Phải cung cấp ít nhất một ID"
+  }
+}
+```
+
+#### Too Many Items
+```json
+// Request with 101 items
+{
+  "ids": [1, 2, 3, ..., 101]
+}
+
+// Response
+{
+  "success": false,
+  "message": "Validation failed", 
+  "error": {
+    "field": "ids",
+    "message": "Không thể xóa quá 100 mục cùng lúc"
+  }
+}
+```
+
+#### Invalid Item Format (Question Details)
+```json
+// Request
+{
+  "items": [
+    {
+      "questionId": "invalid",
+      "questionPackageId": -1
+    }
+  ]
+}
+
+// Response
+{
+  "success": false,
+  "message": "Validation failed",
+  "error": {
+    "field": "items[0].questionId",
+    "message": "ID câu hỏi phải là số nguyên dương"
+  }
+}
+```
+
+### 2. Business Rule Violations
+
+#### Cannot Delete Topics with Active Questions
+```json
+// Response when trying to delete topic with questions
+{
+  "success": true,
+  "message": "Batch delete completed with some failures",
+  "data": {
+    "totalRequested": 2,
+    "successful": 1,
+    "failed": 1,
+    "successfulItems": [{ "id": 2 }],
+    "failedItems": [
+      {
+        "id": 1,
+        "reason": "Không thể xóa chủ đề này vì đang có câu hỏi sử dụng"
+      }
+    ]
+  }
+}
+```
+
+#### Cannot Delete Packages Used in Matches
+```json
+// Response when trying to delete package used in active matches
+{
+  "success": true,
+  "message": "Batch delete completed with some failures",
+  "data": {
+    "totalRequested": 1,
+    "successful": 0,
+    "failed": 1,
+    "successfulItems": [],
+    "failedItems": [
+      {
+        "id": 10,
+        "reason": "Không thể xóa gói câu hỏi này vì đang được sử dụng trong trận đấu"
+      }
+    ]
+  }
+}
+```
+
+### 3. Authentication Issues
+
+#### Missing Token
+```json
+// Response when no Authorization header
+{
+  "success": false,
+  "message": "Access token is required"
+}
+```
+
+#### Invalid Token
+```json
+// Response when token is malformed or expired
+{
+  "success": false,
+  "message": "Vui lòng đăng nhập lại"
+}
+```
+
+#### Insufficient Permissions
+```json
+// Response when user role doesn't have access
+{
+  "success": false,
+  "message": "Không có quyền truy cập"
+}
+```
+
+### 4. Troubleshooting Tips
+
+#### Getting Authentication Token
+1. **Login first**:
+   ```bash
+   curl -X POST http://localhost:3000/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{
+       "identifier": "admin",
+       "password": "admin@123"
+     }'
+   ```
+
+2. **Extract token from response**:
+   ```json
+   {
+     "success": true,
+     "message": "Đăng nhập thành công"
+   }
+   ```
+   
+   Token is set in HTTP-only cookie, or use the returned access token.
+
+#### Checking Item Existence
+Before batch delete, verify items exist:
+```bash
+# Check question topic
+curl -X GET http://localhost:3000/api/question-topics/1 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Check question package  
+curl -X GET http://localhost:3000/api/question-packages/10 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Check question detail
+curl -X GET http://localhost:3000/api/question-details?questionId=1&questionPackageId=10 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+#### Database Constraints
+1. **Question Topics**: Check if any questions reference this topic
+2. **Question Packages**: Check if any question details or matches use this package
+3. **Question Details**: Check if any contestant matches use this detail
+
+#### Performance Considerations
+- Maximum batch size: 100 items
+- Use smaller batches for better performance
+- Monitor database connections during large operations
+- Consider rate limiting for production environments
+
 ## Safety Features
 
 ### 1. Input Validation

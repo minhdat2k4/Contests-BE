@@ -39,7 +39,7 @@ Thumbs.db
 coverage/
 
 # Prisma
-prisma/migrations/
+src/prisma/migrations/
 
 # Temporary files
 tmp/

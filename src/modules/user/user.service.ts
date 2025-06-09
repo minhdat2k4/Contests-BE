@@ -102,6 +102,7 @@ export default class UserService {
     if (role) {
       whereClause.role = role;
     }
+    console.log("njdddk ", isActive);
     if (isActive !== undefined) {
       whereClause.isActive = isActive;
     }

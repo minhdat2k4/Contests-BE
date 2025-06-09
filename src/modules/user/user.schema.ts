@@ -44,6 +44,7 @@ export const CreateUserSchema = z.object({
       "Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
     ),
   role: z.nativeEnum(Role).default("Judge"),
+  isActive: z.boolean(),
 });
 
 export const UserIdShema = z.object({

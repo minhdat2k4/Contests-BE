@@ -139,7 +139,7 @@ export default class ClassController {
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
-            : true,
+            : undefined,
       };
       const data = await ClassService.getAllClass(query);
       if (!data) {

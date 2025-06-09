@@ -17,6 +17,7 @@ import { validateData } from "@/middlewares/validation";
 import { sendOtp } from "@/utils/email";
 import bcrypt from "bcrypt";
 import { role } from "@/middlewares/auth";
+import { prisma } from "@/config/database";
 
 export default class AuthController {
   static async register(req: Request, res: Response): Promise<void> {
@@ -84,6 +85,13 @@ export default class AuthController {
         userId: user.id,
         refreshToken: refreshToken,
       };
+      const deleterefreshToken = await prisma.refreshToken.deleteMany({
+        where: {
+          userId: user.id,
+        },
+      });
+      if (!deleterefreshToken) throw new Error("Đăng nhập thất bại");
+      await UserService.UpdateUser(user.id, { token: accessToken });
       await AuthService.CreateRefreshToken(refreshTokenInput);
       res.cookie("accessToken", accessToken, {
         httpOnly: true,

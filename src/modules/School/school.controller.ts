@@ -156,7 +156,7 @@ export default class SchoolController {
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
-            : true,
+            : undefined,
       };
       const data = await SchoolService.getAllShool(query);
       if (!data) {

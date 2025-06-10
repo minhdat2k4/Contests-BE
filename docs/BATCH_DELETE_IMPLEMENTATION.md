@@ -334,6 +334,110 @@ Authorization: Bearer <your-jwt-token>
 }
 ```
 
+## HTTP Status Codes
+
+The batch delete endpoints now return different HTTP status codes based on the operation results:
+
+### Success Scenarios
+
+#### 200 OK - Complete Success
+Returned when **all items** are successfully deleted.
+
+**Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Xóa hàng loạt thành công: 5/5 mục đã được xóa",
+  "data": {
+    "totalRequested": 5,
+    "successful": 5,
+    "failed": 0,
+    "successfulItems": [...],
+    "failedItems": []
+  },
+  "timestamp": "2025-06-11T10:00:00.000Z"
+}
+```
+
+#### 207 Multi-Status - Partial Success
+Returned when **some items succeed and some fail**.
+
+**Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Xóa hàng loạt hoàn tất một phần: 3/5 thành công, 2 thất bại",
+  "data": {
+    "totalRequested": 5,
+    "successful": 3,
+    "failed": 2,
+    "successfulItems": [...],
+    "failedItems": [...]
+  },
+  "timestamp": "2025-06-11T10:00:00.000Z"
+}
+```
+
+### Failure Scenarios
+
+#### 400 Bad Request - Complete Failure
+Returned when **all items fail** due to business rules or validation errors.
+
+**Response Structure:**
+```json
+{
+  "success": false,
+  "message": "Xóa hàng loạt thất bại: 5/5 mục không thể xóa",
+  "data": {
+    "totalRequested": 5,
+    "successful": 0,
+    "failed": 5,
+    "successfulItems": [],
+    "failedItems": [...]
+  },
+  "timestamp": "2025-06-11T10:00:00.000Z"
+}
+```
+
+### Status Code Summary
+
+| Status Code | Scenario | Success Field | Description |
+|-------------|----------|---------------|-------------|
+| `200` | All items deleted | `true` | Complete success |
+| `207` | Partial success | `true` | Some succeeded, some failed |
+| `400` | All items failed | `false` | Complete failure due to business rules |
+| `401` | Authentication | `false` | Missing or invalid authentication |
+| `403` | Authorization | `false` | Insufficient permissions |
+| `500` | Server Error | `false` | Internal server error |
+
+### Client Handling Recommendations
+
+**For Status 200 (Complete Success):**
+- Show success message to user
+- Update UI to reflect all items deleted
+- No retry needed
+
+**For Status 207 (Partial Success):**
+- Show partial success message
+- Display list of failed items with reasons
+- Allow user to retry failed items
+- Update UI for successful deletions only
+
+**For Status 400 (Complete Failure):**
+- Show error message with details
+- Display reasons for failures
+- Allow user to fix issues and retry
+- Do not update UI
+
+**For Status 401/403 (Auth Errors):**
+- Redirect to login or show permission error
+- Do not retry automatically
+
+**For Status 500 (Server Error):**
+- Show generic error message
+- Allow user to retry after delay
+- Log error for debugging
+
 ### Input Validation Rules
 
 #### Question Topics & Packages
@@ -751,6 +855,81 @@ curl -X GET http://localhost:3000/api/question-details?questionId=1&questionPack
 - Comprehensive logging of batch operations
 - Maintains data integrity with soft deletes
 - Preserves relationships for potential recovery
+
+## HTTP Status Codes
+
+The batch delete API now returns different HTTP status codes based on the operation results:
+
+### 200 OK - Complete Success
+**When**: All items were deleted successfully  
+**Response**: 
+```json
+{
+  "success": true,
+  "message": "Xóa hàng loạt thành công: 5/5 mục đã được xóa",
+  "data": {
+    "totalRequested": 5,
+    "successful": 5,
+    "failed": 0,
+    "successfulItems": [...],
+    "failedItems": []
+  }
+}
+```
+
+### 207 Multi-Status - Partial Success  
+**When**: Some items succeeded, some failed  
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Xóa hàng loạt hoàn tất một phần: 3/5 thành công, 2 thất bại",
+  "data": {
+    "totalRequested": 5,
+    "successful": 3,
+    "failed": 2,
+    "successfulItems": [...],
+    "failedItems": [
+      {
+        "questionId": 2,
+        "questionPackageId": 10,
+        "reason": "Không thể xóa chi tiết câu hỏi đang được sử dụng trong trận đấu đang hoạt động"
+      }
+    ]
+  }
+}
+```
+
+### 400 Bad Request - Complete Failure
+**When**: All items failed due to validation or business logic errors  
+**Response**:
+```json
+{
+  "success": false,
+  "message": "Xóa hàng loạt thất bại: 3/3 mục không thể xóa",
+  "data": {
+    "totalRequested": 3,
+    "successful": 0,
+    "failed": 3,
+    "successfulItems": [],
+    "failedItems": [...]
+  }
+}
+```
+
+### 401/403 - Authentication/Authorization Errors
+Standard authentication and authorization error responses.
+
+### 500 Internal Server Error
+**When**: Unexpected server errors occur during processing  
+**Response**: Standard error format with error details.
+
+### Status Code Logic
+```
+if (failed === 0) → 200 OK (Complete Success)
+else if (successful === 0) → 400 Bad Request (Complete Failure)  
+else → 207 Multi-Status (Partial Success)
+```
 
 ## Testing
 

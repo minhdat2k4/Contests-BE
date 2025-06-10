@@ -23,8 +23,8 @@ export default class UserService {
     if (data.token !== undefined) {
       updateData.token = data.token;
     }
-    if (data.isAcitve !== undefined) {
-      updateData.isActive = data.isAcitve;
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
     }
     if (data.role !== undefined) {
       updateData.role = data.role;

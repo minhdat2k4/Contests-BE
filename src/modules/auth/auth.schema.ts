@@ -26,6 +26,7 @@ export const RegisterSchema = z
         "Xác nhận mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
       ),
     role: z.nativeEnum(Role).default("Judge"),
+    isActive: z.boolean(),
   })
   .refine(data => data.password === data.confirmPassword, {
     message: "Xác nhận mật khẩu không khớp với mật khẩu",

@@ -100,6 +100,12 @@ export const SchoolQuerySchema = z.object({
     .optional(),
 });
 
+export const deleteSchoolsSchema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải chọn ít nhất 1 ID để xoá"),
+});
+
 export type CreateSchoolInput = z.infer<typeof CreateSchoolSchema>;
 export type SchoolIdParams = z.infer<typeof SchoolIdShame>;
 export type UpdateShoolInput = z.infer<typeof UpdeateSchoolShema>;

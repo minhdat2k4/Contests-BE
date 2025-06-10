@@ -19,15 +19,11 @@ export default class UserController {
         input.username
       );
       if (existingUserName) {
-        res
-          .status(400)
-          .json(validateData("username", "Tên tài khoản đã tồn tại"));
-        return;
+        throw new Error(`Tên tài khoản đã tồn tại `);
       }
       const existingEmail = await UserService.existingEmail(input.email);
       if (existingEmail) {
-        res.status(400).json(validateData("email", "Email đã tồn tại"));
-        return;
+        throw new Error(`Email đã tồn tại `);
       }
       const hashPassword = await bcrypt.hash(input.password, 10);
       const user = await UserService.creatUser({
@@ -75,6 +71,7 @@ export default class UserController {
     try {
       const id = req.params.id;
       const input: UpdateUserInput = req.body;
+
       const user = await UserService.getUserById(Number(id));
       if (input.email) {
         const existingEmail = await UserService.existingEmailForUpdate(
@@ -82,7 +79,7 @@ export default class UserController {
           Number(id)
         );
         if (existingEmail) {
-          res.status(400).json(validateData("email", "Email này đã tồn tại"));
+          throw new Error("Email đã tồn tại");
         }
       }
       if (!user) {
@@ -115,7 +112,7 @@ export default class UserController {
         throw new Error("Không tìm thấy người dùng");
       }
       const updated = await UserService.UpdateUser(user.id, {
-        isAcitve: !user.isActive,
+        isActive: !user.isActive,
       });
       if (!updated) {
         throw new Error("Cập nhật trạng thái thất bại");
@@ -155,7 +152,7 @@ export default class UserController {
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
-            : true,
+            : undefined,
         role:
           req.query.role === "Admin"
             ? "Admin"

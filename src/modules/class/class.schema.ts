@@ -69,8 +69,8 @@ export const ClassQuerySchema = z.object({
     .optional(),
   isActive: z
     .string()
-    .optional()
-    .transform(val => val === "true"),
+    .transform(val => val === "true")
+    .optional(),
   schoolId: z
     .string()
     .transform(val => parseInt(val))

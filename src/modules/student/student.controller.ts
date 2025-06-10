@@ -129,7 +129,7 @@ export default class StudentController {
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
-            : true,
+            : undefined,
       };
       const data = await StudentService.getAllStudent(query);
       if (!data) {

@@ -225,24 +225,53 @@ export default class QuestionDetailController {
           404,
           ERROR_CODES.RECORD_NOT_FOUND
         );
-      }
-
-      // Check if new question order already exists (excluding current record)
+      }      // Check if new question order already exists (excluding current record)
+      let swappedWith = null;
       if (data.questionOrder) {
-        const orderExists = await QuestionDetailService.questionOrderExists(
+        const existingQuestionDetail = await QuestionDetailService.getQuestionDetailByOrder(
           questionPackageId,
-          data.questionOrder,
-          questionId
+          data.questionOrder
         );
-        if (orderExists) {
-          throw new CustomError(
-            "Thứ tự câu hỏi đã tồn tại trong gói này",
-            409,
-            ERROR_CODES.DUPLICATE_ENTRY
+        
+        // If another question has this order, swap their positions
+        if (existingQuestionDetail && existingQuestionDetail.questionId !== questionId) {
+          const swapResult = await QuestionDetailService.swapQuestionOrder(
+            questionPackageId,
+            questionId,
+            existingQuestionDetail.questionId
           );
+          
+          swappedWith = {
+            questionId: existingQuestionDetail.questionId,
+            oldOrder: swapResult.updatedQuestion2.questionOrder,
+            newOrder: swapResult.updatedQuestion1.questionOrder,
+          };
+
+          logger.info("Question order swapped successfully", {
+            questionId,
+            questionPackageId,
+            swappedWithQuestionId: existingQuestionDetail.questionId,
+            newOrder: data.questionOrder,
+          });
+
+          const message = swappedWith 
+            ? `Cập nhật thứ tự câu hỏi thành công. Đã hoán đổi thứ tự với câu hỏi ID ${swappedWith.questionId}`
+            : "Cập nhật chi tiết câu hỏi thành công";
+
+          res.status(200).json({
+            success: true,
+            message,
+            data: {
+              updatedQuestionDetail: swapResult.updatedQuestion1,
+              swappedWith,
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
         }
       }
 
+      // If no swap needed, proceed with normal update
       const updatedQuestionDetail = await QuestionDetailService.updateQuestionDetail(
         questionId,
         questionPackageId,
@@ -257,7 +286,10 @@ export default class QuestionDetailController {
       res.status(200).json({
         success: true,
         message: "Cập nhật chi tiết câu hỏi thành công",
-        data: updatedQuestionDetail,
+        data: {
+          updatedQuestionDetail,
+          swappedWith: null,
+        },
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

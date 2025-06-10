@@ -294,3 +294,12 @@ export interface BatchDeleteResponse {
     reason: string;
   }>;
 }
+
+export interface UpdateQuestionDetailResponse {
+  updatedQuestionDetail: QuestionDetailResponse;
+  swappedWith: {
+    questionId: number;
+    oldOrder: number;
+    newOrder: number;
+  } | null;
+}

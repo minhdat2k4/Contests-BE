@@ -620,7 +620,6 @@ export default class QuestionDetailService {
       )
     );
   }
-
   /**
    * Get next available question order for a package
    */
@@ -632,6 +631,79 @@ export default class QuestionDetailService {
     });
 
     return (maxOrder?.questionOrder || 0) + 1;
+  }
+
+  /**
+   * Get question detail that has a specific order in a package
+   */
+  static async getQuestionDetailByOrder(
+    questionPackageId: number,
+    questionOrder: number
+  ): Promise<QuestionDetail | null> {
+    return prisma.questionDetail.findFirst({
+      where: {
+        questionPackageId,
+        questionOrder,
+        isActive: true,
+      },
+    });
+  }
+
+  /**
+   * Swap question orders between two question details in the same package
+   */
+  static async swapQuestionOrder(
+    questionPackageId: number,
+    questionId1: number,
+    questionId2: number
+  ): Promise<{ updatedQuestion1: QuestionDetail; updatedQuestion2: QuestionDetail }> {
+    return prisma.$transaction(async (tx) => {
+      // Get both question details
+      const question1Detail = await tx.questionDetail.findFirst({
+        where: {
+          questionId: questionId1,
+          questionPackageId,
+        },
+      });
+
+      const question2Detail = await tx.questionDetail.findFirst({
+        where: {
+          questionId: questionId2,
+          questionPackageId,
+        },
+      });
+
+      if (!question1Detail || !question2Detail) {
+        throw new Error("One or both question details not found");
+      }
+
+      const tempOrder = question1Detail.questionOrder;
+      const question2Order = question2Detail.questionOrder;
+
+      // Update question 1 with question 2's order
+      const updatedQuestion1 = await tx.questionDetail.update({
+        where: {
+          questionId_questionPackageId: {
+            questionId: questionId1,
+            questionPackageId,
+          },
+        },
+        data: { questionOrder: question2Order },
+      });
+
+      // Update question 2 with question 1's original order
+      const updatedQuestion2 = await tx.questionDetail.update({
+        where: {
+          questionId_questionPackageId: {
+            questionId: questionId2,
+            questionPackageId,
+          },
+        },
+        data: { questionOrder: tempOrder },
+      });
+
+      return { updatedQuestion1, updatedQuestion2 };
+    });
   }
 
   /**

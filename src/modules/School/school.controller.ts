@@ -180,40 +180,49 @@ export default class SchoolController {
       const { ids } = req.body;
 
       if (!Array.isArray(ids)) {
-        throw new Error(`Danh sách không hợp lê`);
+        throw new Error(`Danh sách không hợp lệ`);
       }
 
-      const deleted: number[] = [];
-      const notDeleted: string[] = [];
+      const messages: { status: "success" | "error"; msg: string }[] = [];
 
       for (const id of ids) {
         const school = await SchoolService.getSchoolBy({ id: Number(id) });
 
         if (!school) {
-          notDeleted.push("Không tìm thấy trường học");
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy trường học với ID = ${id}`,
+          });
           continue;
         }
 
         const countClass = await SchoolService.countClassBySchoolId(school.id);
         if (countClass > 0) {
-          notDeleted.push(
-            `Trường ${school.name} có ${countClass} lớp không thể xóa`
-          );
+          messages.push({
+            status: "error",
+            msg: `Trường "${school.name}" có ${countClass} lớp, không thể xóa`,
+          });
           continue;
         }
 
         const deletedSchool = await SchoolService.deleteSchool(school.id);
         if (!deletedSchool) {
-          notDeleted.push(`Xóa trường "${school.name}" thất bại`);
+          messages.push({
+            status: "error",
+            msg: `Xóa trường ${school.name} thất bại`,
+          });
           continue;
         }
-        deleted.push(id);
+
+        messages.push({
+          status: "success",
+          msg: `Xóa trường ${school.name} thành công`,
+        });
       }
 
       res.json({
-        message: `Xóa ${deleted.length} trường học thành công`,
-        deleted,
-        notDeleted,
+        success: true,
+        messages,
       });
     } catch (error) {
       logger.error((error as Error).message);

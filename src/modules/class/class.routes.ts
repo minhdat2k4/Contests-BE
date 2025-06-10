@@ -10,6 +10,7 @@ import {
   CreateClassShema,
   ClassIdShame,
   UpdeateClasshema,
+  deleteClassesSchema,
 } from "./class.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const classRouter = Router();
@@ -61,4 +62,13 @@ classRouter.delete(
   validateParams(ClassIdShame),
   ClassController.deleteClass
 );
+
+classRouter.post(
+  "/delete-many",
+  authenticate,
+  role("Admin"),
+  validateBody(deleteClassesSchema),
+  ClassController.deleteClasses
+);
+
 export { classRouter };

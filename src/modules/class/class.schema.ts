@@ -78,6 +78,12 @@ export const ClassQuerySchema = z.object({
     .optional(),
 });
 
+export const deleteClassesSchema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải chọn ít nhất 1 ID để xoá"),
+});
+
 export type CreateClassInput = z.infer<typeof CreateClassShema>;
 export type ClassIdParams = z.infer<typeof ClassIdShame>;
 export type UpdateClassInput = z.infer<typeof UpdeateClasshema>;

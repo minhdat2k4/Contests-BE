@@ -50,7 +50,6 @@ userRouter.patch(
   "/:id",
   authenticate,
   role("Admin"),
-  validateBody(UpdateUserSchema),
   UserController.UpdateUser
 );
 

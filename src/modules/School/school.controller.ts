@@ -9,6 +9,7 @@ import { log } from "console";
 import { validateData } from "@/middlewares/validation";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
+import { string } from "zod";
 export default class SchoolController {
   static async createSchool(req: Request, res: Response): Promise<void> {
     try {
@@ -169,6 +170,51 @@ export default class SchoolController {
           "Lấy danh sách trường học thành công"
         )
       );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async deleteSchools(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids)) {
+        throw new Error(`Danh sách không hợp lê`);
+      }
+
+      const deleted: number[] = [];
+      const notDeleted: string[] = [];
+
+      for (const id of ids) {
+        const school = await SchoolService.getSchoolBy({ id: Number(id) });
+
+        if (!school) {
+          notDeleted.push("Không tìm thấy trường học");
+          continue;
+        }
+
+        const countClass = await SchoolService.countClassBySchoolId(school.id);
+        if (countClass > 0) {
+          notDeleted.push(
+            `Trường ${school.name} có ${countClass} lớp không thể xóa`
+          );
+          continue;
+        }
+
+        const deletedSchool = await SchoolService.deleteSchool(school.id);
+        if (!deletedSchool) {
+          notDeleted.push(`Xóa trường "${school.name}" thất bại`);
+          continue;
+        }
+        deleted.push(id);
+      }
+
+      res.json({
+        message: `Xóa ${deleted.length} trường học thành công`,
+        deleted,
+        notDeleted,
+      });
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

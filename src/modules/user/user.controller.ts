@@ -71,6 +71,7 @@ export default class UserController {
     try {
       const id = req.params.id;
       const input: UpdateUserInput = req.body;
+
       const user = await UserService.getUserById(Number(id));
       if (input.email) {
         const existingEmail = await UserService.existingEmailForUpdate(
@@ -111,7 +112,7 @@ export default class UserController {
         throw new Error("Không tìm thấy người dùng");
       }
       const updated = await UserService.UpdateUser(user.id, {
-        isAcitve: !user.isActive,
+        isActive: !user.isActive,
       });
       if (!updated) {
         throw new Error("Cập nhật trạng thái thất bại");

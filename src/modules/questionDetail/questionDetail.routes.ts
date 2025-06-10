@@ -10,6 +10,8 @@ import {
   BulkCreateQuestionDetailsSchema,
   ReorderQuestionsSchema,
   BatchDeleteQuestionDetailsSchema,
+  PackageQuestionsQuerySchema,
+  QuestionPackagesQuerySchema,
 } from "./questionDetail.schema";
 
 const questionDetailRouter = Router();
@@ -73,11 +75,12 @@ questionDetailRouter.put(
 
 /**
  * @route GET /api/question-details/package/:packageId
- * @description Get questions by package ID with ordering
+ * @description Get questions by package ID with ordering and pagination
  * @access Private (Admin/Judge)
  */
 questionDetailRouter.get(
   "/package/:packageId",
+  validateQuery(PackageQuestionsQuerySchema),
   QuestionDetailController.getQuestionsByPackageId
 );
 
@@ -93,11 +96,12 @@ questionDetailRouter.get(
 
 /**
  * @route GET /api/question-details/question/:questionId
- * @description Get packages by question ID
+ * @description Get packages by question ID with pagination
  * @access Private (Admin/Judge)
  */
 questionDetailRouter.get(
   "/question/:questionId",
+  validateQuery(QuestionPackagesQuerySchema),
   QuestionDetailController.getPackagesByQuestionId
 );
 

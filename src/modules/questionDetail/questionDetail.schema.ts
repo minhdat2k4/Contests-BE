@@ -148,8 +148,88 @@ export const BatchDeleteQuestionDetailsSchema = z.object({
       questionId: z.number().int().positive("ID câu hỏi phải là số nguyên dương"),
       questionPackageId: z.number().int().positive("ID gói câu hỏi phải là số nguyên dương"),
     }))
-    .min(1, "Phải cung cấp ít nhất một mục để xóa")
-    .max(100, "Không thể xóa quá 100 mục cùng lúc"),
+    .min(1, "Phải cung cấp ít nhất một mục để xóa")    .max(100, "Không thể xóa quá 100 mục cùng lúc"),
+});
+
+// Package Questions Query Schema (for Get Questions by Package ID with pagination)
+export const PackageQuestionsQuerySchema = z.object({
+  page: z
+    .string()
+    .optional()
+    .default("1")
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "Trang phải là số nguyên dương",
+    }),
+  limit: z
+    .string()
+    .optional()
+    .default("10")
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0 && val <= 100, {
+      message: "Giới hạn phải là số nguyên dương và không quá 100",
+    }),
+  includeInactive: z
+    .string()
+    .optional()
+    .transform((val) => val === "true"),
+  search: z.string().optional(),  // New filter options
+  questionType: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true;
+      const validTypes = ["multiple_choice", "essay"];
+      return validTypes.includes(val);
+    }, {
+      message: "Loại câu hỏi không hợp lệ. Chỉ chấp nhận: multiple_choice, essay",
+    }),
+  difficulty: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true;
+      const validDifficulties = ["Alpha", "Beta", "Rc", "Gold"];
+      return validDifficulties.includes(val);
+    }, {
+      message: "Độ khó không hợp lệ. Chỉ chấp nhận: Alpha, Beta, Rc, Gold",
+    }),
+  isActive: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined) return undefined;
+      return val === "true";
+    }),
+  sortBy: z.enum(["questionOrder", "createdAt", "updatedAt", "difficulty", "questionType"]).optional().default("questionOrder"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
+});
+
+// Question Packages Query Schema (for Get Packages by Question ID with pagination)
+export const QuestionPackagesQuerySchema = z.object({
+  page: z
+    .string()
+    .optional()
+    .default("1")
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "Trang phải là số nguyên dương",
+    }),
+  limit: z
+    .string()
+    .optional()
+    .default("10")
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0 && val <= 100, {
+      message: "Giới hạn phải là số nguyên dương và không quá 100",
+    }),
+  includeInactive: z
+    .string()
+    .optional()
+    .transform((val) => val === "true"),
+  search: z.string().optional(),
+  sortBy: z.enum(["questionOrder", "createdAt", "updatedAt"]).optional().default("questionOrder"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
 });
 
 // TypeScript types
@@ -160,6 +240,8 @@ export type QuestionDetailQueryInput = z.infer<typeof QuestionDetailQuerySchema>
 export type BulkCreateQuestionDetailsInput = z.infer<typeof BulkCreateQuestionDetailsSchema>;
 export type ReorderQuestionsInput = z.infer<typeof ReorderQuestionsSchema>;
 export type BatchDeleteQuestionDetailsInput = z.infer<typeof BatchDeleteQuestionDetailsSchema>;
+export type PackageQuestionsQueryInput = z.infer<typeof PackageQuestionsQuerySchema>;
+export type QuestionPackagesQueryInput = z.infer<typeof QuestionPackagesQuerySchema>;
 
 // Response types
 export interface QuestionDetailResponse {

@@ -285,24 +285,131 @@ export default class QuestionDetailService {
         hasPrev: page > 1,
       },
     };
-  }
-
-  /**
-   * Get questions by package ID with ordering
+  }  /**
+   * Get questions by package ID with ordering and pagination
    */
   static async getQuestionsByPackageId(
     questionPackageId: number,
-    includeInactive: boolean = false
-  ): Promise<QuestionDetailListResponse[]> {
+    queryInput: {
+      page: number;
+      limit: number;
+      includeInactive?: boolean;
+      search?: string;
+      questionType?: string;
+      difficulty?: string;
+      isActive?: boolean;
+      sortBy?: "questionOrder" | "createdAt" | "updatedAt" | "difficulty" | "questionType";
+      sortOrder?: "asc" | "desc";
+    }
+  ): Promise<{
+    packageInfo: {
+      id: number;
+      name: string;
+    } | null;
+    questions: QuestionDetailListResponse[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+    filters: {
+      totalQuestions: number;
+      filteredQuestions: number;
+      appliedFilters: {
+        questionType?: string;
+        difficulty?: string;
+        isActive?: boolean;
+        search?: string;
+      };
+    };
+  }> {
+    const { 
+      page, 
+      limit, 
+      includeInactive = false, 
+      search, 
+      questionType,
+      difficulty,
+      isActive,
+      sortBy = "questionOrder", 
+      sortOrder = "asc" 
+    } = queryInput;
+    const skip = (page - 1) * limit;
+
+    // Get package info
+    const packageInfo = await prisma.questionPackage.findFirst({
+      where: { id: questionPackageId },
+      select: { id: true, name: true },
+    });
+
+    // Build where clause for question details
     const whereClause: any = { questionPackageId };
     
-    if (!includeInactive) {
+    // Handle includeInactive vs isActive filters
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive;
+    } else if (!includeInactive) {
       whereClause.isActive = true;
+    }
+
+    // Build question filters
+    const questionFilters: any = {};
+    
+    if (questionType) {
+      questionFilters.questionType = questionType;
+    }
+    
+    if (difficulty) {
+      questionFilters.difficulty = difficulty;
+    }
+
+    if (search) {
+      questionFilters.plainText = {
+        contains: search,
+      };
+    }
+
+    // Add question filters to where clause if any exist
+    if (Object.keys(questionFilters).length > 0) {
+      whereClause.question = questionFilters;
+    }
+
+    // Get total count for the package (without filters)
+    const totalQuestions = await prisma.questionDetail.count({
+      where: { 
+        questionPackageId,
+        isActive: !includeInactive ? true : undefined,
+      },
+    });
+
+    // Count filtered records
+    const filteredTotal = await prisma.questionDetail.count({
+      where: whereClause,
+    });    // Get paginated results with proper sorting
+    let orderByClause: any = {};
+    
+    if (sortBy === "questionType" || sortBy === "difficulty") {
+      // Sort by question properties
+      orderByClause = {
+        question: {
+          [sortBy]: sortOrder,
+        },
+      };
+    } else {
+      // Sort by question detail properties
+      orderByClause = {
+        [sortBy]: sortOrder,
+      };
     }
 
     const questionDetails = await prisma.questionDetail.findMany({
       where: whereClause,
-      orderBy: { questionOrder: "asc" },
+      skip,
+      take: limit,
+      orderBy: orderByClause,
       include: {
         question: {
           select: {
@@ -321,34 +428,111 @@ export default class QuestionDetailService {
       },
     });
 
-    return questionDetails.map((detail) => ({
-      questionId: detail.questionId,
-      questionPackageId: detail.questionPackageId,
-      questionOrder: detail.questionOrder,
-      isActive: detail.isActive,
-      createdAt: detail.createdAt,
-      updatedAt: detail.updatedAt,
-      question: detail.question,
-      questionPackage: detail.questionPackage,
-    }));
-  }
+    const totalPages = Math.ceil(filteredTotal / limit);
 
+    return {
+      packageInfo,
+      questions: questionDetails.map((detail) => ({
+        questionId: detail.questionId,
+        questionPackageId: detail.questionPackageId,
+        questionOrder: detail.questionOrder,
+        isActive: detail.isActive,
+        createdAt: detail.createdAt,
+        updatedAt: detail.updatedAt,
+        question: detail.question,
+        questionPackage: detail.questionPackage,
+      })),
+      pagination: {
+        page,
+        limit,
+        total: filteredTotal,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+      filters: {
+        totalQuestions,
+        filteredQuestions: filteredTotal,
+        appliedFilters: {
+          ...(questionType && { questionType }),
+          ...(difficulty && { difficulty }),
+          ...(isActive !== undefined && { isActive }),
+          ...(search && { search }),
+        },
+      },
+    };
+  }
   /**
-   * Get packages by question ID
+   * Get packages by question ID with pagination
    */
   static async getPackagesByQuestionId(
     questionId: number,
-    includeInactive: boolean = false
-  ): Promise<QuestionDetailListResponse[]> {
+    queryInput: {
+      page: number;
+      limit: number;
+      includeInactive?: boolean;
+      search?: string;
+      sortBy?: "questionOrder" | "createdAt" | "updatedAt";
+      sortOrder?: "asc" | "desc";
+    }
+  ): Promise<{
+    questionInfo: {
+      id: number;
+      plainText: string;
+      questionType: string;
+      difficulty: string;
+    } | null;
+    packages: QuestionDetailListResponse[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, includeInactive = false, search, sortBy = "questionOrder", sortOrder = "asc" } = queryInput;
+    const skip = (page - 1) * limit;
+
+    // Get question info
+    const questionInfo = await prisma.question.findFirst({
+      where: { id: questionId },
+      select: { 
+        id: true, 
+        plainText: true, 
+        questionType: true, 
+        difficulty: true 
+      },
+    });
+
+    // Build where clause
     const whereClause: any = { questionId };
     
     if (!includeInactive) {
       whereClause.isActive = true;
     }
 
+    // Add search functionality for package names
+    if (search) {
+      whereClause.questionPackage = {
+        name: {
+          contains: search,
+        },
+      };
+    }
+
+    // Count total records
+    const total = await prisma.questionDetail.count({
+      where: whereClause,
+    });
+
+    // Get paginated results
     const questionDetails = await prisma.questionDetail.findMany({
       where: whereClause,
-      orderBy: { questionOrder: "asc" },
+      skip,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder },
       include: {
         question: {
           select: {
@@ -367,16 +551,29 @@ export default class QuestionDetailService {
       },
     });
 
-    return questionDetails.map((detail) => ({
-      questionId: detail.questionId,
-      questionPackageId: detail.questionPackageId,
-      questionOrder: detail.questionOrder,
-      isActive: detail.isActive,
-      createdAt: detail.createdAt,
-      updatedAt: detail.updatedAt,
-      question: detail.question,
-      questionPackage: detail.questionPackage,
-    }));
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      questionInfo,
+      packages: questionDetails.map((detail) => ({
+        questionId: detail.questionId,
+        questionPackageId: detail.questionPackageId,
+        questionOrder: detail.questionOrder,
+        isActive: detail.isActive,
+        createdAt: detail.createdAt,
+        updatedAt: detail.updatedAt,
+        question: detail.question,
+        questionPackage: detail.questionPackage,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 
   /**

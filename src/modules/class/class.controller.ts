@@ -157,4 +157,71 @@ export default class ClassController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+  static async deleteClasses(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
+
+      const messages: { status: "success" | "error"; msg: string }[] = [];
+
+      for (const id of ids) {
+        const classData = await ClassService.getClassBy({ id: Number(id) });
+
+        if (!classData) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy lớp với ID = ${id}`,
+          });
+          continue;
+        }
+
+        const [countVideo, countStudent] = await Promise.all([
+          ClassService.countClassVieoByClassId(classData.id),
+          ClassService.countClassStudentClassId(classData.id),
+        ]);
+
+        if (countVideo > 0) {
+          messages.push({
+            status: "error",
+            msg: `Lớp "${classData.name}" có ${countVideo} video lớp tham gia cuộc thi, không thể xóa`,
+          });
+          continue;
+        }
+
+        if (countStudent > 0) {
+          messages.push({
+            status: "error",
+            msg: `Lớp "${classData.name}" có ${countStudent} sinh viên, không thể xóa`,
+          });
+          continue;
+        }
+
+        const deleted = await ClassService.deleteClass(classData.id);
+        if (!deleted) {
+          messages.push({
+            status: "error",
+            msg: `Xóa lớp "${classData.name}" thất bại`,
+          });
+          continue;
+        }
+
+        messages.push({
+          status: "success",
+          msg: `Xóa lớp "${classData.name}" thành công`,
+        });
+        logger.info(`Xóa lớp ${classData.name} thành công`);
+      }
+
+      res.json({
+        success: true,
+        messages,
+      });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

@@ -169,4 +169,62 @@ export default class StudentController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+  static async deleteStudents(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
+
+      const messages: { status: "success" | "error"; msg: string }[] = [];
+
+      for (const id of ids) {
+        const student = await StudentService.getStudentBy({ id: Number(id) });
+
+        if (!student) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy sinh viên với ID = ${id}`,
+          });
+          continue;
+        }
+
+        const countContestant = await StudentService.countContestantStudentId(
+          student.id
+        );
+        if (countContestant > 0) {
+          messages.push({
+            status: "error",
+            msg: `Sinh viên "${student.fullName}" đang tham gia ${countContestant} cuộc thi, không thể xóa`,
+          });
+          continue;
+        }
+
+        const deletedStudent = await StudentService.deleteStudent(student.id);
+        if (!deletedStudent) {
+          messages.push({
+            status: "error",
+            msg: `Xóa sinh viên "${student.fullName}" thất bại`,
+          });
+          continue;
+        }
+
+        messages.push({
+          status: "success",
+          msg: `Xóa sinh viên "${student.fullName}" thành công`,
+        });
+
+        logger.info(`Xóa sinh viên ${student.fullName} thành công`);
+      }
+
+      res.json({
+        success: true,
+        messages,
+      });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

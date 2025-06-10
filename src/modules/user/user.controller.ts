@@ -177,6 +177,7 @@ export default class UserController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
   static async deleteUser(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;
@@ -196,6 +197,62 @@ export default class UserController {
       }
       res.json(successResponse({}, "Xoá người dùng thành công"));
       logger.info(`Xoá người dùng ${user.username} thành công`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async deleteUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
+
+      const messages: { status: "success" | "error"; msg: string }[] = [];
+
+      for (const id of ids) {
+        const user = await UserService.getUserById(Number(id));
+        if (!user) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy người dùng với ID = ${id}`,
+          });
+          continue;
+        }
+
+        const countGroups = await UserService.countGroupsByUserId(user.id);
+        if (countGroups > 0) {
+          messages.push({
+            status: "error",
+            msg: `Không thể xoá "${user.username}" vì họ là trọng tài của ${countGroups} trận đấu`,
+          });
+          continue;
+        }
+
+        const result = await UserService.deleteUser(user.id);
+        if (!result) {
+          messages.push({
+            status: "error",
+            msg: `Xoá người dùng "${user.username}" thất bại`,
+          });
+          continue;
+        }
+
+        messages.push({
+          status: "success",
+          msg: `Xoá người dùng "${user.username}" thành công`,
+        });
+
+        logger.info(`Đã xoá người dùng ${user.username}`);
+      }
+
+      res.json({
+        success: true,
+        messages,
+      });
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

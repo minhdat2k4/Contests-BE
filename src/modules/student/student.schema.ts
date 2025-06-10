@@ -99,6 +99,12 @@ export const StudentQuerySchema = z.object({
     .optional(),
 });
 
+export const deleteStudentsSchema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải chọn ít nhất 1 ID để xoá"),
+});
+
 export type CreateStudentInput = z.infer<typeof CreateStudentShema>;
 export type StudentIdParams = z.infer<typeof StudentIdShame>;
 export type UpdateStudentInput = z.infer<typeof UpdateStundentShema>;

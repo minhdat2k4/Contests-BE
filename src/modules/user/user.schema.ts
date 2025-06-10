@@ -69,6 +69,12 @@ export const UserQuerySchema = z.object({
     .optional(),
   role: z.nativeEnum(Role).optional(),
 });
+
+export const deleteUsersSchema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải chọn ít nhất 1 ID để xoá"),
+});
 export type UserInput = z.infer<typeof UpdateUserSchema>;
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;

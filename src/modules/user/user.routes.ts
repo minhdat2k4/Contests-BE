@@ -6,6 +6,7 @@ import {
   UpdateUserSchema,
   UserIdShema,
   UserQuerySchema,
+  deleteUsersSchema,
 } from "./user.schema";
 import {
   validateBody,
@@ -66,4 +67,12 @@ userRouter.delete(
   role("Admin"),
   validateParams(UserIdShema),
   UserController.deleteUser
+);
+
+userRouter.post(
+  "/delete-many",
+  authenticate,
+  role("Admin"),
+  validateBody(deleteUsersSchema),
+  UserController.deleteUsers
 );

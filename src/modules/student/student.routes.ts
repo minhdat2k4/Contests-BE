@@ -10,6 +10,7 @@ import {
   StudentQuerySchema,
   StudentIdShame,
   UpdateStundentShema,
+  deleteStudentsSchema,
 } from "./student.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const studentRouter = Router();
@@ -62,4 +63,13 @@ studentRouter.delete(
   validateParams(StudentIdShame),
   StudentController.deleteStudent
 );
+
+studentRouter.post(
+  "/delete-many",
+  authenticate,
+  role("Admin"),
+  validateBody(deleteStudentsSchema),
+  StudentController.deleteStudents
+);
+
 export { studentRouter };

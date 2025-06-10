@@ -271,7 +271,6 @@ export default class QuestionTopicController {
       );
     }
   }
-
   /**
    * Batch delete question topics
    */
@@ -283,15 +282,35 @@ export default class QuestionTopicController {
 
       const result = await QuestionTopicService.batchDeleteQuestionTopics(data);
 
-      logger.info(`Batch delete completed: ${result.successful} successful, ${result.failed} failed`);
+      logger.info(`Batch delete completed: ${result.successful} successful, ${result.failed} failed`);      // Determine appropriate status code and message based on results
+      let statusCode: number;
+      let message: string;
 
-      // Return success even if some items failed - client needs to handle partial failures
-      res.status(200).json(
-        successResponse(
-          result,
-          `Xóa hàng loạt hoàn tất: ${result.successful}/${result.totalRequested} thành công`
-        )
-      );
+      if (result.failed === 0) {
+        // All items deleted successfully
+        statusCode = 200;
+        message = `Xóa hàng loạt thành công: ${result.successful}/${result.totalRequested} chủ đề câu hỏi đã được xóa`;
+        res.status(statusCode).json(
+          successResponse(result, message)
+        );
+      } else if (result.successful === 0) {
+        // All items failed
+        statusCode = 400;
+        message = `Xóa hàng loạt thất bại: ${result.failed}/${result.totalRequested} chủ đề câu hỏi không thể xóa`;
+        res.status(statusCode).json({
+          success: false,
+          message: message,
+          data: result,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        // Partial success - some succeeded, some failed
+        statusCode = 207; // Multi-Status
+        message = `Xóa hàng loạt hoàn tất một phần: ${result.successful}/${result.totalRequested} thành công, ${result.failed} thất bại`;
+        res.status(statusCode).json(
+          successResponse(result, message)
+        );
+      }
     } catch (error) {
       logger.error("Error in batch delete question topics:", error);
         if (error instanceof CustomError) {

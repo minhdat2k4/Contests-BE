@@ -10,6 +10,8 @@ import {
   BulkCreateQuestionDetailsInput,
   ReorderQuestionsInput,
   BatchDeleteQuestionDetailsInput,
+  PackageQuestionsQueryInput,
+  QuestionPackagesQueryInput,
 } from "./questionDetail.schema";
 
 export default class QuestionDetailController {
@@ -223,24 +225,53 @@ export default class QuestionDetailController {
           404,
           ERROR_CODES.RECORD_NOT_FOUND
         );
-      }
-
-      // Check if new question order already exists (excluding current record)
+      }      // Check if new question order already exists (excluding current record)
+      let swappedWith = null;
       if (data.questionOrder) {
-        const orderExists = await QuestionDetailService.questionOrderExists(
+        const existingQuestionDetail = await QuestionDetailService.getQuestionDetailByOrder(
           questionPackageId,
-          data.questionOrder,
-          questionId
+          data.questionOrder
         );
-        if (orderExists) {
-          throw new CustomError(
-            "Thứ tự câu hỏi đã tồn tại trong gói này",
-            409,
-            ERROR_CODES.DUPLICATE_ENTRY
+        
+        // If another question has this order, swap their positions
+        if (existingQuestionDetail && existingQuestionDetail.questionId !== questionId) {
+          const swapResult = await QuestionDetailService.swapQuestionOrder(
+            questionPackageId,
+            questionId,
+            existingQuestionDetail.questionId
           );
+          
+          swappedWith = {
+            questionId: existingQuestionDetail.questionId,
+            oldOrder: swapResult.updatedQuestion2.questionOrder,
+            newOrder: swapResult.updatedQuestion1.questionOrder,
+          };
+
+          logger.info("Question order swapped successfully", {
+            questionId,
+            questionPackageId,
+            swappedWithQuestionId: existingQuestionDetail.questionId,
+            newOrder: data.questionOrder,
+          });
+
+          const message = swappedWith 
+            ? `Cập nhật thứ tự câu hỏi thành công. Đã hoán đổi thứ tự với câu hỏi ID ${swappedWith.questionId}`
+            : "Cập nhật chi tiết câu hỏi thành công";
+
+          res.status(200).json({
+            success: true,
+            message,
+            data: {
+              updatedQuestionDetail: swapResult.updatedQuestion1,
+              swappedWith,
+            },
+            timestamp: new Date().toISOString(),
+          });
+          return;
         }
       }
 
+      // If no swap needed, proceed with normal update
       const updatedQuestionDetail = await QuestionDetailService.updateQuestionDetail(
         questionId,
         questionPackageId,
@@ -255,7 +286,10 @@ export default class QuestionDetailController {
       res.status(200).json({
         success: true,
         message: "Cập nhật chi tiết câu hỏi thành công",
-        data: updatedQuestionDetail,
+        data: {
+          updatedQuestionDetail,
+          swappedWith: null,
+        },
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -460,16 +494,12 @@ export default class QuestionDetailController {
         });
       }
     }
-  }
-
-  /**
-   * Get questions by package ID with ordering
+  }  /**
+   * Get questions by package ID with ordering and pagination
    */
   static async getQuestionsByPackageId(req: Request, res: Response): Promise<void> {
     try {
       const packageIdParam = req.params.packageId;
-      const includeInactive = req.query.includeInactive === "true";
-
       const packageId = parseInt(packageIdParam, 10);
 
       if (isNaN(packageId) || packageId <= 0) {
@@ -486,15 +516,21 @@ export default class QuestionDetailController {
         );
       }
 
-      const questions = await QuestionDetailService.getQuestionsByPackageId(
-        packageId,
-        includeInactive
-      );
+      // Use validated query parameters from middleware
+      const queryInput: PackageQuestionsQueryInput = (req as any).validatedQuery || req.query;
 
-      res.status(200).json({
+      const result = await QuestionDetailService.getQuestionsByPackageId(
+        packageId,
+        queryInput
+      );      res.status(200).json({
         success: true,
         message: "Lấy danh sách câu hỏi theo gói thành công",
-        data: questions,
+        data: {
+          packageInfo: result.packageInfo,
+          questions: result.questions,
+        },
+        pagination: result.pagination,
+        filters: result.filters,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -521,16 +557,12 @@ export default class QuestionDetailController {
         });
       }
     }
-  }
-
-  /**
-   * Get packages by question ID
+  }  /**
+   * Get packages by question ID with pagination
    */
   static async getPackagesByQuestionId(req: Request, res: Response): Promise<void> {
     try {
       const questionIdParam = req.params.questionId;
-      const includeInactive = req.query.includeInactive === "true";
-
       const questionId = parseInt(questionIdParam, 10);
 
       if (isNaN(questionId) || questionId <= 0) {
@@ -547,15 +579,22 @@ export default class QuestionDetailController {
         );
       }
 
-      const packages = await QuestionDetailService.getPackagesByQuestionId(
+      // Use validated query parameters from middleware
+      const queryInput: QuestionPackagesQueryInput = (req as any).validatedQuery || req.query;
+
+      const result = await QuestionDetailService.getPackagesByQuestionId(
         questionId,
-        includeInactive
+        queryInput
       );
 
       res.status(200).json({
         success: true,
         message: "Lấy danh sách gói theo câu hỏi thành công",
-        data: packages,
+        data: {
+          questionInfo: result.questionInfo,
+          packages: result.packages,
+        },
+        pagination: result.pagination,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
@@ -829,7 +868,6 @@ export default class QuestionDetailController {
         });      }
     }
   }
-
   /**
    * Batch delete question details
    */
@@ -843,10 +881,31 @@ export default class QuestionDetailController {
 
       logger.info(`Batch delete completed: ${result.successful} successful, ${result.failed} failed`);
 
-      // Return success even if some items failed - client needs to handle partial failures
-      res.status(200).json({
-        success: true,
-        message: `Xóa hàng loạt hoàn tất: ${result.successful}/${result.totalRequested} thành công`,
+      // Determine appropriate status code and message based on results
+      let statusCode: number;
+      let message: string;
+      let success: boolean;
+
+      if (result.failed === 0) {
+        // All items deleted successfully
+        statusCode = 200;
+        success = true;
+        message = `Xóa hàng loạt thành công: ${result.successful}/${result.totalRequested} mục đã được xóa`;
+      } else if (result.successful === 0) {
+        // All items failed
+        statusCode = 400;
+        success = false;
+        message = `Xóa hàng loạt thất bại: ${result.failed}/${result.totalRequested} mục không thể xóa`;
+      } else {
+        // Partial success - some succeeded, some failed
+        statusCode = 207; // Multi-Status
+        success = true; // Consider partial success as overall success
+        message = `Xóa hàng loạt hoàn tất một phần: ${result.successful}/${result.totalRequested} thành công, ${result.failed} thất bại`;
+      }
+
+      res.status(statusCode).json({
+        success: success,
+        message: message,
         data: result,
         timestamp: new Date().toISOString(),
       });

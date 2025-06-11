@@ -17,6 +17,7 @@
         "prisma:deploy": "prisma migrate deploy --schema src/prisma/schema.prisma",
         "prisma:studio": "prisma studio --schema src/prisma/schema.prisma",
         "prisma:seed": "ts-node -r tsconfig-paths/register src/prisma/seed.ts",
+        "prisma:reset": "prisma migrate reset --schema src/prisma/schema.prisma --force",
         "prisma:undo-seed": "ts-node -r tsconfig-paths/register src/prisma/undo-seed.ts",
         "prisma:undo-seed-force": "ts-node -r tsconfig-paths/register src/prisma/undo-seed.ts --force",
         "prisma:undo-seed-advanced": "ts-node -r tsconfig-paths/register src/prisma/undo-seed-advanced.ts",

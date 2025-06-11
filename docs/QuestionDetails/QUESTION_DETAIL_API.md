@@ -345,19 +345,51 @@ Updates the order of multiple questions within a package.
 }
 ```
 
-### 9. Get Questions by Package
+### 9. Get Questions by Package (Enhanced with Advanced Filtering)
 **GET** `/api/question-details/package/{packageId}`
 
-Retrieves all questions associated with a specific package.
+Retrieves all questions associated with a specific package with advanced filtering, pagination, search, and sorting capabilities.
 
 **Path Parameters:**
 - `packageId` (number): The question package ID
 
 **Query Parameters:**
-- `page` (number, optional): Page number (default: 1)
-- `limit` (number, optional): Items per page (default: 10)
-- `isActive` (boolean, optional): Filter by active status
+- `page` (number, optional): Page number (default: 1, minimum: 1)
+- `limit` (number, optional): Items per page (default: 10, maximum: 100)
 - `includeInactive` (boolean, optional): Include inactive questions (default: false)
+- `search` (string, optional): Search within question text
+- `questionType` (string, optional): Filter by question type - "multiple_choice", "essay"
+- `difficulty` (string, optional): Filter by difficulty level - "Alpha", "Beta", "Rc", "Gold"
+- `isActive` (boolean, optional): Filter by active status - true/false
+- `sortBy` (string, optional): Sort field - "questionOrder", "createdAt", "updatedAt", "difficulty", "questionType" (default: "questionOrder")
+- `sortOrder` (string, optional): Sort direction - "asc", "desc" (default: "asc")
+
+**Example Requests:**
+
+1. Basic request with pagination:
+```bash
+GET /api/question-details/package/1?page=1&limit=5&search=toán&sortBy=questionOrder&sortOrder=asc
+```
+
+2. Filter by question type:
+```bash
+GET /api/question-details/package/1?questionType=multiple_choice&page=1&limit=10
+```
+
+3. Filter by difficulty:
+```bash
+GET /api/question-details/package/1?difficulty=Easy&sortBy=difficulty&sortOrder=desc
+```
+
+4. Combined filters:
+```bash
+GET /api/question-details/package/1?questionType=multiple_choice&difficulty=Easy&isActive=true&page=1&limit=5
+```
+
+5. Search with filters:
+```bash
+GET /api/question-details/package/1?search=toán&questionType=multiple_choice&difficulty=Medium
+```
 
 **Response (200):**
 ```json
@@ -367,38 +399,89 @@ Retrieves all questions associated with a specific package.
   "data": {
     "packageInfo": {
       "id": 1,
-      "name": "Sample Package",
-      "description": "Package description"
+      "name": "Gói câu hỏi Toán học"
     },
     "questions": [
       {
         "questionId": 1,
+        "questionPackageId": 1,
         "questionOrder": 1,
         "isActive": true,
+        "createdAt": "2025-06-10T10:00:00.000Z",
+        "updatedAt": "2025-06-10T10:00:00.000Z",
         "question": {
           "id": 1,
-          "title": "Question 1",
-          "content": "Question content"
+          "plainText": "Câu hỏi về toán học cơ bản",
+          "questionType": "multiple_choice",
+          "difficulty": "Easy"
+        },
+        "questionPackage": {
+          "id": 1,
+          "name": "Gói câu hỏi Toán học"
         }
       }
-    ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 1,
-      "totalItems": 5,
-      "itemsPerPage": 10
+    ]
+  },
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 15,
+    "totalPages": 3,
+    "hasNext": true,
+    "hasPrev": false
+  },
+  "filters": {
+    "totalQuestions": 50,
+    "filteredQuestions": 15,
+    "appliedFilters": {
+      "questionType": "multiple_choice",
+      "difficulty": "Easy",
+      "isActive": true
     }
   },
-  "timestamp": "2025-06-07T09:00:00.000Z"
+  "timestamp": "2025-06-10T10:00:00.000Z"
 }
 ```
 
-### 10. Get Packages by Question
+**Filter Information:**
+The response now includes comprehensive filter information:
+- `filters.totalQuestions`: Total number of questions in the package (without filters)
+- `filters.filteredQuestions`: Number of questions after applying filters
+- `filters.appliedFilters`: Object showing which filters were applied
+
+**Filter Combinations:**
+- All filters can be combined for precise results
+- Filters are applied cumulatively (AND logic)
+- Search works across all filtered results
+- Sorting can be applied to both filtered and unfiltered results
+
+**Question Type Values:**
+- `multiple_choice`: Multiple choice questions
+- `essay`: Essay questions
+
+**Difficulty Values:**
+- `Alpha`, `Beta`, `Rc`, `Gold`: Database-defined difficulty levels
+
+### 10. Get Packages by Question (Enhanced with Pagination)
 **GET** `/api/question-details/question/{questionId}`
 
-Retrieves all packages that contain a specific question.
+Retrieves all packages that contain a specific question with pagination, search, and sorting capabilities.
 
 **Path Parameters:**
+- `questionId` (number): The question ID
+
+**Query Parameters:**
+- `page` (number, optional): Page number (default: 1, minimum: 1)
+- `limit` (number, optional): Items per page (default: 10, maximum: 100)
+- `includeInactive` (boolean, optional): Include inactive packages (default: false)
+- `search` (string, optional): Search within package names
+- `sortBy` (string, optional): Sort field - "questionOrder", "createdAt", "updatedAt" (default: "questionOrder")
+- `sortOrder` (string, optional): Sort direction - "asc", "desc" (default: "asc")
+
+**Example Request:**
+```bash
+GET /api/question-details/question/1?page=1&limit=10&search=gói&includeInactive=false
+```
 - `questionId` (number): The question ID
 
 **Query Parameters:**

@@ -106,39 +106,39 @@ export default class RoundController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
-  // static async deleteRound(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Round = await RoundService.getRoundBy({ id: Number(id) });
-  //     if (!Round) {
-  //       throw new Error("Không tìm thấy vòng đấu ");
-  //     }
-  //     const [countRoundVieo, countStudent] = await Promise.all([
-  //       RoundService.countRoundVieoByRoundId(Number(id)),
-  //       RoundService.countRoundStudentRoundId(Number(id)),
-  //     ]);
+  static async deleteRound(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const Round = await RoundService.getRoundBy({ id: Number(id) });
+      if (!Round) {
+        throw new Error("Không tìm thấy vòng đấu ");
+      }
+      const [countContestants, countMatch] = await Promise.all([
+        RoundService.countContestantsByRoundId(Number(id)),
+        RoundService.countMatchesByRoundId(Number(id)),
+      ]);
 
-  //     if (countRoundVieo > 0) {
-  //       throw new Error(
-  //         `Lớp này hiện có ${countRoundVieo} video lớp tham gia cuộc thi không thể xóa`
-  //       );
-  //     }
-  //     if (countStudent > 0) {
-  //       throw new Error(
-  //         `Lớp này hiện có ${countStudent} sinh viên không thể xóa `
-  //       );
-  //     }
-  //     const deleteRound = await RoundService.deleteRound(Round.id);
-  //     if (!deleteRound) {
-  //       throw new Error(`Xóa lớp ${Round.name} thất bại `);
-  //     }
-  //     logger.info(`Xóa lớp ${Round.name} thành công`);
-  //     res.json(successResponse(null, `Xóa lớp ${Round.name} thành công`));
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+      if (countMatch > 0) {
+        throw new Error(
+          `Vòng này hiện có ${countMatch} trận đấu không thể xóa`
+        );
+      }
+      if (countContestants > 0) {
+        throw new Error(
+          `Vòng này hiện có ${countContestants} thí sinh không thể xóa `
+        );
+      }
+      const deleteRound = await RoundService.deleteRound(Round.id);
+      if (!deleteRound) {
+        throw new Error(`Xóa vòng đấu ${Round.name} thất bại `);
+      }
+      logger.info(`Xóa vòng đấu ${Round.name} thành công`);
+      res.json(successResponse(null, `Xóa vòng đấu ${Round.name} thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
   static async updateRound(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;
@@ -170,71 +170,72 @@ export default class RoundController {
     }
   }
 
-  // static async deleteRoundes(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const { ids } = req.body;
+  static async deleteRounds(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
 
-  //     if (!Array.isArray(ids)) {
-  //       throw new Error("Danh sách không hợp lệ");
-  //     }
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
 
-  //     const messages: { status: "success" | "error"; msg: string }[] = [];
+      const messages: { status: "success" | "error"; msg: string }[] = [];
 
-  //     for (const id of ids) {
-  //       const RoundData = await RoundService.getRoundBy({ id: Number(id) });
+      for (const id of ids) {
+        const round = await RoundService.getRoundBy({ id: Number(id) });
 
-  //       if (!RoundData) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Không tìm thấy lớp với ID = ${id}`,
-  //         });
-  //         continue;
-  //       }
+        if (!round) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy vòng đấu với ID = ${id}`,
+          });
+          continue;
+        }
 
-  //       const [countVideo, countStudent] = await Promise.all([
-  //         RoundService.countRoundVieoByRoundId(RoundData.id),
-  //         RoundService.countRoundStudentRoundId(RoundData.id),
-  //       ]);
+        const [countContestants, countMatch] = await Promise.all([
+          RoundService.countContestantsByRoundId(round.id),
+          RoundService.countMatchesByRoundId(round.id),
+        ]);
 
-  //       if (countVideo > 0) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Lớp "${RoundData.name}" có ${countVideo} video lớp tham gia cuộc thi, không thể xóa`,
-  //         });
-  //         continue;
-  //       }
+        if (countMatch > 0) {
+          messages.push({
+            status: "error",
+            msg: `Vòng "${round.name}" hiện có ${countMatch} trận đấu, không thể xóa`,
+          });
+          continue;
+        }
 
-  //       if (countStudent > 0) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Lớp "${RoundData.name}" có ${countStudent} sinh viên, không thể xóa`,
-  //         });
-  //         continue;
-  //       }
+        if (countContestants > 0) {
+          messages.push({
+            status: "error",
+            msg: `Vòng "${round.name}" hiện có ${countContestants} thí sinh, không thể xóa`,
+          });
+          continue;
+        }
 
-  //       const deleted = await RoundService.deleteRound(RoundData.id);
-  //       if (!deleted) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Xóa lớp "${RoundData.name}" thất bại`,
-  //         });
-  //         continue;
-  //       }
+        const deleted = await RoundService.deleteRound(round.id);
 
-  //       messages.push({
-  //         status: "success",
-  //         msg: `Xóa lớp "${RoundData.name}" thành công`,
-  //       });
-  //       logger.info(`Xóa lớp ${RoundData.name} thành công`);
-  //     }
+        if (!deleted) {
+          messages.push({
+            status: "error",
+            msg: `Xóa vòng đấu "${round.name}" thất bại`,
+          });
+          continue;
+        }
 
-  //     res.json({
-  //       success: true,
-  //       messages,
-  //     });
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+        messages.push({
+          status: "success",
+          msg: `Xóa vòng đấu "${round.name}" thành công`,
+        });
+        logger.info(`Xóa vòng đấu "${round.name}" thành công`);
+      }
+
+      res.json({
+        success: true,
+        messages,
+      });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

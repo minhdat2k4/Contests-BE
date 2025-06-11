@@ -147,26 +147,26 @@ export default class RoundService {
       },
     });
   }
-  // static async deleteClass(id: number): Promise<Class> {
-  //   return prisma.class.delete({
-  //     where: {
-  //       id: id,
-  //     },
-  //   });
-  // }
+  static async deleteRound(id: number): Promise<Round> {
+    return prisma.round.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
 
-  // static async countClassVieoByClassId(id: number) {
-  //   return prisma.classVideo.count({
-  //     where: {
-  //       classId: id,
-  //     },
-  //   });
-  // }
-  // static async countClassStudentClassId(id: number) {
-  //   return prisma.student.count({
-  //     where: {
-  //       classId: id,
-  //     },
-  //   });
-  // }
+  static async countMatchesByRoundId(id: number) {
+    return prisma.match.count({
+      where: {
+        roundId: id,
+      },
+    });
+  }
+  static async countContestantsByRoundId(id: number) {
+    return prisma.contestant.count({
+      where: {
+        roundId: id,
+      },
+    });
+  }
 }

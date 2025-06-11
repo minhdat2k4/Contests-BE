@@ -10,6 +10,7 @@ import {
   RoundIdShame,
   CreateRoundShema,
   UpdeateRoundhema,
+  deleteRoundesSchema,
 } from "./round.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const roundRouter = Router();
@@ -54,20 +55,20 @@ roundRouter.patch(
   role("Admin"),
   RoundController.toggleActive
 );
-// classRouter.delete(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(ClassIdShame),
-//   ClassController.deleteClass
-// );
+roundRouter.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(RoundIdShame),
+  RoundController.deleteRound
+);
 
-// classRouter.post(
-//   "/delete-many",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(deleteClassesSchema),
-//   ClassController.deleteClasses
-// );
+roundRouter.post(
+  "/delete-many",
+  authenticate,
+  role("Admin"),
+  validateBody(deleteRoundesSchema),
+  RoundController.deleteRounds
+);
 
 export { roundRouter };

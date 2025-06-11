@@ -229,4 +229,17 @@ export default class SchoolController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+  static async listSchool(req: Request, res: Response): Promise<void> {
+    try {
+      const data = await SchoolService.listSchool();
+      if (!data) {
+        throw new Error("Không tìm thấy trường học ");
+      }
+      logger.info(`Lấy danh sách trường học thành công`);
+      res.json(successResponse(data, "Lấy danh sách trường học thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

@@ -163,6 +163,8 @@ Table Rounds {
   name String [not null]
   index Int [not null]
   contestId Int [not null]
+  startTime DateTime [default: `now()`, not null]
+  endTime DateTime [default: `now()`, not null]
   contest Contests [not null]
   isActive Boolean [not null, default: true]
   contestants Contestants [not null]

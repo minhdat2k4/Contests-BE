@@ -160,8 +160,8 @@ export default class UserController {
             ? "Judge"
             : undefined,
       };
-
-      const data = await UserService.getAllUser(query);
+      const id = req.user?.userId;
+      const data = await UserService.getAllUser(query, id);
       if (!data) {
         throw new Error("Không tìm thấy người dùng");
       }

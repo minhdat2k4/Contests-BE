@@ -11,7 +11,7 @@ import { aboutRouter } from "./modules/about/about.routes";
 import { userRouter } from "@/modules/user";
 import { schoolRouter } from "@/modules/school";
 import { studentRouter } from "@/modules/student";
-// import { schoolRouter } from "@/modules/school"; // Temporarily commented out
+import { roundRouter } from "@/modules/round"; // Temporarily commented out
 import { classRouter } from "@/modules/class";
 import { questionTopicRoutes } from "@/modules/questionTopic";
 import { questionPackageRouter } from "@/modules/questionPackage";
@@ -72,6 +72,7 @@ app.use("/api/about", aboutRouter);
 app.use("/api/user", userRouter);
 app.use("/api/school", schoolRouter);
 app.use("/api/class", classRouter);
+app.use("/api/round", roundRouter);
 app.use("/api/student", studentRouter);
 app.use("/api/question-topics", questionTopicRoutes);
 app.use("/api/question-packages", questionPackageRouter);
@@ -82,7 +83,8 @@ app.get("/api/v1", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Contest Backend API v1",
-    version: "1.0.0",    endpoints: {
+    version: "1.0.0",
+    endpoints: {
       auth: "/api/auth",
       about: "/api/about",
       users: "/api/users",

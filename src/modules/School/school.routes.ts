@@ -17,6 +17,13 @@ const schoolRouter = Router();
 // prive
 
 schoolRouter.get(
+  "/list-school",
+  authenticate,
+  role("Admin"),
+  SchoolController.listSchool
+);
+
+schoolRouter.get(
   "/",
   authenticate,
   role("Admin"),

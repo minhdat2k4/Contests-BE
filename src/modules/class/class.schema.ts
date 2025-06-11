@@ -62,11 +62,7 @@ export const ClassQuerySchema = z.object({
     .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
     .optional()
     .default("10"),
-  search: z
-    .string()
-    .min(2, "Từ khóa tìm kiếm phải có ít nhất 2 ký tự")
-    .max(100, "Từ khóa tìm kiếm tối đa 100 ký tự")
-    .optional(),
+  search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
   isActive: z
     .string()
     .transform(val => val === "true")
@@ -84,6 +80,13 @@ export const deleteClassesSchema = z.object({
     .min(1, "Phải chọn ít nhất 1 ID để xoá"),
 });
 
+export type ClassById = {
+  id: number;
+  name: string;
+  schoolId: number;
+  school: { name: string };
+  isActive: boolean;
+};
 export type CreateClassInput = z.infer<typeof CreateClassShema>;
 export type ClassIdParams = z.infer<typeof ClassIdShame>;
 export type UpdateClassInput = z.infer<typeof UpdeateClasshema>;

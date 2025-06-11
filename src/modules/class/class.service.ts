@@ -5,6 +5,7 @@ import {
   CreateClassInput,
   UpdateClassInput,
   Classes,
+  ClassById,
 } from "@/modules/class";
 import { nativeEnum } from "zod";
 export default class ClassService {
@@ -36,10 +37,21 @@ export default class ClassService {
       },
     });
   }
-  static async getClassBy(data: any): Promise<Class | null> {
+  static async getClassBy(data: any): Promise<ClassById | null> {
     return prisma.class.findFirst({
       where: {
         ...data,
+      },
+      select: {
+        id: true,
+        name: true,
+        schoolId: true,
+        isActive: true,
+        school: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
   }

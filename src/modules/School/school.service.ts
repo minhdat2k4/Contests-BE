@@ -156,4 +156,13 @@ export default class SchoolService {
       },
     };
   }
+  static async listSchool() {
+    return prisma.school.findMany({
+      where: { isActive: true },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
 }

@@ -2,6 +2,7 @@ import { User } from "@prisma/client";
 import { prisma } from "@/config/database";
 import { UserInput, CreateUserInput, UserQueryInput } from "./user.schema";
 import bcrypt from "bcrypt";
+import { notDeepEqual } from "assert";
 export default class UserService {
   static async creatUser(user: CreateUserInput) {
     return prisma.user.create({
@@ -79,7 +80,10 @@ export default class UserService {
     });
     return !!user;
   }
-  static async getAllUser(UserQueryInput: UserQueryInput): Promise<{
+  static async getAllUser(
+    UserQueryInput: UserQueryInput,
+    userId: number | undefined = undefined
+  ): Promise<{
     users: Array<{
       id: number;
       username: string;
@@ -105,6 +109,7 @@ export default class UserService {
     if (isActive !== undefined) {
       whereClause.isActive = isActive;
     }
+
     if (search) {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
@@ -114,7 +119,10 @@ export default class UserService {
     }
 
     const users = await prisma.user.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        ...(userId !== undefined ? { id: { not: userId } } : {}),
+      },
       skip: skip,
       take: limit,
       orderBy: { createdAt: "desc" },

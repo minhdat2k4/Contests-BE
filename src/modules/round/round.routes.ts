@@ -5,8 +5,9 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { RoundController } from "@/modules/round";
-import { RoundQuerySchema } from "./round.schema";
+import { RoundQuerySchema, RoundIdShame } from "./round.schema";
 import { authenticate, role } from "@/middlewares/auth";
+import { RoundIdParams } from "../../../dist/modules/round/round.schema";
 const roundRouter = Router();
 // prive
 
@@ -18,13 +19,13 @@ roundRouter.get(
   RoundController.getAlls
 );
 
-// classRouter.get(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(ClassIdShame),
-//   ClassController.getClassById
-// );
+roundRouter.get(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(RoundIdShame),
+  RoundController.getRoundById
+);
 
 // classRouter.post(
 //   "/",

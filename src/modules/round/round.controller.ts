@@ -15,7 +15,7 @@ export default class ClassController {
             ? req.query.isActive === "true"
             : undefined,
       };
-      const data = await RoundService.getAllClass(query);
+      const data = await RoundService.getAll(query);
       if (!data) {
         throw new Error("Không tìm thấy vòng đấu ");
       }
@@ -31,6 +31,24 @@ export default class ClassController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async getRoundById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const round = await RoundService.getRoundBy({ id: Number(id) });
+      if (!round) {
+        throw new Error("Không tìm thấy vòng đấu ");
+      }
+      logger.info(`Lấy thông tin lớp ${round.name} thành công`);
+      res.json(
+        successResponse(round, `Lấy thông tin lớp ${round.name} thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
   // static async toggleActive(req: Request, res: Response): Promise<void> {
   //   try {
   //     const id = req.params.id;
@@ -130,22 +148,6 @@ export default class ClassController {
   //     }
   //     logger.info(`Thêm lớp ${input.name} thành công`);
   //     res.json(successResponse(Class, `Thêm lớp ${input.name} thành công`));
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-  // static async getClassById(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Class = await ClassService.getClassBy({ id: Number(id) });
-  //     if (!Class) {
-  //       throw new Error("Không tìm thấy vòng đấu ");
-  //     }
-  //     logger.info(`Lấy thông tin lớp ${Class.name} thành công`);
-  //     res.json(
-  //       successResponse(Class, `Lấy thông tin lớp ${Class.name} thành công`)
-  //     );
   //   } catch (error) {
   //     logger.error((error as Error).message);
   //     res.status(400).json(errorResponse((error as Error).message));

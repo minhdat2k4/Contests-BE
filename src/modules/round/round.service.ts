@@ -1,8 +1,8 @@
 import { prisma } from "@/config/database";
-import { Rounds, RoundQueryInput } from "@/modules/round";
+import { Rounds, RoundQueryInput, RoundById } from "@/modules/round";
 
 export default class RoundService {
-  static async getAllClass(query: RoundQueryInput): Promise<{
+  static async getAll(query: RoundQueryInput): Promise<{
     rounds: Rounds[];
     pagination: {
       page: number;
@@ -67,6 +67,25 @@ export default class RoundService {
     };
   }
 
+  static async getRoundBy(data: any): Promise<RoundById | null> {
+    return prisma.round.findFirst({
+      where: {
+        ...data,
+      },
+      select: {
+        id: true,
+        name: true,
+        contestId: true,
+        isActive: true,
+        contest: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+  }
+
   // static async updateClass(
   //   id: number,
   //   data: UpdateClassInput
@@ -95,24 +114,7 @@ export default class RoundService {
   //     },
   //   });
   // }
-  // static async getClassBy(data: any): Promise<ClassById | null> {
-  //   return prisma.class.findFirst({
-  //     where: {
-  //       ...data,
-  //     },
-  //     select: {
-  //       id: true,
-  //       name: true,
-  //       schoolId: true,
-  //       isActive: true,
-  //       school: {
-  //         select: {
-  //           name: true,
-  //         },
-  //       },
-  //     },
-  //   });
-  // }
+
   // static async createClass(data: CreateClassInput): Promise<Class | null> {
   //   return prisma.class.create({
   //     data: {

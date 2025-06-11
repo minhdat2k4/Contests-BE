@@ -1,4 +1,5 @@
 import z from "zod";
+import { ContestStatus } from "@prisma/client";
 export const RoundShema = z.object({
   id: z.number(),
   name: z.string(),
@@ -86,8 +87,8 @@ export const deleteRoundesSchema = z.object({
 export type RoundById = {
   id: number;
   name: string;
-  schoolId: number;
-  school: { name: string };
+  contestId: number;
+  contest: { name: string };
   isActive: boolean;
 };
 export type CreateRoundInput = z.infer<typeof CreateRoundShema>;

@@ -283,7 +283,9 @@ model Round {
   id          Int          @id @default(autoincrement())
   name        String       @db.VarChar(255)
   index       Int         
-  contestId   Int         
+  contestId   Int   
+  startTime    DateTime   @default(now())
+  endTime      DateTime   @default(now())     
   contest     Contest      @relation(fields:[contestId],references:[id],onDelete:Restrict, onUpdate : Restrict)
   isActive    Boolean      @default(true) 
   contestants Contestant[]

@@ -1,7 +1,12 @@
 import { Request, Response } from "express";
-import { RoundQueryInput, RoundService } from "@/modules/round";
+import {
+  RoundQueryInput,
+  RoundService,
+  CreateRoundInput,
+} from "@/modules/round";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
+import { prisma } from "@/config/database";
 export default class ClassController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
@@ -39,9 +44,35 @@ export default class ClassController {
       if (!round) {
         throw new Error("Không tìm thấy vòng đấu ");
       }
-      logger.info(`Lấy thông tin lớp ${round.name} thành công`);
+      logger.info(`Lấy thông tin vòng đấu ${round.name} thành công`);
       res.json(
-        successResponse(round, `Lấy thông tin lớp ${round.name} thành công`)
+        successResponse(
+          round,
+          `Lấy thông tin vòng đấu ${round.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async createRound(req: Request, res: Response): Promise<void> {
+    try {
+      const input: CreateRoundInput = req.body;
+      const contest = await prisma.contest.findFirst({
+        where: { id: input.contestId },
+      });
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi");
+      }
+      const round = await RoundService.createRound(input);
+      if (!round) {
+        throw new Error(`Thêm vòng đấu ${input.name} thành công`);
+      }
+      logger.info(`Thêm vòng đấu ${input.name} thành công`);
+      res.json(
+        successResponse(round, `Thêm vòng đấu ${input.name} thành công`)
       );
     } catch (error) {
       logger.error((error as Error).message);
@@ -52,7 +83,7 @@ export default class ClassController {
   // static async toggleActive(req: Request, res: Response): Promise<void> {
   //   try {
   //     const id = req.params.id;
-  //     const Class = await ClassService.getClassBy({ id: Number(id) });
+  //     const round = await ClassService.getClassBy({ id: Number(id) });
   //     if (!Class) {
   //       throw new Error("Không tìm thấy vòng đấu ");
   //     }
@@ -130,24 +161,6 @@ export default class ClassController {
   //     res.json(
   //       successResponse(updateClass, `Cập nhật lớp ${Class.name} thành công`)
   //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-  // static async createClass(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const input: CreateClassInput = req.body;
-  //     const school = await SchoolService.getSchoolBy({ id: input.schoolId });
-  //     if (!school) {
-  //       throw new Error("Không tìm thấy trường");
-  //     }
-  //     const Class = await ClassService.createClass(input);
-  //     if (!Class) {
-  //       throw new Error(`Thêm lớp ${input.name} thành công`);
-  //     }
-  //     logger.info(`Thêm lớp ${input.name} thành công`);
-  //     res.json(successResponse(Class, `Thêm lớp ${input.name} thành công`));
   //   } catch (error) {
   //     logger.error((error as Error).message);
   //     res.status(400).json(errorResponse((error as Error).message));

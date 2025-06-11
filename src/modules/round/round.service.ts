@@ -1,5 +1,11 @@
 import { prisma } from "@/config/database";
-import { Rounds, RoundQueryInput, RoundById } from "@/modules/round";
+import {
+  Rounds,
+  RoundQueryInput,
+  RoundById,
+  CreateRoundInput,
+} from "@/modules/round";
+import { Round } from "@prisma/client";
 
 export default class RoundService {
   static async getAll(query: RoundQueryInput): Promise<{
@@ -39,6 +45,9 @@ export default class RoundService {
         id: true,
         name: true,
         isActive: true,
+        index: true,
+        endTime: true,
+        startTime: true,
         contest: {
           select: {
             name: true,
@@ -51,6 +60,9 @@ export default class RoundService {
       name: key.name,
       isActive: key.isActive,
       contestName: key.contest?.name ?? null,
+      index: key.index,
+      endTime: key.endTime,
+      startTime: key.startTime,
     }));
     const total = await prisma.round.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
@@ -77,11 +89,22 @@ export default class RoundService {
         name: true,
         contestId: true,
         isActive: true,
+        index: true,
+        endTime: true,
+        startTime: true,
         contest: {
           select: {
             name: true,
           },
         },
+      },
+    });
+  }
+
+  static async createRound(data: CreateRoundInput): Promise<Round | null> {
+    return prisma.round.create({
+      data: {
+        ...data,
       },
     });
   }
@@ -111,14 +134,6 @@ export default class RoundService {
   //   return prisma.class.delete({
   //     where: {
   //       id: id,
-  //     },
-  //   });
-  // }
-
-  // static async createClass(data: CreateClassInput): Promise<Class | null> {
-  //   return prisma.class.create({
-  //     data: {
-  //       ...data,
   //     },
   //   });
   // }

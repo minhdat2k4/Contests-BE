@@ -833,17 +833,13 @@ export default class QuestionDetailService {
           continue;
         }
 
-        // Perform soft delete
-        await prisma.questionDetail.update({
+        // Perform hard delete
+        await prisma.questionDetail.delete({
           where: {
             questionId_questionPackageId: {
               questionId: item.questionId,
               questionPackageId: item.questionPackageId,
             },
-          },
-          data: {
-            isActive: false,
-            updatedAt: new Date(),
           },
         });
 

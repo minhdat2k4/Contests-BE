@@ -75,7 +75,7 @@ questionPackageRouter.put(
  * @description Soft delete question package
  * @access Private (Admin/Judge)
  */
-questionPackageRouter.delete(
+questionPackageRouter.patch(
   "/:id",
   validateParams(QuestionPackageIdSchema),
   QuestionPackageController.deleteQuestionPackage

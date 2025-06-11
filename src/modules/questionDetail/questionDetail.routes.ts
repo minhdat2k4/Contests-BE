@@ -137,6 +137,16 @@ questionDetailRouter.delete(
 );
 
 /**
+ * @route DELETE /api/question-details/:questionId/:questionPackageId/hard
+ * @description Hard delete question detail (explicit hard delete endpoint)
+ * @access Private (Admin/Judge)
+ */
+questionDetailRouter.delete(
+  "/:questionId/:questionPackageId/hard",
+  QuestionDetailController.hardDeleteQuestionDetail
+);
+
+/**
  * @route PATCH /api/question-details/:questionId/:questionPackageId/deactivate
  * @description Soft delete question detail (set isActive to false)
  * @access Private (Admin/Judge)

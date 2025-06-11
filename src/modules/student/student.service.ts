@@ -77,7 +77,7 @@ export default class StudentService {
     if (search) {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
-        { fullfullName: { contains: keyword } },
+        { fullName: { contains: keyword } },
         { studentCode: { contains: keyword } },
         { class: { name: { contains: keyword } } },
       ]);

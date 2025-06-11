@@ -312,9 +312,8 @@ export default class AuthController {
         res.status(400).json(validateData("currentPassword", "Sai mật khẩu"));
         return;
       }
-      const hashedPassword = await bcrypt.hash(input.newPassword, 10);
       await UserService.UpdateUser(req.user.userId, {
-        password: hashedPassword,
+        password: input.newPassword,
       });
       res.json(successResponse(null, "Đổi mật khẩu thành công"));
       logger.info(`Người dùng ${req.user.username} đổi mật thành công`);

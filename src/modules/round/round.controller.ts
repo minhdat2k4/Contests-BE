@@ -3,11 +3,12 @@ import {
   RoundQueryInput,
   RoundService,
   CreateRoundInput,
+  UpdateRoundInput,
 } from "@/modules/round";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
-export default class ClassController {
+export default class RoundController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
       const query: RoundQueryInput = {
@@ -80,46 +81,46 @@ export default class ClassController {
     }
   }
 
-  // static async toggleActive(req: Request, res: Response): Promise<void> {
+  static async toggleActive(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const round = await RoundService.getRoundBy({ id: Number(id) });
+      if (!round) {
+        throw new Error("Không tìm thấy vòng đấu ");
+      }
+      const updateRound = await RoundService.updateRound(Number(id), {
+        isActive: !round.isActive,
+      });
+      if (!updateRound) {
+        throw new Error("Cập nhật trạng thái vòng đấu thất bại ");
+      }
+      logger.info(`Cập nhật trạng thái vòng đấu  ${round.name} thành công`);
+      res.json(
+        successResponse(
+          updateRound,
+          `Cập nhật trạng thái vòng đấu ${round.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  // static async deleteRound(req: Request, res: Response): Promise<void> {
   //   try {
   //     const id = req.params.id;
-  //     const round = await ClassService.getClassBy({ id: Number(id) });
-  //     if (!Class) {
+  //     const Round = await RoundService.getRoundBy({ id: Number(id) });
+  //     if (!Round) {
   //       throw new Error("Không tìm thấy vòng đấu ");
   //     }
-  //     const updateClass = await ClassService.updateClass(Number(id), {
-  //       isActive: !Class.isActive,
-  //     });
-  //     if (!updateClass) {
-  //       throw new Error("Cập nhật trạng thái lớp thất bại ");
-  //     }
-  //     logger.info(`Cập nhật trạng thái lớp  ${Class.name} thành công`);
-  //     res.json(
-  //       successResponse(
-  //         updateClass,
-  //         `Cập nhật trạng thái lớp ${Class.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-  // static async deleteClass(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Class = await ClassService.getClassBy({ id: Number(id) });
-  //     if (!Class) {
-  //       throw new Error("Không tìm thấy vòng đấu ");
-  //     }
-  //     const [countClassVieo, countStudent] = await Promise.all([
-  //       ClassService.countClassVieoByClassId(Number(id)),
-  //       ClassService.countClassStudentClassId(Number(id)),
+  //     const [countRoundVieo, countStudent] = await Promise.all([
+  //       RoundService.countRoundVieoByRoundId(Number(id)),
+  //       RoundService.countRoundStudentRoundId(Number(id)),
   //     ]);
 
-  //     if (countClassVieo > 0) {
+  //     if (countRoundVieo > 0) {
   //       throw new Error(
-  //         `Lớp này hiện có ${countClassVieo} video lớp tham gia cuộc thi không thể xóa`
+  //         `Lớp này hiện có ${countRoundVieo} video lớp tham gia cuộc thi không thể xóa`
   //       );
   //     }
   //     if (countStudent > 0) {
@@ -127,47 +128,49 @@ export default class ClassController {
   //         `Lớp này hiện có ${countStudent} sinh viên không thể xóa `
   //       );
   //     }
-  //     const deleteClass = await ClassService.deleteClass(Class.id);
-  //     if (!deleteClass) {
-  //       throw new Error(`Xóa lớp ${Class.name} thất bại `);
+  //     const deleteRound = await RoundService.deleteRound(Round.id);
+  //     if (!deleteRound) {
+  //       throw new Error(`Xóa lớp ${Round.name} thất bại `);
   //     }
-  //     logger.info(`Xóa lớp ${Class.name} thành công`);
-  //     res.json(successResponse(null, `Xóa lớp ${Class.name} thành công`));
+  //     logger.info(`Xóa lớp ${Round.name} thành công`);
+  //     res.json(successResponse(null, `Xóa lớp ${Round.name} thành công`));
   //   } catch (error) {
   //     logger.error((error as Error).message);
   //     res.status(400).json(errorResponse((error as Error).message));
   //   }
   // }
-  // static async updateClass(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const input: UpdateClassInput = req.body;
-  //     if (input.schoolId) {
-  //       const school = await SchoolService.getSchoolBy({ id: input.schoolId });
-  //       if (!school) {
-  //         throw new Error("Không tìm thấy trường");
-  //       }
-  //     }
-  //     const Class = await ClassService.getClassBy({ id: Number(id) });
-  //     if (!Class) {
-  //       throw new Error("Không tìm thấy lớp");
-  //     }
-  //     console.log("đ", Class);
-  //     const updateClass = await ClassService.updateClass(Number(id), input);
-  //     if (!updateClass) {
-  //       throw new Error("Cập nhật lớp thất bại");
-  //     }
-  //     logger.info(`Cập nhật lớp  ${Class.name} thành công`);
-  //     res.json(
-  //       successResponse(updateClass, `Cập nhật lớp ${Class.name} thành công`)
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async updateRound(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const input: UpdateRoundInput = req.body;
+      const contest = await prisma.contest.findFirst({
+        where: { id: input.contestId },
+      });
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi");
+      }
+      const Round = await RoundService.getRoundBy({ id: Number(id) });
+      if (!Round) {
+        throw new Error("Không tìm thấy vòng thi");
+      }
+      const updateRound = await RoundService.updateRound(Number(id), input);
+      if (!updateRound) {
+        throw new Error("Cập nhật vòng thi thất bại");
+      }
+      logger.info(`Cập nhật vòng thi  ${Round.name} thành công`);
+      res.json(
+        successResponse(
+          updateRound,
+          `Cập nhật vòng thi ${Round.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 
-  // static async deleteClasses(req: Request, res: Response): Promise<void> {
+  // static async deleteRoundes(req: Request, res: Response): Promise<void> {
   //   try {
   //     const { ids } = req.body;
 
@@ -178,9 +181,9 @@ export default class ClassController {
   //     const messages: { status: "success" | "error"; msg: string }[] = [];
 
   //     for (const id of ids) {
-  //       const classData = await ClassService.getClassBy({ id: Number(id) });
+  //       const RoundData = await RoundService.getRoundBy({ id: Number(id) });
 
-  //       if (!classData) {
+  //       if (!RoundData) {
   //         messages.push({
   //           status: "error",
   //           msg: `Không tìm thấy lớp với ID = ${id}`,
@@ -189,14 +192,14 @@ export default class ClassController {
   //       }
 
   //       const [countVideo, countStudent] = await Promise.all([
-  //         ClassService.countClassVieoByClassId(classData.id),
-  //         ClassService.countClassStudentClassId(classData.id),
+  //         RoundService.countRoundVieoByRoundId(RoundData.id),
+  //         RoundService.countRoundStudentRoundId(RoundData.id),
   //       ]);
 
   //       if (countVideo > 0) {
   //         messages.push({
   //           status: "error",
-  //           msg: `Lớp "${classData.name}" có ${countVideo} video lớp tham gia cuộc thi, không thể xóa`,
+  //           msg: `Lớp "${RoundData.name}" có ${countVideo} video lớp tham gia cuộc thi, không thể xóa`,
   //         });
   //         continue;
   //       }
@@ -204,25 +207,25 @@ export default class ClassController {
   //       if (countStudent > 0) {
   //         messages.push({
   //           status: "error",
-  //           msg: `Lớp "${classData.name}" có ${countStudent} sinh viên, không thể xóa`,
+  //           msg: `Lớp "${RoundData.name}" có ${countStudent} sinh viên, không thể xóa`,
   //         });
   //         continue;
   //       }
 
-  //       const deleted = await ClassService.deleteClass(classData.id);
+  //       const deleted = await RoundService.deleteRound(RoundData.id);
   //       if (!deleted) {
   //         messages.push({
   //           status: "error",
-  //           msg: `Xóa lớp "${classData.name}" thất bại`,
+  //           msg: `Xóa lớp "${RoundData.name}" thất bại`,
   //         });
   //         continue;
   //       }
 
   //       messages.push({
   //         status: "success",
-  //         msg: `Xóa lớp "${classData.name}" thành công`,
+  //         msg: `Xóa lớp "${RoundData.name}" thành công`,
   //       });
-  //       logger.info(`Xóa lớp ${classData.name} thành công`);
+  //       logger.info(`Xóa lớp ${RoundData.name} thành công`);
   //     }
 
   //     res.json({

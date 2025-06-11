@@ -9,6 +9,7 @@ import {
   RoundQuerySchema,
   RoundIdShame,
   CreateRoundShema,
+  UpdeateRoundhema,
 } from "./round.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const roundRouter = Router();
@@ -38,21 +39,21 @@ roundRouter.post(
   RoundController.createRound
 );
 
-// classRouter.patch(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(UpdeateClasshema),
-//   validateParams(ClassIdShame),
-//   ClassController.updateClass
-// );
+roundRouter.patch(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdeateRoundhema),
+  validateParams(RoundIdShame),
+  RoundController.updateRound
+);
 
-// classRouter.patch(
-//   "/:id/toggle-active",
-//   authenticate,
-//   role("Admin"),
-//   ClassController.toggleActive
-// );
+roundRouter.patch(
+  "/:id/toggle-active",
+  authenticate,
+  role("Admin"),
+  RoundController.toggleActive
+);
 // classRouter.delete(
 //   "/:id",
 //   authenticate,

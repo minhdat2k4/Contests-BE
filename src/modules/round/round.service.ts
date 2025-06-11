@@ -4,6 +4,7 @@ import {
   RoundQueryInput,
   RoundById,
   CreateRoundInput,
+  UpdateRoundInput,
 } from "@/modules/round";
 import { Round } from "@prisma/client";
 
@@ -109,27 +110,43 @@ export default class RoundService {
     });
   }
 
-  // static async updateClass(
-  //   id: number,
-  //   data: UpdateClassInput
-  // ): Promise<Class | null> {
-  //   const updateData: any = {};
-  //   if (data.name !== undefined) {
-  //     updateData.name = data.name;
-  //   }
-  //   if (data.isActive !== undefined) {
-  //     updateData.isActive = data.isActive;
-  //   }
-  //   if (data.schoolId !== undefined) {
-  //     updateData.schoolId = data.schoolId;
-  //   }
-  //   return prisma.class.update({
-  //     where: { id: id },
-  //     data: {
-  //       ...updateData,
-  //     },
-  //   });
-  // }
+  static async updateRound(
+    id: number,
+    data: UpdateRoundInput
+  ): Promise<Round | null> {
+    const updateData: any = {};
+
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+
+    if (data.contestId !== undefined) {
+      updateData.contestId = data.contestId;
+    }
+
+    if (data.index !== undefined) {
+      updateData.index = data.index;
+    }
+
+    if (data.endTime !== undefined) {
+      updateData.endTime = data.endTime;
+    }
+
+    if (data.startTime !== undefined) {
+      updateData.startTime = data.startTime;
+    }
+
+    return prisma.round.update({
+      where: { id: id },
+      data: {
+        ...updateData,
+      },
+    });
+  }
   // static async deleteClass(id: number): Promise<Class> {
   //   return prisma.class.delete({
   //     where: {

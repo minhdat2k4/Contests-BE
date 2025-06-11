@@ -45,6 +45,13 @@ export const CreateRoundShema = z.object({
 });
 
 export const RoundIdShame = z.object({
+  id: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Id là 1 số nguyên dương "),
+});
+
+export const UpdeateRoundhema = z.object({
   name: z
     .string({
       required_error: "Vui lòng nhập tên vòng đấu",
@@ -78,6 +85,34 @@ export const RoundIdShame = z.object({
 
   index: z.number().optional(),
   isActive: z.boolean().optional(),
+});
+
+export const RoundQuerySchema = z.object({
+  page: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
+    .optional()
+    .default("10"),
+  search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
+  isActive: z
+    .string()
+    .transform(val => val === "true")
+    .optional(),
+  contestId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id cuộc thi phải là số nguyên dương"
+    )
+    .optional(),
 });
 
 export const deleteRoundesSchema = z.object({

@@ -19,7 +19,6 @@ import { questionDetailRouter } from "@/modules/questionDetail";
 import { rescueRoute } from "@/modules/rescues";
 import { contestRoute } from "@/modules/contest";
 import multer from "multer";
-import { prepareFileInfo, moveUploadedFile } from "./utils/uploadFile";
 
 import fs from "fs";
 import { enumRouter } from "@/modules/enum";
@@ -72,42 +71,6 @@ app.get("/health", (req, res) => {
     environment: process.env.NODE_ENV || "development",
   });
 });
-const upload = multer({ dest: "temp/" });
-app.post(
-  "/api/uploads",
-  upload.single("file"),
-  (req: Request, res: Response): void => {
-    const file = req.file;
-
-    if (!file) {
-      res.status(400).json({ error: "Không có file nào được gửi lên." });
-      return;
-    }
-
-    const fileInfo = prepareFileInfo(file, [".jpg", ".png", ".mp4"], "uploads");
-
-    if (!fileInfo.isValid) {
-      res.status(400).json({ error: fileInfo.error });
-      return;
-    }
-
-    // Tạo thư mục nếu chưa có
-    if (!fs.existsSync("uploads")) {
-      fs.mkdirSync("uploads", { recursive: true });
-    }
-
-    // Di chuyển file từ temp -> uploads
-    fs.renameSync(fileInfo.tempPath!, fileInfo.destPath!);
-
-    res.status(200).json({
-      fileName: fileInfo.fileName,
-      url: `/uploads/${fileInfo.fileName}`,
-      ext: fileInfo.ext,
-      originalName: fileInfo.originalName,
-    });
-  }
-);
-
 // API routes
 app.use("/api/auth", authRouter);
 app.use("/api/about", aboutRouter);

@@ -146,7 +146,7 @@ Table Contests {
   endTime DateTime [not null]
   logo String
   background String
-  media String
+  media Json
   slogan String
   status ContestStatus [not null, default: 'upcoming']
   isActive Boolean [not null, default: true]

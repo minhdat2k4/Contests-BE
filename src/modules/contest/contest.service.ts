@@ -1,5 +1,5 @@
 import { prisma } from "@/config/database";
-import { ContestQueryInput } from "./contest.schema";
+import { ContestQueryInput, CreateContestInput } from "./contest.schema";
 import { Contest } from "@prisma/client";
 export default class ContestService {
   static async getAll(query: ContestQueryInput): Promise<{
@@ -62,13 +62,13 @@ export default class ContestService {
     });
   }
 
-  // static async create(data: CreateRescueInput): Promise<Rescue | null> {
-  //   return prisma.rescue.create({
-  //     data: {
-  //       ...data,
-  //     },
-  //   });
-  // }
+  static async create(data: any): Promise<Contest | null> {
+    return prisma.contest.create({
+      data: {
+        ...data,
+      },
+    });
+  }
 
   // static async updateRescue(
   //   id: number,

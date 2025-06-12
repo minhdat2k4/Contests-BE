@@ -1,9 +1,9 @@
 import path from "path";
 import fs from "fs";
-export function prepareFileInfo(
+
+export function prepareFileInfoCustom(
   file: Express.Multer.File,
-  allowedExtensions: string[],
-  uploadFolder = "uploads"
+  folderPath: string // Đường dẫn tuyệt đối tới thư mục lưu file
 ): {
   isValid: boolean;
   fileName?: string;
@@ -14,22 +14,16 @@ export function prepareFileInfo(
   error?: string;
 } {
   const ext = path.extname(file.originalname).toLowerCase();
-  if (!allowedExtensions.includes(ext)) {
-    return {
-      isValid: false,
-      error: `File "${file.originalname}" không đúng định dạng.`,
-    };
-  }
-
-  const fileName = `${Date.now()}-${file.originalname.replace(/\s+/g, "-")}`;
+  const baseName = path.basename(file.originalname, ext).replace(/\s+/g, "-");
+  const fileName = `${Date.now()}-${baseName}${ext}`; // chỉ tên file, không kèm folder
   const tempPath = file.path;
-  const destPath = path.join(uploadFolder, fileName);
+  const destPath = path.join(folderPath, fileName); // path đúng: folder + tên file
 
   return {
     isValid: true,
     fileName,
     ext: ext.slice(1),
-    originalName: path.basename(file.originalname, ext),
+    originalName: baseName,
     tempPath,
     destPath,
   };

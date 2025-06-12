@@ -1,11 +1,66 @@
 import { Request, Response } from "express";
-import { ContestQueryInput, Contestervice } from "@/modules/contest";
+import {
+  ContestQueryInput,
+  Contestervice,
+  CreateContestInput,
+} from "@/modules/contest";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { ContestStatus } from "@prisma/client";
 import { prisma } from "@/config/database";
-import { error } from "console";
+import {
+  prepareFileInfoCustom,
+  moveUploadedFile,
+} from "../../utils/uploadFile";
 export default class ContestController {
+  static async create(req: Request, res: Response): Promise<void> {
+    try {
+      const input: CreateContestInput = req.body;
+      const files = req.files as {
+        logo?: Express.Multer.File[];
+        background?: Express.Multer.File[];
+        media?: Express.Multer.File[];
+      };
+      const folderPath = "uploads/contest";
+      const logoInfo = files?.logo?.[0]
+        ? prepareFileInfoCustom(files.logo[0], folderPath)
+        : null;
+      const bgInfo = files?.background?.[0]
+        ? prepareFileInfoCustom(files.background[0], folderPath)
+        : null;
+      const mediaInfos =
+        files?.media?.map(file => prepareFileInfoCustom(file, folderPath)) ||
+        [];
+
+      const contest = await Contestervice.create({
+        name: input.ContestName,
+        slug: input.slug,
+        rule: input.rule,
+        plainText: input.plainText,
+        location: input.location,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        slogan: input.slogan,
+        status: input.status,
+        logo: logoInfo ? `/uploads/contest/${logoInfo.fileName}` : undefined,
+        background: bgInfo ? `/uploads/contest/${bgInfo.fileName}` : undefined,
+        media: mediaInfos.length
+          ? mediaInfos.map(i => `/uploads/contest/${i.fileName}`)
+          : [],
+      });
+
+      if (logoInfo) moveUploadedFile(logoInfo.tempPath!, logoInfo.destPath!);
+      if (bgInfo) moveUploadedFile(bgInfo.tempPath!, bgInfo.destPath!);
+      mediaInfos.forEach(info =>
+        moveUploadedFile(info.tempPath!, info.destPath!)
+      );
+      logger.info(`Thêm cuộc thi thành công`);
+      res.json(successResponse(contest, "Thêm cuộc thi thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
       const query: ContestQueryInput = {
@@ -257,44 +312,5 @@ export default class ContestController {
   //     logger.error((error as Error).message);
   //     res.status(400).json(errorResponse((error as Error).message));
   //   }
-  // }
-
-  // static async create(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const input: CreateContestInput = req.body;
-  //     const match = await prisma.match.findFirst({
-  //       where: { id: input.matchId },
-  //     });
-  //     if (!match) {
-  //       throw new Error("Không tìm thấy trận đấu");
-  //     }
-  //     const Contest = await Contestervice.create(input);
-  //     if (!Contest) {
-  //       throw new Error(`Thêm cuộc thi ${input.name} thành công`);
-  //     }
-  //     logger.info(`Thêm cuộc thi ${input.name} thành công`);
-  //     res.json(
-  //       successResponse(Contest, `Thêm cuộc thi ${input.name} thành công`)
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-
-  // static async enmuResceType(req: Request, res: Response): Promise<void> {
-  //   const ContestTypes = Object.values(ContestType); // Lấy các giá trị enum
-  //   res.json({
-  //     success: true,
-  //     data: ContestTypes,
-  //   });
-  // }
-
-  // static async enmuContesttatus(req: Request, res: Response): Promise<void> {
-  //   const ContestTypes = Object.values(Contesttatus); // Lấy các giá trị enum
-  //   res.json({
-  //     success: true,
-  //     data: ContestTypes,
-  //   });
   // }
 }

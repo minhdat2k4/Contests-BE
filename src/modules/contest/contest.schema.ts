@@ -1,25 +1,6 @@
 import z, { number } from "zod";
 import { ContestStatus } from "@prisma/client";
 
-export const CreateContestsSchema = z.object({
-  name: z.string().min(1, "Tên cuộc thi là bắt buộc"),
-  slug: z.string().min(1, "Slug là bắt buộc"),
-  rule: z.string().min(1, "Nội dung luật là bắt buộc"),
-  plainText: z.string().min(1, "Mô tả ngắn là bắt buộc"),
-  location: z.string().min(1, "Địa điểm là bắt buộc"),
-  startTime: z.coerce.date().refine(date => !isNaN(date.getTime()), {
-    message: "Ngày bắt đầu không hợp lệ",
-  }),
-  endTime: z.coerce.date().refine(date => !isNaN(date.getTime()), {
-    message: "Ngày kết thúc không hợp lệ",
-  }),
-  logo: z.string().or(z.string().min(1, "Logo là bắt buộc")),
-  background: z.string().or(z.string().min(1, "Background là bắt buộc")),
-  media: z.array(z.string()).or(z.any()),
-  slogan: z.string().optional(),
-  status: z.nativeEnum(ContestStatus),
-  isActive: z.boolean(),
-});
 export const ContestsIdShame = z.object({
   id: z
     .string()
@@ -79,7 +60,21 @@ export const deleteContestsesSchema = z.object({
     .min(1, "Phải chọn ít nhất 1 ID để xoá"),
 });
 
-export type CreateContestInput = z.infer<typeof CreateContestsSchema>;
 export type ContestsIdParams = z.infer<typeof ContestsIdShame>;
 export type UpdateContestInput = z.infer<typeof UpdateContestsSchema>;
 export type ContestQueryInput = z.infer<typeof ContestsQuerySchema>;
+export type CreateContestInput = {
+  ContestName: string;
+  slug: string;
+  rule: string;
+  plainText: string;
+  location: string;
+  startTime: Date | string;
+  endTime: Date | string;
+  logo?: string;
+  background?: string;
+  media?: any;
+  slogan: string;
+  status: ContestStatus;
+  isActive?: boolean;
+};

@@ -12,6 +12,9 @@ import {
 } from "./contest.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const contestRoute = Router();
+
+import { uploadContestFiles } from "@/middlewares/uploadContestFiles";
+
 // // // prive
 
 contestRoute.get(
@@ -30,13 +33,13 @@ contestRoute.get(
   ContestController.getById
 );
 
-// contestRoute.post(
-//   "/",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(CreateContestShema),
-//   ContestController.create
-// );
+contestRoute.post(
+  "/",
+  authenticate,
+  role("Admin"),
+  uploadContestFiles,
+  ContestController.create
+);
 
 // contestRoute.patch(
 //   "/:id",

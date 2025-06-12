@@ -266,7 +266,7 @@ model Contest {
   endTime      DateTime
   logo         String?         @db.VarChar(255)
   background   String?         @db.VarChar(255)
-  media        String?         @db.VarChar(255)
+  media        Json?       
   slogan       String?         @db.VarChar(255)
   status       ContestStatus   @default(upcoming)
   isActive     Boolean         @default(true)

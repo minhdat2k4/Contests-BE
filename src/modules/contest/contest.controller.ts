@@ -3,6 +3,8 @@ import { ContestQueryInput, Contestervice } from "@/modules/contest";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { ContestStatus } from "@prisma/client";
+import { prisma } from "@/config/database";
+import { error } from "console";
 export default class ContestController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
@@ -49,48 +51,206 @@ export default class ContestController {
     }
   }
 
-  // static async delete(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Rescue = await Contestervice.getRescueBy({ id: Number(id) });
-  //     if (!Rescue) {
-  //       throw new Error("Không tìm thấy cuộc thi ");
-  //     }
+  static async delete(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const contest = await Contestervice.getBy({ id: Number(id) });
 
-  //     const deleteRescue = await Contestervice.delete(Rescue.id);
-  //     if (!deleteRescue) {
-  //       throw new Error(`Xóa cuộc thi ${Rescue.name} thất bại `);
-  //     }
-  //     logger.info(`Xóa cuộc thi ${Rescue.name} thành công`);
-  //     res.json(successResponse(null, `Xóa cuộc thi ${Rescue.name} thành công`));
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi ");
+      }
+
+      const countRound = await prisma.round.count({
+        where: { contestId: contest.id },
+      });
+      if (countRound > 0) {
+        throw new Error(
+          ` Cuộc thi này đang có ${countRound} vòng đấu không thể xóa`
+        );
+      }
+
+      const countMatch = await prisma.match.count({
+        where: { contestId: contest.id },
+      });
+      if (countMatch > 0) {
+        throw new Error(
+          ` Cuộc thi này đang có ${countMatch} trận đấu không thể xóa`
+        );
+      }
+
+      const countContestants = await prisma.contestant.count({
+        where: { contestId: contest.id },
+      });
+      if (countContestants > 0) {
+        throw new Error(
+          ` Cuộc thi này đang có ${countContestants} thí sinh không thể xóa`
+        );
+      }
+
+      const countSpo = await prisma.sponsor.count({
+        where: { contestId: contest.id },
+      });
+      if (countSpo > 0) {
+        throw new Error(
+          ` Cuộc thi này đang có ${countSpo} nhà tài trợ không thể xóa`
+        );
+      }
+
+      const countClassVieo = await prisma.classVideo.count({
+        where: { contestId: contest.id },
+      });
+      if (countClassVieo > 0) {
+        throw new Error(
+          ` Cuộc thi này đang có ${countClassVieo} video tham gia không thể xóa`
+        );
+      }
+
+      const countAwrad = await prisma.award.count({
+        where: { contestId: contest.id },
+      });
+      if (countAwrad > 0) {
+        throw new Error(
+          ` Cuộc thi này đang có ${countAwrad} giải thưởng không thể xóa`
+        );
+      }
+      const deletecontest = await Contestervice.delete(contest.id);
+      if (!deletecontest) {
+        throw new Error(`Xóa cuộc thi ${contest.name} thất bại `);
+      }
+      logger.info(`Xóa cuộc thi ${contest.name} thành công`);
+      res.json(
+        successResponse(null, `Xóa cuộc thi ${contest.name} thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async deleteMany(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
+
+      const messages: { status: "success" | "error"; msg: string }[] = [];
+
+      for (const id of ids) {
+        const contest = await Contestervice.getBy({ id: Number(id) });
+
+        if (!contest) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy cuộc thi với ID = ${id}`,
+          });
+          continue;
+        }
+
+        // Kiểm tra liên kết
+        const relatedChecks = [
+          {
+            count: await prisma.round.count({
+              where: { contestId: contest.id },
+            }),
+            type: "vòng đấu",
+          },
+          {
+            count: await prisma.match.count({
+              where: { contestId: contest.id },
+            }),
+            type: "trận đấu",
+          },
+          {
+            count: await prisma.contestant.count({
+              where: { contestId: contest.id },
+            }),
+            type: "thí sinh",
+          },
+          {
+            count: await prisma.sponsor.count({
+              where: { contestId: contest.id },
+            }),
+            type: "nhà tài trợ",
+          },
+          {
+            count: await prisma.classVideo.count({
+              where: { contestId: contest.id },
+            }),
+            type: "video tham gia",
+          },
+          {
+            count: await prisma.award.count({
+              where: { contestId: contest.id },
+            }),
+            type: "giải thưởng",
+          },
+        ];
+
+        let hasError = false;
+        for (const check of relatedChecks) {
+          if (check.count > 0) {
+            messages.push({
+              status: "error",
+              msg: `Cuộc thi này đang có ${check.count} ${check.type} không thể xóa`,
+            });
+            hasError = true;
+          }
+        }
+
+        if (hasError) continue;
+
+        // Tiến hành xóa
+        const deleted = await Contestervice.delete(contest.id);
+
+        if (!deleted) {
+          messages.push({
+            status: "error",
+            msg: `Xóa cuộc thi "${contest.name}" thất bại`,
+          });
+          continue;
+        }
+
+        messages.push({
+          status: "success",
+          msg: `Xóa cuộc thi "${contest.name}" thành công`,
+        });
+        logger.info(`Xóa cuộc thi "${contest.name}" thành công`);
+      }
+
+      res.json({
+        success: true,
+        messages,
+      });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
   // static async update(req: Request, res: Response): Promise<void> {
   //   try {
   //     const id = req.params.id;
-  //     const input: UpdateRescueInput = req.body;
+  //     const input: UpdatecontestInput = req.body;
   //     const match = await prisma.match.findFirst({
   //       where: { id: input.matchId },
   //     });
   //     if (!match) {
   //       throw new Error("Không tìm thấy trận đấu");
   //     }
-  //     const Rescue = await Contestervice.getRescueBy({ id: Number(id) });
-  //     if (!Rescue) {
+  //     const contest = await Contestervice.getcontestBy({ id: Number(id) });
+  //     if (!contest) {
   //       throw new Error("Không tìm thấy cuộc thi ");
   //     }
-  //     const updateRescue = await Contestervice.updateRescue(Number(id), input);
-  //     if (!updateRescue) {
+  //     const updatecontest = await Contestervice.updatecontest(Number(id), input);
+  //     if (!updatecontest) {
   //       throw new Error("Cập nhật cuộc thi thất bại");
   //     }
-  //     logger.info(`Cập nhật vòng thi  ${Rescue.name} thành công`);
+  //     logger.info(`Cập nhật vòng thi  ${contest.name} thành công`);
   //     res.json(
   //       successResponse(
-  //         updateRescue,
-  //         `Cập nhật vòng thi ${Rescue.name} thành công`
+  //         updatecontest,
+  //         `Cập nhật vòng thi ${contest.name} thành công`
   //       )
   //     );
   //   } catch (error) {
@@ -122,53 +282,6 @@ export default class ContestController {
   //   }
   // }
 
-  // static async deleteMany(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const { ids } = req.body;
-
-  //     if (!Array.isArray(ids)) {
-  //       throw new Error("Danh sách không hợp lệ");
-  //     }
-
-  //     const messages: { status: "success" | "error"; msg: string }[] = [];
-
-  //     for (const id of ids) {
-  //       const Contest = await Contestervice.getContestBy({ id: Number(id) });
-
-  //       if (!Contest) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Không tìm thấy cuộc thi với ID = ${id}`,
-  //         });
-  //         continue;
-  //       }
-
-  //       const deleted = await Contestervice.delete(Contest.id);
-
-  //       if (!deleted) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Xóa vòng đấu "${Contest.name}" thất bại`,
-  //         });
-  //         continue;
-  //       }
-
-  //       messages.push({
-  //         status: "success",
-  //         msg: `Xóa vòng đấu "${Contest.name}" thành công`,
-  //       });
-  //       logger.info(`Xóa vòng đấu "${Contest.name}" thành công`);
-  //     }
-
-  //     res.json({
-  //       success: true,
-  //       messages,
-  //     });
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
   // static async enmuResceType(req: Request, res: Response): Promise<void> {
   //   const ContestTypes = Object.values(ContestType); // Lấy các giá trị enum
   //   res.json({

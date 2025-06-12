@@ -5,7 +5,11 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { ContestController } from "@/modules/contest";
-import { ContestsQuerySchema, ContestsIdShame } from "./contest.schema";
+import {
+  ContestsQuerySchema,
+  ContestsIdShame,
+  deleteContestsesSchema,
+} from "./contest.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const contestRoute = Router();
 // // // prive
@@ -43,20 +47,20 @@ contestRoute.get(
 //   ContestController.update
 // );
 
-// contestRoute.delete(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(ContestIdShame),
-//   ContestController.delete
-// );
+contestRoute.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(ContestsIdShame),
+  ContestController.delete
+);
 
-// contestRoute.post(
-//   "/delete-many",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(deleteContestesSchema),
-//   ContestController.deleteMany
-// );
+contestRoute.post(
+  "/delete-many",
+  authenticate,
+  role("Admin"),
+  validateBody(deleteContestsesSchema),
+  ContestController.deleteMany
+);
 
 export { contestRoute };

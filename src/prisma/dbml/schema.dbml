@@ -154,6 +154,8 @@ Table Contests {
   contestants Contestants [not null]
   awards Awards [not null]
   round Rounds [not null]
+  ClassVideo Class_Videos [not null]
+  Sponsor Sponsors [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -293,6 +295,8 @@ Table Sponsors {
   logo String
   images String
   videos String [not null]
+  contestId Int
+  contest Contests
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -303,6 +307,8 @@ Table Class_Videos {
   slogan String
   classId Int [not null]
   class Classes [not null]
+  contestId Int
+  contest Contests
   videos String [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -401,7 +407,13 @@ Enum ControlKey {
   image
 }
 
- 
+Enum ControlValue {
+  start
+  pause
+  reset
+  zoomIn
+  zoomOut
+}
 
 Ref: RefreshTokens.userId > Users.id [delete: Cascade]
 
@@ -449,6 +461,10 @@ Ref: Awards.contestId > Contests.id [delete: Restrict]
 
 Ref: Awards.contestantId > Contestants.id [delete: Restrict]
 
+Ref: Sponsors.contestId > Contests.id [delete: Restrict]
+
 Ref: Class_Videos.classId > Classes.id [delete: Restrict]
+
+Ref: Class_Videos.contestId > Contests.id [delete: Restrict]
 
 Ref: Screen_Controls.matchId - Matches.id [delete: Restrict]

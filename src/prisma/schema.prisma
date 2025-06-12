@@ -256,26 +256,31 @@ model QuestionDetail {
 }
 
 model Contest {
-  id           Int            @id @default(autoincrement())
-  name         String         @db.VarChar(255)
-  slug         String         @db.VarChar(255) @unique
-  rule         String         @db.Text
-  plainText    String         @db.Text 
-  location     String         @db.VarChar(255)
-  startTime    DateTime       
-  endTime      DateTime   
-  logo         String?        @db.VarChar(255)
-  background   String?        @db.VarChar(255)
-  media        String?        @db.VarChar(255)
-  slogan       String?        @db.VarChar(255)
-  status       ContestStatus  @default(upcoming)
-  isActive     Boolean        @default(true) 
+  id           Int             @id @default(autoincrement())
+  name         String          @db.VarChar(255)
+  slug         String          @db.VarChar(255) @unique
+  rule         String          @db.Text
+  plainText    String          @db.Text
+  location     String          @db.VarChar(255)
+  startTime    DateTime
+  endTime      DateTime
+  logo         String?         @db.VarChar(255)
+  background   String?         @db.VarChar(255)
+  media        String?         @db.VarChar(255)
+  slogan       String?         @db.VarChar(255)
+  status       ContestStatus   @default(upcoming)
+  isActive     Boolean         @default(true)
+
   matches      Match[]
   contestants  Contestant[]
   awards       Award[]
   round        Round[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ClassVideo   ClassVideo[]
+  Sponsor      Sponsor[]
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
   @@map("Contests")
 }
 
@@ -419,28 +424,36 @@ model Award {
 }
 
 model Sponsor {
-  id      Int     @id @default(autoincrement())
-  name    String  @db.VarChar(255)
-  logo    String? @db.VarChar(255)
-  images  String? @db.VarChar(255)
-  videos  String  @db.VarChar(255)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  logo       String?  @db.VarChar(255)
+  images     String?  @db.VarChar(255)
+  videos     String   @db.VarChar(255)
+
+  contestId  Int?
+  contest    Contest? @relation(fields: [contestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@map("Sponsors")
 }
 
 model ClassVideo {
-  id       Int     @id @default(autoincrement())
-  name     String  @db.VarChar(255)
-  slogan   String? @db.VarChar(255)
-  classId  Int    
-  class    Class   @relation(fields: [classId], references: [id],onDelete :Restrict , onUpdate :Restrict)
-  videos   String  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  slogan     String?   @db.VarChar(255)
+  classId    Int
+  class      Class     @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  contestId  Int?
+  contest    Contest?  @relation(fields: [contestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  videos     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
   @@map("Class_Videos")
 }
+
 
 model ScreenControl {
   id           Int          @id @default(autoincrement())

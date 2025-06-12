@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { logger } from "@/utils/logger";
 import { CustomError } from "@/middlewares/errorHandler";
 import { ERROR_CODES } from "@/constants/errorCodes";
+import { prisma } from "@/config/database";
 import QuestionDetailService from "./questionDetail.service";
 import {
   CreateQuestionDetailInput,
@@ -911,6 +912,163 @@ export default class QuestionDetailController {
       });
     } catch (error) {
       QuestionDetailController.handleErrorResponse(res, error);
+    }
+  }
+
+  /**
+   * Hard delete question detail (explicit hard delete endpoint)
+   */
+  static async hardDeleteQuestionDetail(req: Request, res: Response): Promise<void> {
+    try {
+      const questionIdParam = req.params.questionId;
+      const questionPackageIdParam = req.params.questionPackageId;
+
+      const questionId = parseInt(questionIdParam, 10);
+      const questionPackageId = parseInt(questionPackageIdParam, 10);
+
+      if (isNaN(questionId) || questionId <= 0) {
+        throw new CustomError("ID câu hỏi phải là số nguyên dương", 400, ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      if (isNaN(questionPackageId) || questionPackageId <= 0) {
+        throw new CustomError("ID gói câu hỏi phải là số nguyên dương", 400, ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      // Check if question detail exists
+      const exists = await QuestionDetailService.questionDetailExists(questionId, questionPackageId);
+      if (!exists) {
+        throw new CustomError(
+          "Không tìm thấy mối quan hệ câu hỏi-gói",
+          404,
+          ERROR_CODES.RECORD_NOT_FOUND
+        );
+      }
+
+      // Check if this question detail is being used in any active matches
+      const activeMatches = await prisma.contestantMatch.findFirst({
+        where: {
+          match: {
+            questionPackage: {
+              questionDetails: {
+                some: {
+                  questionId,
+                  questionPackageId,
+                },
+              },
+            },
+            isActive: true,
+            status: {
+              in: ["upcoming", "ongoing"],
+            },
+          },
+        },
+      });      if (activeMatches) {
+        throw new CustomError(
+          "Không thể xóa chi tiết câu hỏi đang được sử dụng trong trận đấu đang hoạt động",
+          409,
+          ERROR_CODES.DUPLICATE_ENTRY
+        );
+      }
+
+      await QuestionDetailService.deleteQuestionDetail(questionId, questionPackageId);
+
+      logger.info("Question detail hard deleted successfully", {
+        questionId,
+        questionPackageId,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Xóa vĩnh viễn câu hỏi khỏi gói thành công",
+        data: null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error("Error hard deleting question detail:", error);
+      if (error instanceof CustomError) {
+        res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+          error: {
+            code: error.code,
+            details: error.message,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Lỗi server nội bộ",
+          error: {
+            code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            details: "Đã xảy ra lỗi không mong muốn",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  /**
+   * Normalize question orders in a package
+   */
+  static async normalizeQuestionOrders(req: Request, res: Response): Promise<void> {
+    try {
+      const packageIdParam = req.params.packageId;
+      const packageId = parseInt(packageIdParam, 10);
+
+      if (isNaN(packageId) || packageId <= 0) {
+        throw new CustomError(
+          "ID gói câu hỏi phải là số nguyên dương",
+          400,
+          ERROR_CODES.VALIDATION_ERROR
+        );
+      }
+
+      // Check if package exists
+      const packageExists = await QuestionDetailService.questionPackageExists(packageId);
+      if (!packageExists) {
+        throw new CustomError(
+          "Không tìm thấy gói câu hỏi",
+          404,
+          ERROR_CODES.RECORD_NOT_FOUND
+        );
+      }
+
+      await QuestionDetailService.normalizeQuestionOrders(packageId);
+
+      logger.info(`Question orders normalized successfully for package: ${packageId}`);
+
+      res.status(200).json({
+        success: true,
+        message: "Sắp xếp lại thứ tự câu hỏi thành công",
+        data: null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error("Error normalizing question orders:", error);
+      
+      if (error instanceof CustomError) {
+        res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+          error: {
+            code: error.code,
+            details: error.message,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Lỗi server nội bộ",
+          error: {
+            code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            details: "Đã xảy ra lỗi không mong muốn",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
   }
 }

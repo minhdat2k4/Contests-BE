@@ -297,17 +297,16 @@ export default class QuestionPackageService {
           continue;
         }
 
-        // Soft delete the question package
-        await prisma.questionPackage.update({
+        // Hard delete the question package
+        await prisma.questionPackage.delete({
           where: { id },
-          data: { isActive: false },
         });
 
         successfulIds.push(id);
       } catch (error) {
         failedIds.push({
           id,
-          reason: "Lỗi hệ thống khi xóa gói câu hỏi",
+          reason: `Lỗi hệ thống khi xóa gói câu hỏi: ${error instanceof Error ? error.message : "Lỗi không xác định"}`,
         });
       }
     }

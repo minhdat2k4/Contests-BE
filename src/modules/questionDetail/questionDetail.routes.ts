@@ -137,6 +137,16 @@ questionDetailRouter.delete(
 );
 
 /**
+ * @route DELETE /api/question-details/:questionId/:questionPackageId/hard
+ * @description Hard delete question detail (explicit hard delete endpoint)
+ * @access Private (Admin/Judge)
+ */
+questionDetailRouter.delete(
+  "/:questionId/:questionPackageId/hard",
+  QuestionDetailController.hardDeleteQuestionDetail
+);
+
+/**
  * @route PATCH /api/question-details/:questionId/:questionPackageId/deactivate
  * @description Soft delete question detail (set isActive to false)
  * @access Private (Admin/Judge)
@@ -151,10 +161,20 @@ questionDetailRouter.patch(
  * @description Batch delete question details
  * @access Private (Admin/Judge)
  */
-questionDetailRouter.post(
+questionDetailRouter.delete(
   "/batch-delete",
   validateBody(BatchDeleteQuestionDetailsSchema),
   QuestionDetailController.batchDeleteQuestionDetails
+);
+
+/**
+ * @route PUT /api/question-details/package/:packageId/normalize-orders
+ * @description Normalize question orders in a package (fill gaps, ensure sequential order)
+ * @access Private (Admin/Judge)
+ */
+questionDetailRouter.put(
+  "/package/:packageId/normalize-orders",
+  QuestionDetailController.normalizeQuestionOrders
 );
 
 export { questionDetailRouter };

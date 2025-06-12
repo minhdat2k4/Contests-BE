@@ -21,6 +21,7 @@ import multer from "multer";
 import { prepareFileInfo, moveUploadedFile } from "./utils/uploadFile";
 
 import fs from "fs";
+import { enumRouter } from "@/modules/enum";
 
 // Load environment variables
 dotenv.config();
@@ -117,7 +118,9 @@ app.use("/api/student", studentRouter);
 app.use("/api/question-topics", questionTopicRoutes);
 app.use("/api/question-packages", questionPackageRouter);
 app.use("/api/question-details", questionDetailRouter);
+
 app.use("/api/rescue", rescueRoute);
+app.use("/api/enums", enumRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {
@@ -131,6 +134,8 @@ app.get("/api/v1", (req, res) => {
       users: "/api/users",
       "question-topics": "/api/question-topics",
       "question-packages": "/api/question-packages",
+      "question-details": "/api/question-details",
+      enums: "/api/enums",
       health: "/health",
     },
   });

@@ -253,16 +253,16 @@ export default class QuestionTopicService {
         }
 
         // Soft delete the question topic
-        await prisma.questionTopic.update({
+        // Hard delete the question topic
+        await prisma.questionTopic.delete({
           where: { id },
-          data: { isActive: false },
         });
 
         successfulIds.push(id);
       } catch (error) {
         failedIds.push({
           id,
-          reason: "Lỗi hệ thống khi xóa chủ đề câu hỏi",
+          reason: `Lỗi hệ thống khi xóa chủ đề câu hỏi: ${error instanceof Error ? error.message : "Lỗi không xác định"}`,
         });
       }
     }

@@ -75,7 +75,6 @@ export default class QuestionDetailService {
       questionPackage: questionDetail.questionPackage,
     };
   }
-
   /**
    * Update question detail
    */
@@ -84,26 +83,98 @@ export default class QuestionDetailService {
     questionPackageId: number,
     data: UpdateQuestionDetailInput
   ): Promise<QuestionDetail | null> {
-    const updateData: any = {};
+    return prisma.$transaction(async (tx) => {
+      const updateData: any = {};
 
-    if (data.questionOrder !== undefined) {
-      updateData.questionOrder = data.questionOrder;
-    }
-    if (data.isActive !== undefined) {
-      updateData.isActive = data.isActive;
-    }
+      // Handle question order update with automatic reordering
+      if (data.questionOrder !== undefined) {
+        // Get current question detail
+        const currentDetail = await tx.questionDetail.findFirst({
+          where: {
+            questionId,
+            questionPackageId,
+          },
+        });
 
-    return prisma.questionDetail.update({
-      where: {
-        questionId_questionPackageId: {
-          questionId,
-          questionPackageId,
+        if (!currentDetail) {
+          throw new Error("Question detail not found");
+        }
+
+        const oldOrder = currentDetail.questionOrder;
+        const newOrder = data.questionOrder;
+
+        if (oldOrder !== newOrder) {
+          // Check if the new order is already taken by another question
+          const existingQuestionAtNewOrder = await tx.questionDetail.findFirst({
+            where: {
+              questionPackageId,
+              questionOrder: newOrder,
+              isActive: true,
+              NOT: {
+                questionId,
+              },
+            },
+          });
+
+          if (existingQuestionAtNewOrder) {
+            // If moving to a position with existing question, shift others
+            if (newOrder < oldOrder) {
+              // Moving up: shift questions down that are between newOrder and oldOrder
+              await tx.questionDetail.updateMany({
+                where: {
+                  questionPackageId,
+                  questionOrder: {
+                    gte: newOrder,
+                    lt: oldOrder,
+                  },
+                  isActive: true,
+                },
+                data: {
+                  questionOrder: {
+                    increment: 1,
+                  },
+                },
+              });
+            } else {
+              // Moving down: shift questions up that are between oldOrder and newOrder
+              await tx.questionDetail.updateMany({
+                where: {
+                  questionPackageId,
+                  questionOrder: {
+                    gt: oldOrder,
+                    lte: newOrder,
+                  },
+                  isActive: true,
+                },
+                data: {
+                  questionOrder: {
+                    decrement: 1,
+                  },
+                },
+              });
+            }
+          }
+        }
+
+        updateData.questionOrder = data.questionOrder;
+      }
+
+      if (data.isActive !== undefined) {
+        updateData.isActive = data.isActive;
+      }
+
+      // Update the target question detail
+      return tx.questionDetail.update({
+        where: {
+          questionId_questionPackageId: {
+            questionId,
+            questionPackageId,
+          },
         },
-      },
-      data: updateData,
+        data: updateData,
+      });
     });
   }
-
   /**
    * Remove question from package (delete)
    */
@@ -111,16 +182,50 @@ export default class QuestionDetailService {
     questionId: number,
     questionPackageId: number
   ): Promise<QuestionDetail | null> {
-    return prisma.questionDetail.delete({
-      where: {
-        questionId_questionPackageId: {
+    return prisma.$transaction(async (tx) => {
+      // Get the question detail to know its order before deleting
+      const questionDetail = await tx.questionDetail.findFirst({
+        where: {
           questionId,
           questionPackageId,
         },
-      },
+      });
+
+      if (!questionDetail) {
+        throw new Error("Question detail not found");
+      }
+
+      const deletedOrder = questionDetail.questionOrder;
+
+      // Delete the question detail
+      const deleted = await tx.questionDetail.delete({
+        where: {
+          questionId_questionPackageId: {
+            questionId,
+            questionPackageId,
+          },
+        },
+      });
+
+      // Shift up all questions with order greater than the deleted one
+      await tx.questionDetail.updateMany({
+        where: {
+          questionPackageId,
+          questionOrder: {
+            gt: deletedOrder,
+          },
+          isActive: true,
+        },
+        data: {
+          questionOrder: {
+            decrement: 1,
+          },
+        },
+      });
+
+      return deleted;
     });
   }
-
   /**
    * Soft delete question detail (set isActive to false)
    */
@@ -128,14 +233,49 @@ export default class QuestionDetailService {
     questionId: number,
     questionPackageId: number
   ): Promise<QuestionDetail | null> {
-    return prisma.questionDetail.update({
-      where: {
-        questionId_questionPackageId: {
+    return prisma.$transaction(async (tx) => {
+      // Get the question detail to know its order before soft deleting
+      const questionDetail = await tx.questionDetail.findFirst({
+        where: {
           questionId,
           questionPackageId,
         },
-      },
-      data: { isActive: false },
+      });
+
+      if (!questionDetail) {
+        throw new Error("Question detail not found");
+      }
+
+      const deletedOrder = questionDetail.questionOrder;
+
+      // Soft delete the question detail
+      const softDeleted = await tx.questionDetail.update({
+        where: {
+          questionId_questionPackageId: {
+            questionId,
+            questionPackageId,
+          },
+        },
+        data: { isActive: false },
+      });
+
+      // Shift up all active questions with order greater than the soft deleted one
+      await tx.questionDetail.updateMany({
+        where: {
+          questionPackageId,
+          questionOrder: {
+            gt: deletedOrder,
+          },
+          isActive: true,
+        },
+        data: {
+          questionOrder: {
+            decrement: 1,
+          },
+        },
+      });
+
+      return softDeleted;
     });
   }
 
@@ -648,7 +788,6 @@ export default class QuestionDetailService {
       },
     });
   }
-
   /**
    * Swap question orders between two question details in the same package
    */
@@ -677,7 +816,7 @@ export default class QuestionDetailService {
         throw new Error("One or both question details not found");
       }
 
-      const tempOrder = question1Detail.questionOrder;
+      const question1Order = question1Detail.questionOrder;
       const question2Order = question2Detail.questionOrder;
 
       // Update question 1 with question 2's order
@@ -699,7 +838,7 @@ export default class QuestionDetailService {
             questionPackageId,
           },
         },
-        data: { questionOrder: tempOrder },
+        data: { questionOrder: question1Order },
       });
 
       return { updatedQuestion1, updatedQuestion2 };
@@ -768,7 +907,6 @@ export default class QuestionDetailService {
     });
     return !!questionPackage;
   }
-
   /**
    * Batch delete question details
    */
@@ -782,6 +920,9 @@ export default class QuestionDetailService {
       successfulItems: [],
       failedItems: [],
     };
+
+    // Group items by questionPackageId to normalize orders per package
+    const packageIds = new Set<number>();
 
     // Process each question detail individually
     for (const item of data.items) {
@@ -803,7 +944,9 @@ export default class QuestionDetailService {
             reason: "Chi tiết câu hỏi không tồn tại hoặc đã bị xóa trước đó",
           });
           continue;
-        }        // Check if this question detail is being used in any active matches
+        }
+
+        // Check if this question detail is being used in any active matches
         const activeMatches = await prisma.contestantMatch.findFirst({
           where: {
             match: {
@@ -833,19 +976,18 @@ export default class QuestionDetailService {
           continue;
         }
 
-        // Perform soft delete
-        await prisma.questionDetail.update({
+        // Perform hard delete
+        await prisma.questionDetail.delete({
           where: {
             questionId_questionPackageId: {
               questionId: item.questionId,
               questionPackageId: item.questionPackageId,
             },
           },
-          data: {
-            isActive: false,
-            updatedAt: new Date(),
-          },
         });
+
+        // Track which packages need order normalization
+        packageIds.add(item.questionPackageId);
 
         result.successful++;
         result.successfulItems.push({
@@ -862,6 +1004,108 @@ export default class QuestionDetailService {
       }
     }
 
+    // Normalize question orders for all affected packages
+    for (const packageId of packageIds) {
+      try {
+        await this.normalizeQuestionOrders(packageId);
+      } catch (error) {
+        // Log error but don't fail the whole operation
+        console.error(`Failed to normalize orders for package ${packageId}:`, error);
+      }
+    }
+
     return result;
+  }
+
+  /**
+   * Reorder question orders in a package to fill gaps (normalize)
+   * This method ensures sequential order starting from 1
+   */
+  static async normalizeQuestionOrders(questionPackageId: number): Promise<void> {
+    // Get all active question details for the package, ordered by current questionOrder
+    const questionDetails = await prisma.questionDetail.findMany({
+      where: {
+        questionPackageId,
+        isActive: true,
+      },
+      orderBy: {
+        questionOrder: 'asc',
+      },
+      select: {
+        questionId: true,
+        questionOrder: true,
+      },
+    });
+
+    // Update each question detail with normalized order (1, 2, 3, ...)
+    const updatePromises = questionDetails.map((detail, index) => {
+      const newOrder = index + 1;
+      
+      // Only update if the order is different
+      if (detail.questionOrder !== newOrder) {
+        return prisma.questionDetail.update({
+          where: {
+            questionId_questionPackageId: {
+              questionId: detail.questionId,
+              questionPackageId,
+            },
+          },
+          data: {
+            questionOrder: newOrder,
+          },
+        });
+      }
+      return null;
+    });
+
+    // Execute all updates in parallel, filtering out null values
+    await Promise.all(updatePromises.filter(promise => promise !== null));
+  }
+
+  /**
+   * Shift question orders up after a deletion at specific position
+   */
+  static async shiftQuestionOrdersUp(
+    questionPackageId: number, 
+    deletedOrder: number
+  ): Promise<void> {
+    await prisma.questionDetail.updateMany({
+      where: {
+        questionPackageId,
+        questionOrder: {
+          gt: deletedOrder,
+        },
+        isActive: true,
+      },
+      data: {
+        questionOrder: {
+          decrement: 1,
+        },
+      },
+    });
+  }
+
+  /**
+   * Insert question at specific order and shift others down
+   */
+  static async insertQuestionAtOrder(
+    questionPackageId: number,
+    targetOrder: number
+  ): Promise<void> {
+    // Shift existing questions down
+    await prisma.questionDetail.updateMany({
+      where: {
+        questionPackageId,
+        questionOrder: {
+          gte: targetOrder,
+        },
+        isActive: true,
+      },
+      data: {
+        questionOrder: {
+          increment: 1,
+        },
+      },
+    });
   }
 }

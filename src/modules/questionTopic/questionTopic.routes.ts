@@ -86,7 +86,7 @@ questionRouter.patch(
  * @description Batch delete question topics
  * @access Private (Admin/Judge)
  */
-questionRouter.post(
+questionRouter.delete(
   "/batch-delete",
   validateBody(BatchDeleteQuestionTopicsSchema),
   QuestionTopicController.batchDeleteQuestionTopics

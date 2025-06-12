@@ -86,7 +86,7 @@ questionPackageRouter.patch(
  * @description Batch delete question packages
  * @access Private (Admin/Judge)
  */
-questionPackageRouter.post(
+questionPackageRouter.delete(
   "/batch-delete",
   validateBody(BatchDeleteQuestionPackagesSchema),
   QuestionPackageController.batchDeleteQuestionPackages

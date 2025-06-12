@@ -1008,4 +1008,67 @@ export default class QuestionDetailController {
       }
     }
   }
+
+  /**
+   * Normalize question orders in a package
+   */
+  static async normalizeQuestionOrders(req: Request, res: Response): Promise<void> {
+    try {
+      const packageIdParam = req.params.packageId;
+      const packageId = parseInt(packageIdParam, 10);
+
+      if (isNaN(packageId) || packageId <= 0) {
+        throw new CustomError(
+          "ID gói câu hỏi phải là số nguyên dương",
+          400,
+          ERROR_CODES.VALIDATION_ERROR
+        );
+      }
+
+      // Check if package exists
+      const packageExists = await QuestionDetailService.questionPackageExists(packageId);
+      if (!packageExists) {
+        throw new CustomError(
+          "Không tìm thấy gói câu hỏi",
+          404,
+          ERROR_CODES.RECORD_NOT_FOUND
+        );
+      }
+
+      await QuestionDetailService.normalizeQuestionOrders(packageId);
+
+      logger.info(`Question orders normalized successfully for package: ${packageId}`);
+
+      res.status(200).json({
+        success: true,
+        message: "Sắp xếp lại thứ tự câu hỏi thành công",
+        data: null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error("Error normalizing question orders:", error);
+      
+      if (error instanceof CustomError) {
+        res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+          error: {
+            code: error.code,
+            details: error.message,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Lỗi server nội bộ",
+          error: {
+            code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            details: "Đã xảy ra lỗi không mong muốn",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+  }
 }

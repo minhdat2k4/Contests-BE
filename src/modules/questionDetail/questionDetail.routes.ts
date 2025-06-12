@@ -161,10 +161,20 @@ questionDetailRouter.patch(
  * @description Batch delete question details
  * @access Private (Admin/Judge)
  */
-questionDetailRouter.post(
+questionDetailRouter.delete(
   "/batch-delete",
   validateBody(BatchDeleteQuestionDetailsSchema),
   QuestionDetailController.batchDeleteQuestionDetails
+);
+
+/**
+ * @route PUT /api/question-details/package/:packageId/normalize-orders
+ * @description Normalize question orders in a package (fill gaps, ensure sequential order)
+ * @access Private (Admin/Judge)
+ */
+questionDetailRouter.put(
+  "/package/:packageId/normalize-orders",
+  QuestionDetailController.normalizeQuestionOrders
 );
 
 export { questionDetailRouter };

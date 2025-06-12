@@ -1,5 +1,5 @@
 import z, { number } from "zod";
-import { RescueType, RescueStatus } from "@prisma/client";
+import { RescueType, RescueStatus, Match } from "@prisma/client";
 
 export const RescuesShema = z.object({
   id: z.number(),
@@ -23,45 +23,37 @@ export const CreateRescuesShema = z.object({
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
     .min(1, "Vui lòng nhập tên cứu trợ")
-    .max(255, "Tên cứu trợ tối đa 255 kí tự")
-    .optional(),
+    .max(255, "Tên cứu trợ tối đa 255 kí tự"),
   rescueType: z.nativeEnum(RescueType),
-  questionFrom: z
-    .number({
-      required_error: "Vui lòng nhập câu bắt đầu",
-      invalid_type_error: "Vui lòng nhập kí tự số",
-    })
-    .optional(),
-  questionTo: z
-    .number({
-      required_error: "Vui lòng nhập câu kết thúc",
-      invalid_type_error: "Vui lòng nhập kí tự số",
-    })
-    .optional(),
-  studentIds: z.any().optional(),
-  supportAnswers: z.any().optional(),
-  remainingContestants: z
-    .number({
-      required_error: "Vui lòng nhập số thí sinh còn lại",
-      invalid_type_error: "Vui lòng nhập kí tự số",
-    })
-    .optional(),
-  maxStudent: z
-    .number({
-      required_error: "Vui lòng nhập số lượng thí sinh tối đa",
-      invalid_type_error: "Vui lòng nhập kí tự số",
-    })
-    .optional(),
+  questionFrom: z.number({
+    required_error: "Vui lòng nhập câu bắt đầu",
+    invalid_type_error: "Vui lòng nhập kí tự số",
+  }),
+  questionTo: z.number({
+    required_error: "Vui lòng nhập câu kết thúc",
+    invalid_type_error: "Vui lòng nhập kí tự số",
+  }),
+  studentIds: z.any(),
+  supportAnswers: z.any(),
+  remainingContestants: z.number({
+    required_error: "Vui lòng nhập số thí sinh còn lại",
+    invalid_type_error: "Vui lòng nhập kí tự số",
+  }),
+  maxStudent: z.number({
+    required_error: "Vui lòng nhập số lượng thí sinh tối đa",
+    invalid_type_error: "Vui lòng nhập kí tự số",
+  }),
   matchId: z
     .number({
       required_error: "Vui lòng nhập id cuộc thi",
       invalid_type_error: "Id là một số nguyên",
     })
-    .refine(val => !isNaN(val) && val > 0, "Id cuộc thi là một số nguyên dương")
-    .optional(),
-  status: z.nativeEnum(RescueStatus).optional(),
-  index: z.number().optional(),
-  isActive: z.boolean().optional(),
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id cuộc thi là một số nguyên dương"
+    ),
+  status: z.nativeEnum(RescueStatus),
+  index: z.number(),
 });
 
 export const RescuesIdShame = z.object({
@@ -145,14 +137,14 @@ export type RescuesById = {
   rescueType: RescueType;
   questionFrom: number;
   questionTo: number;
-  studentIds: number[];
-  supportAnswers: string[];
+  studentIds?: any;
+  supportAnswers?: any;
   remainingContestants: number;
   maxStudent: number;
+  matchId: number;
   index: number;
   status: RescueStatus;
-  matchName: string;
-  isActive: boolean;
+  match: { name: string };
 };
 export type CreateRescueInput = z.infer<typeof CreateRescuesShema>;
 export type RescuesIdParams = z.infer<typeof RescuesIdShame>;

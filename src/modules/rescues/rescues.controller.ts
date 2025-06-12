@@ -1,8 +1,13 @@
 import { Request, Response } from "express";
-import { RescuesQueryInput, RescueService } from "@/modules/rescues";
+import {
+  RescuesQueryInput,
+  RescueService,
+  CreateRescueInput,
+} from "@/modules/rescues";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { RescueStatus, RescueType } from "@prisma/client";
+import prisma from "@/config/client";
 export default class RescueController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
@@ -21,7 +26,7 @@ export default class RescueController {
       logger.info(`Lấy danh sách cứu trợ thành công`);
       res.json(
         successResponse(
-          { reqescues: data.rescues, pagination: data.pagination },
+          { rescues: data.rescues, pagination: data.pagination },
           "Lấy danh sách cứu trợ  thành công"
         )
       );
@@ -31,48 +36,48 @@ export default class RescueController {
     }
   }
 
-  // static async getRescueById(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Rescue = await RescueService.getRescueBy({ id: Number(id) });
-  //     if (!Rescue) {
-  //       throw new Error("Không tìm thấy vòng đấu ");
-  //     }
-  //     logger.info(`Lấy thông tin vòng đấu ${Rescue.name} thành công`);
-  //     res.json(
-  //       successResponse(
-  //         Rescue,
-  //         `Lấy thông tin vòng đấu ${Rescue.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async getById(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const Rescue = await RescueService.getRescueBy({ id: Number(id) });
+      if (!Rescue) {
+        throw new Error("Không tìm thấy cứu trợ ");
+      }
+      logger.info(`Lấy thông tin cứu trợ ${Rescue.name} thành công`);
+      res.json(
+        successResponse(
+          Rescue,
+          `Lấy thông tin cứu trợ ${Rescue.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 
-  // static async createRescue(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const input: CreateRescueInput = req.body;
-  //     const contest = await prisma.contest.findFirst({
-  //       where: { id: input.contestId },
-  //     });
-  //     if (!contest) {
-  //       throw new Error("Không tìm thấy cuộc thi");
-  //     }
-  //     const Rescue = await RescueService.createRescue(input);
-  //     if (!Rescue) {
-  //       throw new Error(`Thêm vòng đấu ${input.name} thành công`);
-  //     }
-  //     logger.info(`Thêm vòng đấu ${input.name} thành công`);
-  //     res.json(
-  //       successResponse(Rescue, `Thêm vòng đấu ${input.name} thành công`)
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async create(req: Request, res: Response): Promise<void> {
+    try {
+      const input: CreateRescueInput = req.body;
+      const contest = await prisma.match.findFirst({
+        where: { id: input.matchId },
+      });
+      if (!contest) {
+        throw new Error("Không tìm thấy trận đấu");
+      }
+      const Rescue = await RescueService.create(input);
+      if (!Rescue) {
+        throw new Error(`Thêm cứu trợ ${input.name} thành công`);
+      }
+      logger.info(`Thêm cứu trợ ${input.name} thành công`);
+      res.json(
+        successResponse(Rescue, `Thêm cứu trợ ${input.name} thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 
   // static async toggleActive(req: Request, res: Response): Promise<void> {
   //   try {

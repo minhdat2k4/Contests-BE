@@ -5,7 +5,11 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { RescuesController } from "@/modules/rescues";
-import { RescuesQuerySchema } from "./rescues.schema";
+import {
+  RescuesQuerySchema,
+  RescuesIdShame,
+  CreateRescuesShema,
+} from "./rescues.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const rescueRoute = Router();
 // // prive
@@ -18,21 +22,21 @@ rescueRoute.get(
   RescuesController.getAlls
 );
 
-// roundRouter.get(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(RoundIdShame),
-//   RoundController.getRoundById
-// );
+rescueRoute.get(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(RescuesIdShame),
+  RescuesController.getById
+);
 
-// roundRouter.post(
-//   "/",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(CreateRoundShema),
-//   RoundController.createRound
-// );
+rescueRoute.post(
+  "/",
+  authenticate,
+  role("Admin"),
+  validateBody(CreateRescuesShema),
+  RescuesController.create
+);
 
 // roundRouter.patch(
 //   "/:id",

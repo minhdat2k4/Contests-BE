@@ -1,8 +1,11 @@
 import { prisma } from "@/config/database";
-import { RescuesQueryInput, Rescues } from "@/modules/rescues";
+import {
+  RescuesQueryInput,
+  Rescues,
+  RescuesById,
+  CreateRescueInput,
+} from "@/modules/rescues";
 import { Rescue } from "@prisma/client";
-import { match } from "assert";
-
 export default class RescueService {
   static async getAll(query: RescuesQueryInput): Promise<{
     rescues: Rescues[];
@@ -94,35 +97,40 @@ export default class RescueService {
     };
   }
 
-  // static async getRescueBy(data: any): Promise<RescueById | null> {
-  //   return prisma.Rescue.findFirst({
-  //     where: {
-  //       ...data,
-  //     },
-  //     select: {
-  //       id: true,
-  //       name: true,
-  //       contestId: true,
-  //       isActive: true,
-  //       index: true,
-  //       endTime: true,
-  //       startTime: true,
-  //       contest: {
-  //         select: {
-  //           name: true,
-  //         },
-  //       },
-  //     },
-  //   });
-  // }
+  static async getRescueBy(data: any): Promise<RescuesById | null> {
+    return prisma.rescue.findFirst({
+      where: {
+        ...data,
+      },
+      select: {
+        id: true,
+        name: true,
+        rescueType: true,
+        questionFrom: true,
+        questionTo: true,
+        studentIds: true,
+        supportAnswers: true,
+        remainingContestants: true,
+        maxStudent: true,
+        index: true,
+        status: true,
+        matchId: true,
+        match: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+  }
 
-  // static async createRescue(data: CreateRescueInput): Promise<Rescue | null> {
-  //   return prisma.Rescue.create({
-  //     data: {
-  //       ...data,
-  //     },
-  //   });
-  // }
+  static async create(data: CreateRescueInput): Promise<Rescue | null> {
+    return prisma.rescue.create({
+      data: {
+        ...data,
+      },
+    });
+  }
 
   // static async updateRescue(
   //   id: number,

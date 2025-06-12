@@ -7,7 +7,7 @@ import {
 } from "@/modules/rescues";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { RescueStatus, RescueType } from "@prisma/client";
+import { Prisma, RescueStatus, RescueType } from "@prisma/client";
 import prisma from "@/config/client";
 export default class RescueController {
   static async getAlls(req: Request, res: Response): Promise<void> {
@@ -176,5 +176,20 @@ export default class RescueController {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
     }
+  }
+  static async enmuResceType(req: Request, res: Response): Promise<void> {
+    const rescueTypes = Object.values(RescueType); // Lấy các giá trị enum
+    res.json({
+      success: true,
+      data: rescueTypes,
+    });
+  }
+
+  static async enmuRescueStatus(req: Request, res: Response): Promise<void> {
+    const rescueTypes = Object.values(RescueStatus); // Lấy các giá trị enum
+    res.json({
+      success: true,
+      data: rescueTypes,
+    });
   }
 }

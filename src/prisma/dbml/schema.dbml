@@ -401,13 +401,7 @@ Enum ControlKey {
   image
 }
 
-Enum ControlValue {
-  start
-  pause
-  reset
-  zoomIn
-  zoomOut
-}
+ 
 
 Ref: RefreshTokens.userId > Users.id [delete: Cascade]
 

@@ -25,6 +25,20 @@ rescueRoute.get(
 );
 
 rescueRoute.get(
+  "/enum/type",
+  authenticate,
+  role("Admin"),
+  RescuesController.enmuResceType
+);
+
+rescueRoute.get(
+  "/enum/status",
+  authenticate,
+  role("Admin"),
+  RescuesController.enmuRescueStatus
+);
+
+rescueRoute.get(
   "/:id",
   authenticate,
   role("Admin"),

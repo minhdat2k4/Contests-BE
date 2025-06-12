@@ -17,6 +17,7 @@ import { questionTopicRoutes } from "@/modules/questionTopic";
 import { questionPackageRouter } from "@/modules/questionPackage";
 import { questionDetailRouter } from "@/modules/questionDetail";
 import { rescueRoute } from "@/modules/rescues";
+import { contestRoute } from "@/modules/contest";
 import multer from "multer";
 import { prepareFileInfo, moveUploadedFile } from "./utils/uploadFile";
 
@@ -118,7 +119,7 @@ app.use("/api/student", studentRouter);
 app.use("/api/question-topics", questionTopicRoutes);
 app.use("/api/question-packages", questionPackageRouter);
 app.use("/api/question-details", questionDetailRouter);
-
+app.use("/api/contest", contestRoute);
 app.use("/api/rescue", rescueRoute);
 app.use("/api/enums", enumRouter);
 

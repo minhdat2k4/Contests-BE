@@ -10,6 +10,7 @@ import {
   RescuesIdShame,
   CreateRescuesShema,
   UpdateRescuesShema,
+  deleteRescuesesSchema,
 } from "./rescues.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const rescueRoute = Router();
@@ -56,12 +57,12 @@ rescueRoute.delete(
   RescuesController.delete
 );
 
-roundRouter.post(
+rescueRoute.post(
   "/delete-many",
   authenticate,
   role("Admin"),
-  validateBody(deleteRoundesSchema),
-  RoundController.deleteRounds
+  validateBody(deleteRescuesesSchema),
+  RescuesController.deleteMany
 );
 
 export { rescueRoute };

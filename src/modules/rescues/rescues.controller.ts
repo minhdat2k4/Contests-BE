@@ -130,72 +130,51 @@ export default class RescueController {
     }
   }
 
-  // static async deleteRescues(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const { ids } = req.body;
+  static async deleteMany(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
 
-  //     if (!Array.isArray(ids)) {
-  //       throw new Error("Danh sách không hợp lệ");
-  //     }
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
 
-  //     const messages: { status: "success" | "error"; msg: string }[] = [];
+      const messages: { status: "success" | "error"; msg: string }[] = [];
 
-  //     for (const id of ids) {
-  //       const Rescue = await RescueService.getRescueBy({ id: Number(id) });
+      for (const id of ids) {
+        const Rescue = await RescueService.getRescueBy({ id: Number(id) });
 
-  //       if (!Rescue) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Không tìm thấy cứu trợ với ID = ${id}`,
-  //         });
-  //         continue;
-  //       }
+        if (!Rescue) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy cứu trợ với ID = ${id}`,
+          });
+          continue;
+        }
 
-  //       const [countContestants, countMatch] = await Promise.all([
-  //         RescueService.countContestantsByRescueId(Rescue.id),
-  //         RescueService.countMatchesByRescueId(Rescue.id),
-  //       ]);
+        const deleted = await RescueService.delete(Rescue.id);
 
-  //       if (countMatch > 0) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Vòng "${Rescue.name}" hiện có ${countMatch} trận đấu, không thể xóa`,
-  //         });
-  //         continue;
-  //       }
+        if (!deleted) {
+          messages.push({
+            status: "error",
+            msg: `Xóa vòng đấu "${Rescue.name}" thất bại`,
+          });
+          continue;
+        }
 
-  //       if (countContestants > 0) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Vòng "${Rescue.name}" hiện có ${countContestants} thí sinh, không thể xóa`,
-  //         });
-  //         continue;
-  //       }
+        messages.push({
+          status: "success",
+          msg: `Xóa vòng đấu "${Rescue.name}" thành công`,
+        });
+        logger.info(`Xóa vòng đấu "${Rescue.name}" thành công`);
+      }
 
-  //       const deleted = await RescueService.deleteRescue(Rescue.id);
-
-  //       if (!deleted) {
-  //         messages.push({
-  //           status: "error",
-  //           msg: `Xóa vòng đấu "${Rescue.name}" thất bại`,
-  //         });
-  //         continue;
-  //       }
-
-  //       messages.push({
-  //         status: "success",
-  //         msg: `Xóa vòng đấu "${Rescue.name}" thành công`,
-  //       });
-  //       logger.info(`Xóa vòng đấu "${Rescue.name}" thành công`);
-  //     }
-
-  //     res.json({
-  //       success: true,
-  //       messages,
-  //     });
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+      res.json({
+        success: true,
+        messages,
+      });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

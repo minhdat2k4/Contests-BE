@@ -3,6 +3,7 @@ import {
   RescuesQueryInput,
   RescueService,
   CreateRescueInput,
+  UpdateRescueInput,
 } from "@/modules/rescues";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
@@ -59,10 +60,10 @@ export default class RescueController {
   static async create(req: Request, res: Response): Promise<void> {
     try {
       const input: CreateRescueInput = req.body;
-      const contest = await prisma.match.findFirst({
+      const match = await prisma.match.findFirst({
         where: { id: input.matchId },
       });
-      if (!contest) {
+      if (!match) {
         throw new Error("Không tìm thấy trận đấu");
       }
       const Rescue = await RescueService.create(input);
@@ -79,94 +80,55 @@ export default class RescueController {
     }
   }
 
-  // static async toggleActive(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Rescue = await RescueService.getRescueBy({ id: Number(id) });
-  //     if (!Rescue) {
-  //       throw new Error("Không tìm thấy vòng đấu ");
-  //     }
-  //     const updateRescue = await RescueService.updateRescue(Number(id), {
-  //       isActive: !Rescue.isActive,
-  //     });
-  //     if (!updateRescue) {
-  //       throw new Error("Cập nhật trạng thái vòng đấu thất bại ");
-  //     }
-  //     logger.info(`Cập nhật trạng thái vòng đấu  ${Rescue.name} thành công`);
-  //     res.json(
-  //       successResponse(
-  //         updateRescue,
-  //         `Cập nhật trạng thái vòng đấu ${Rescue.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-  // static async deleteRescue(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const Rescue = await RescueService.getRescueBy({ id: Number(id) });
-  //     if (!Rescue) {
-  //       throw new Error("Không tìm thấy vòng đấu ");
-  //     }
-  //     const [countContestants, countMatch] = await Promise.all([
-  //       RescueService.countContestantsByRescueId(Number(id)),
-  //       RescueService.countMatchesByRescueId(Number(id)),
-  //     ]);
+  static async delete(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const Rescue = await RescueService.getRescueBy({ id: Number(id) });
+      if (!Rescue) {
+        throw new Error("Không tìm thấy cứu trợ ");
+      }
 
-  //     if (countMatch > 0) {
-  //       throw new Error(
-  //         `Vòng này hiện có ${countMatch} trận đấu không thể xóa`
-  //       );
-  //     }
-  //     if (countContestants > 0) {
-  //       throw new Error(
-  //         `Vòng này hiện có ${countContestants} thí sinh không thể xóa `
-  //       );
-  //     }
-  //     const deleteRescue = await RescueService.deleteRescue(Rescue.id);
-  //     if (!deleteRescue) {
-  //       throw new Error(`Xóa vòng đấu ${Rescue.name} thất bại `);
-  //     }
-  //     logger.info(`Xóa vòng đấu ${Rescue.name} thành công`);
-  //     res.json(successResponse(null, `Xóa vòng đấu ${Rescue.name} thành công`));
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
-  // static async updateRescue(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const input: UpdateRescueInput = req.body;
-  //     const contest = await prisma.contest.findFirst({
-  //       where: { id: input.contestId },
-  //     });
-  //     if (!contest) {
-  //       throw new Error("Không tìm thấy cuộc thi");
-  //     }
-  //     const Rescue = await RescueService.getRescueBy({ id: Number(id) });
-  //     if (!Rescue) {
-  //       throw new Error("Không tìm thấy vòng thi");
-  //     }
-  //     const updateRescue = await RescueService.updateRescue(Number(id), input);
-  //     if (!updateRescue) {
-  //       throw new Error("Cập nhật vòng thi thất bại");
-  //     }
-  //     logger.info(`Cập nhật vòng thi  ${Rescue.name} thành công`);
-  //     res.json(
-  //       successResponse(
-  //         updateRescue,
-  //         `Cập nhật vòng thi ${Rescue.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+      const deleteRescue = await RescueService.delete(Rescue.id);
+      if (!deleteRescue) {
+        throw new Error(`Xóa cứu trợ ${Rescue.name} thất bại `);
+      }
+      logger.info(`Xóa cứu trợ ${Rescue.name} thành công`);
+      res.json(successResponse(null, `Xóa cứu trợ ${Rescue.name} thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async update(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const input: UpdateRescueInput = req.body;
+      const match = await prisma.match.findFirst({
+        where: { id: input.matchId },
+      });
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu");
+      }
+      const Rescue = await RescueService.getRescueBy({ id: Number(id) });
+      if (!Rescue) {
+        throw new Error("Không tìm thấy cứu trợ ");
+      }
+      const updateRescue = await RescueService.updateRescue(Number(id), input);
+      if (!updateRescue) {
+        throw new Error("Cập nhật cứu trợ thất bại");
+      }
+      logger.info(`Cập nhật vòng thi  ${Rescue.name} thành công`);
+      res.json(
+        successResponse(
+          updateRescue,
+          `Cập nhật vòng thi ${Rescue.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 
   // static async deleteRescues(req: Request, res: Response): Promise<void> {
   //   try {
@@ -184,7 +146,7 @@ export default class RescueController {
   //       if (!Rescue) {
   //         messages.push({
   //           status: "error",
-  //           msg: `Không tìm thấy vòng đấu với ID = ${id}`,
+  //           msg: `Không tìm thấy cứu trợ với ID = ${id}`,
   //         });
   //         continue;
   //       }

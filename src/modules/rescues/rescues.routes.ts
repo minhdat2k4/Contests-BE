@@ -9,6 +9,7 @@ import {
   RescuesQuerySchema,
   RescuesIdShame,
   CreateRescuesShema,
+  UpdateRescuesShema,
 } from "./rescues.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const rescueRoute = Router();
@@ -38,35 +39,29 @@ rescueRoute.post(
   RescuesController.create
 );
 
-// roundRouter.patch(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(UpdeateRoundhema),
-//   validateParams(RoundIdShame),
-//   RoundController.updateRound
-// );
+rescueRoute.patch(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdateRescuesShema),
+  validateParams(RescuesIdShame),
+  RescuesController.update
+);
 
-// roundRouter.patch(
-//   "/:id/toggle-active",
-//   authenticate,
-//   role("Admin"),
-//   RoundController.toggleActive
-// );
-// roundRouter.delete(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(RoundIdShame),
-//   RoundController.deleteRound
-// );
+rescueRoute.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(RescuesIdShame),
+  RescuesController.delete
+);
 
-// roundRouter.post(
-//   "/delete-many",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(deleteRoundesSchema),
-//   RoundController.deleteRounds
-// );
+roundRouter.post(
+  "/delete-many",
+  authenticate,
+  role("Admin"),
+  validateBody(deleteRoundesSchema),
+  RoundController.deleteRounds
+);
 
 export { rescueRoute };

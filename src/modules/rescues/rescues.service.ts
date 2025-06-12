@@ -4,6 +4,7 @@ import {
   Rescues,
   RescuesById,
   CreateRescueInput,
+  UpdateRescueInput,
 } from "@/modules/rescues";
 import { Rescue } from "@prisma/client";
 export default class RescueService {
@@ -132,50 +133,71 @@ export default class RescueService {
     });
   }
 
-  // static async updateRescue(
-  //   id: number,
-  //   data: UpdateRescueInput
-  // ): Promise<Rescue | null> {
-  //   const updateData: any = {};
+  static async updateRescue(
+    id: number,
+    data: UpdateRescueInput
+  ): Promise<Rescue | null> {
+    const updateData: any = {};
 
-  //   if (data.name !== undefined) {
-  //     updateData.name = data.name;
-  //   }
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
 
-  //   if (data.isActive !== undefined) {
-  //     updateData.isActive = data.isActive;
-  //   }
+    if (data.matchId !== undefined) {
+      updateData.matchId = data.matchId;
+    }
 
-  //   if (data.contestId !== undefined) {
-  //     updateData.contestId = data.contestId;
-  //   }
+    if (data.index !== undefined) {
+      updateData.index = data.index;
+    }
 
-  //   if (data.index !== undefined) {
-  //     updateData.index = data.index;
-  //   }
+    if (data.maxStudent !== undefined) {
+      updateData.maxStudent = data.maxStudent;
+    }
 
-  //   if (data.endTime !== undefined) {
-  //     updateData.endTime = data.endTime;
-  //   }
+    if (data.questionFrom !== undefined) {
+      updateData.questionFrom = data.questionFrom;
+    }
 
-  //   if (data.startTime !== undefined) {
-  //     updateData.startTime = data.startTime;
-  //   }
+    if (data.questionTo !== undefined) {
+      updateData.questionTo = data.questionTo;
+    }
 
-  //   return prisma.Rescue.update({
-  //     where: { id: id },
-  //     data: {
-  //       ...updateData,
-  //     },
-  //   });
-  // }
-  // static async deleteRescue(id: number): Promise<Rescue> {
-  //   return prisma.Rescue.delete({
-  //     where: {
-  //       id: id,
-  //     },
-  //   });
-  // }
+    if (data.remainingContestants !== undefined) {
+      updateData.remainingContestants = data.remainingContestants;
+    }
+
+    if (data.rescueType !== undefined) {
+      updateData.rescueType = data.rescueType;
+    }
+
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+    }
+
+    if (data.studentIds !== undefined) {
+      updateData.studentIds = data.studentIds;
+    }
+
+    if (data.supportAnswers !== undefined) {
+      updateData.supportAnswers = data.supportAnswers;
+    }
+
+    return prisma.rescue.update({
+      where: { id: id },
+      data: {
+        ...updateData,
+      },
+    });
+  }
+
+  static async delete(id: number): Promise<Rescue> {
+    return prisma.rescue.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
 
   // static async countMatchesByRescueId(id: number) {
   //   return prisma.match.count({

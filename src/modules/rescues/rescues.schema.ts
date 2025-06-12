@@ -63,7 +63,7 @@ export const RescuesIdShame = z.object({
     .refine(val => !isNaN(val) && val > 0, "Id là 1 số nguyên dương "),
 });
 
-export const UpdeateRescueshema = z.object({
+export const UpdateRescuesShema = z.object({
   name: z
     .string({
       required_error: "Vui lòng nhập tên cứu trợ",
@@ -72,31 +72,42 @@ export const UpdeateRescueshema = z.object({
     .min(1, "Vui lòng nhập tên cứu trợ")
     .max(255, "Tên cứu trợ tối đa 255 kí tự")
     .optional(),
-  contestId: z
+  rescueType: z.nativeEnum(RescueType),
+  questionFrom: z
+    .number({
+      required_error: "Vui lòng nhập câu bắt đầu",
+      invalid_type_error: "Vui lòng nhập kí tự số",
+    })
+    .optional(),
+  questionTo: z
+    .number({
+      required_error: "Vui lòng nhập câu kết thúc",
+      invalid_type_error: "Vui lòng nhập kí tự số",
+    })
+    .optional(),
+  studentIds: z.any(),
+  supportAnswers: z.any(),
+  remainingContestants: z
+    .number({
+      required_error: "Vui lòng nhập số thí sinh còn lại",
+      invalid_type_error: "Vui lòng nhập kí tự số",
+    })
+    .optional(),
+  maxStudent: z
+    .number({
+      required_error: "Vui lòng nhập số lượng thí sinh tối đa",
+      invalid_type_error: "Vui lòng nhập kí tự số",
+    })
+    .optional(),
+  matchId: z
     .number({
       required_error: "Vui lòng nhập id cuộc thi",
       invalid_type_error: "Id là một số nguyên",
     })
     .refine(val => !isNaN(val) && val > 0, "Id cuộc thi là một số nguyên dương")
     .optional(),
-  startTime: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), {
-      message: "Ngày bắt đầu không hợp lệ",
-    })
-    .transform(val => new Date(val))
-    .optional(),
-
-  endTime: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), {
-      message: "Ngày kết thúc không hợp lệ",
-    })
-    .transform(val => new Date(val))
-    .optional(),
-
+  status: z.nativeEnum(RescueStatus).optional(),
   index: z.number().optional(),
-  isActive: z.boolean().optional(),
 });
 
 export const RescuesQuerySchema = z.object({
@@ -148,6 +159,6 @@ export type RescuesById = {
 };
 export type CreateRescueInput = z.infer<typeof CreateRescuesShema>;
 export type RescuesIdParams = z.infer<typeof RescuesIdShame>;
-export type UpdateRescueInput = z.infer<typeof UpdeateRescueshema>;
+export type UpdateRescueInput = z.infer<typeof UpdateRescuesShema>;
 export type RescuesQueryInput = z.infer<typeof RescuesQuerySchema>;
 export type Rescues = z.infer<typeof RescuesShema>;

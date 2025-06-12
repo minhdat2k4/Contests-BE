@@ -390,10 +390,10 @@ model Rescue {
   rescueType         RescueType  
   questionFrom       Int         
   questionTo         Int        
-  studentIds         Json         
-  supportAnswers     Json       
-  remainingContestants Int?      
-  maxStudent         Int?       
+  studentIds         Json?        
+  supportAnswers     Json?      
+  remainingContestants Int     
+  maxStudent         Int      
   index              Int         
   status             RescueStatus
   matchId            Int          @map("match_id")

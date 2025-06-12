@@ -263,10 +263,10 @@ Table Rescues {
   rescueType RescueType [not null]
   questionFrom Int [not null]
   questionTo Int [not null]
-  studentIds Json [not null]
-  supportAnswers Json [not null]
-  remainingContestants Int
-  maxStudent Int
+  studentIds Json
+  supportAnswers Json
+  remainingContestants Int [not null]
+  maxStudent Int [not null]
   index Int [not null]
   status RescueStatus [not null]
   matchId Int [not null]

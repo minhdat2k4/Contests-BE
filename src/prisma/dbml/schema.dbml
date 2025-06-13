@@ -144,18 +144,26 @@ Table Contests {
   location String [not null]
   startTime DateTime [not null]
   endTime DateTime [not null]
-  logo String
-  background String
-  media Json
   slogan String
   status ContestStatus [not null, default: 'upcoming']
   isActive Boolean [not null, default: true]
+  mediaFiles Media [not null]
   matches Matches [not null]
   contestants Contestants [not null]
   awards Awards [not null]
   round Rounds [not null]
   ClassVideo Class_Videos [not null]
   Sponsor Sponsors [not null]
+  createdAt DateTime [default: `now()`, not null]
+  updatedAt DateTime [not null]
+}
+
+Table Media {
+  id Int [pk, increment]
+  url String [not null]
+  type ContestMedia [not null]
+  contest Contests
+  contestId Int
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -365,6 +373,12 @@ Enum ContestantMatchStatus {
   completed
 }
 
+Enum ContestMedia {
+  logo
+  background
+  images
+}
+
 Enum RescueType {
   resurrected
   lifelineUsed
@@ -426,6 +440,8 @@ Ref: Questions.questionTopicId > Question_Topics.id [delete: Restrict]
 Ref: Question_Details.questionId > Questions.id [delete: Restrict]
 
 Ref: Question_Details.questionPackageId > Question_Packages.id [delete: Restrict]
+
+Ref: Media.contestId > Contests.id
 
 Ref: Rounds.contestId > Contests.id [delete: Restrict]
 

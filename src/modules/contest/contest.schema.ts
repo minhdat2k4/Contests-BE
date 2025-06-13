@@ -8,12 +8,29 @@ export const ContestsIdShame = z.object({
     .refine(val => !isNaN(val) && val > 0, "Id là 1 số nguyên dương "),
 });
 
+export const CreateContestsSchema = z.object({
+  name: z.string().min(1, "Tên cuộc thi là bắt buộc"),
+  slug: z.string().min(1, "Slug là bắt buộc").optional(),
+  rule: z.string().min(1, "Nội dung luật là bắt buộc"),
+  plainText: z.string().min(1, "Mô tả ngắn là bắt buộc").optional(),
+  location: z.string().min(1, "Địa điểm là bắt buộc"),
+  startTime: z.coerce.date().refine(date => !isNaN(date.getTime()), {
+    message: "Ngày bắt đầu không hợp lệ",
+  }),
+  endTime: z.coerce.date().refine(date => !isNaN(date.getTime()), {
+    message: "Ngày kết thúc không hợp lệ",
+  }),
+  logo: z.string().or(z.string().min(1, "Logo là bắt buộc")),
+  background: z.string().or(z.string().min(1, "Background là bắt buộc")),
+  isActive: z.boolean(),
+});
+
 export const UpdateContestsSchema = z.object({
   name: z.string().min(1, "Tên cuộc thi là bắt buộc").optional(),
   slug: z.string().min(1, "Slug là bắt buộc").optional(),
   rule: z.string().min(1, "Nội dung luật là bắt buộc").optional(),
   plainText: z.string().min(1, "Mô tả ngắn là bắt buộc").optional(),
-  location: z.string().min(1, "Địa điểm là bắt buộc"),
+  location: z.string().min(1, "Địa điểm là bắt buộc").optional(),
   startTime: z.coerce
     .date()
     .refine(date => !isNaN(date.getTime()), {
@@ -26,14 +43,8 @@ export const UpdateContestsSchema = z.object({
       message: "Ngày kết thúc không hợp lệ",
     })
     .optional(),
-  logo: z.string().or(z.string().min(1, "Logo là bắt buộc")).optional(),
-  background: z
-    .string()
-    .or(z.string().min(1, "Background là bắt buộc"))
-    .optional(),
-  media: z.array(z.string()).or(z.any()).optional(),
-  slogan: z.string().optional().optional(),
   status: z.nativeEnum(ContestStatus).optional(),
+  slogan: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -64,16 +75,13 @@ export type ContestsIdParams = z.infer<typeof ContestsIdShame>;
 export type UpdateContestInput = z.infer<typeof UpdateContestsSchema>;
 export type ContestQueryInput = z.infer<typeof ContestsQuerySchema>;
 export type CreateContestInput = {
-  ContestName: string;
+  name: string;
   slug: string;
   rule: string;
   plainText: string;
   location: string;
   startTime: Date | string;
   endTime: Date | string;
-  logo?: string;
-  background?: string;
-  media?: any;
   slogan: string;
   status: ContestStatus;
   isActive?: boolean;

@@ -3,59 +3,35 @@ import {
   ContestQueryInput,
   Contestervice,
   CreateContestInput,
+  UpdateContestInput,
 } from "@/modules/contest";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { ContestStatus } from "@prisma/client";
+import { ContestStatus, Contest } from "@prisma/client";
 import { prisma } from "@/config/database";
-import {
-  prepareFileInfoCustom,
-  moveUploadedFile,
-  deleteFile,
-  deleteTempFile,
-} from "../../utils/uploadFile";
+import { htmlToPlainText } from "@/utils/html";
+
 export default class ContestController {
   static async create(req: Request, res: Response): Promise<void> {
     try {
       const input: CreateContestInput = req.body;
-      const files = req.files as {
-        logo?: Express.Multer.File[];
-        background?: Express.Multer.File[];
-        media?: Express.Multer.File[];
-      };
-      const folderPath = "uploads/contest";
-      const logoInfo = files?.logo?.[0]
-        ? prepareFileInfoCustom(files.logo[0], folderPath)
-        : null;
-      const bgInfo = files?.background?.[0]
-        ? prepareFileInfoCustom(files.background[0], folderPath)
-        : null;
-      const mediaInfos =
-        files?.media?.map(file => prepareFileInfoCustom(file, folderPath)) ||
-        [];
-
-      const contest = await Contestervice.create({
-        name: input.ContestName,
-        slug: input.slug,
+      const slug = await Contestervice.generateUniqueSlug(input.name);
+      const textplan = await htmlToPlainText(input.rule);
+      const data = {
+        name: input.name,
+        slug: slug,
         rule: input.rule,
-        plainText: input.plainText,
+        plainText: textplan,
         location: input.location,
         startTime: input.startTime,
         endTime: input.endTime,
         slogan: input.slogan,
         status: input.status,
-        logo: logoInfo ? `/uploads/contest/${logoInfo.fileName}` : undefined,
-        background: bgInfo ? `/uploads/contest/${bgInfo.fileName}` : undefined,
-        media: mediaInfos.length
-          ? mediaInfos.map(i => `/uploads/contest/${i.fileName}`)
-          : [],
-      });
+        isActive: input.isActive,
+      };
 
-      if (logoInfo) moveUploadedFile(logoInfo.tempPath!, logoInfo.destPath!);
-      if (bgInfo) moveUploadedFile(bgInfo.tempPath!, bgInfo.destPath!);
-      mediaInfos.forEach(info =>
-        moveUploadedFile(info.tempPath!, info.destPath!)
-      );
+      const contest = await Contestervice.create(data);
+
       logger.info(`Thêm cuộc thi thành công`);
       res.json(successResponse(contest, "Thêm cuộc thi thành công"));
     } catch (error) {
@@ -116,7 +92,6 @@ export default class ContestController {
       if (!contest) {
         throw new Error("Không tìm thấy cuộc thi ");
       }
-
       const countRound = await prisma.round.count({
         where: { contestId: contest.id },
       });
@@ -125,13 +100,21 @@ export default class ContestController {
           ` Cuộc thi này đang có ${countRound} vòng đấu không thể xóa`
         );
       }
-
       const countMatch = await prisma.match.count({
         where: { contestId: contest.id },
       });
       if (countMatch > 0) {
         throw new Error(
           ` Cuộc thi này đang có ${countMatch} trận đấu không thể xóa`
+        );
+      }
+
+      const countMedia = await prisma.media.count({
+        where: { contestId: contest.id },
+      });
+      if (countMedia > 0) {
+        throw new Error(
+          ` Cuộc thi này đang có ${countMedia} media không thể xóa`
         );
       }
 
@@ -173,11 +156,6 @@ export default class ContestController {
       const deletecontest = await Contestervice.delete(contest.id);
       if (!deletecontest) {
         throw new Error(`Xóa cuộc thi ${contest.name} thất bại `);
-      }
-      await deleteFile(contest.logo);
-      await deleteFile(contest.background);
-      if (Array.isArray(contest.media)) {
-        await Promise.all(contest.media.map(i => deleteFile(i as string)));
       }
       logger.info(`Xóa cuộc thi ${contest.name} thành công`);
       res.json(
@@ -272,11 +250,6 @@ export default class ContestController {
           });
           continue;
         }
-        await deleteFile(contest.logo);
-        await deleteFile(contest.background);
-        if (Array.isArray(contest.media)) {
-          await Promise.all(contest.media.map(i => deleteFile(i as string)));
-        }
         messages.push({
           status: "success",
           msg: `Xóa cuộc thi "${contest.name}" thành công`,
@@ -294,34 +267,54 @@ export default class ContestController {
     }
   }
 
-  // static async update(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const input: UpdatecontestInput = req.body;
-  //     const match = await prisma.match.findFirst({
-  //       where: { id: input.matchId },
-  //     });
-  //     if (!match) {
-  //       throw new Error("Không tìm thấy trận đấu");
-  //     }
-  //     const contest = await Contestervice.getcontestBy({ id: Number(id) });
-  //     if (!contest) {
-  //       throw new Error("Không tìm thấy cuộc thi ");
-  //     }
-  //     const updatecontest = await Contestervice.updatecontest(Number(id), input);
-  //     if (!updatecontest) {
-  //       throw new Error("Cập nhật cuộc thi thất bại");
-  //     }
-  //     logger.info(`Cập nhật vòng thi  ${contest.name} thành công`);
-  //     res.json(
-  //       successResponse(
-  //         updatecontest,
-  //         `Cập nhật vòng thi ${contest.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async update(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const input: UpdateContestInput = req.body;
+      const contest = await Contestervice.getBy({ id: Number(id) });
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi ");
+      }
+      const updatecontest = await Contestervice.update(Number(id), input);
+      if (!updatecontest) {
+        throw new Error("Cập nhật trạng thái cuộc thi thất bại");
+      }
+      logger.info(`Cập nhật trạng thái cuộc thi  ${contest.name} thành công`);
+      res.json(
+        successResponse(
+          updatecontest,
+          `Cập nhật trạng thái cuộc thi ${contest.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async toggle(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const contest = await Contestervice.getBy({ id: Number(id) });
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi ");
+      }
+      const updatecontest = await Contestervice.update(Number(id), {
+        isActive: !contest.isActive,
+      });
+      if (!updatecontest) {
+        throw new Error("Cập nhật trạng thái cuộc thi thất bại");
+      }
+      logger.info(`Cập nhật trạng thái cuộc thi  ${contest.name} thành công`);
+      res.json(
+        successResponse(
+          updatecontest,
+          `Cập nhật  trạng thái cuộc thi ${contest.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

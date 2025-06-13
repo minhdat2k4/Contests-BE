@@ -9,6 +9,7 @@ import {
   ContestsQuerySchema,
   ContestsIdShame,
   deleteContestsesSchema,
+  UpdateContestsSchema,
 } from "./contest.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const contestRoute = Router();
@@ -41,14 +42,22 @@ contestRoute.post(
   ContestController.create
 );
 
-// contestRoute.patch(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(UpdateContestShema),
-//   validateParams(ContestIdShame),
-//   ContestController.update
-// );
+contestRoute.patch(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdateContestsSchema),
+  validateParams(ContestsIdShame),
+  ContestController.update
+);
+
+contestRoute.patch(
+  "/:id/toggle-active",
+  authenticate,
+  role("Admin"),
+  validateParams(ContestsIdShame),
+  ContestController.toggle
+);
 
 contestRoute.delete(
   "/:id",

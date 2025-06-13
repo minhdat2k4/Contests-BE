@@ -1,6 +1,12 @@
 import { prisma } from "@/config/database";
-import { ContestQueryInput, CreateContestInput } from "./contest.schema";
+import {
+  ContestQueryInput,
+  CreateContestInput,
+  UpdateContestInput,
+} from "./contest.schema";
 import { Contest } from "@prisma/client";
+import slugify from "slugify";
+import { htmlToPlainText } from "@/utils/html";
 export default class ContestService {
   static async getAll(query: ContestQueryInput): Promise<{
     Contest: Contest[];
@@ -70,63 +76,75 @@ export default class ContestService {
     });
   }
 
-  // static async updateRescue(
-  //   id: number,
-  //   data: UpdateRescueInput
-  // ): Promise<Rescue | null> {
-  //   const updateData: any = {};
+  static async generateUniqueSlug(
+    name: string,
+    excludeId?: number
+  ): Promise<string> {
+    const baseSlug = slugify(name, { lower: true, locale: "vi", strict: true });
+    let slug = baseSlug;
+    let suffix = 1;
 
-  //   if (data.name !== undefined) {
-  //     updateData.name = data.name;
-  //   }
+    while (true) {
+      const exists = await prisma.contest.findFirst({
+        where: {
+          slug,
+          ...(excludeId && { NOT: { id: excludeId } }),
+        },
+      });
 
-  //   if (data.matchId !== undefined) {
-  //     updateData.matchId = data.matchId;
-  //   }
+      if (!exists) break;
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
+    }
 
-  //   if (data.index !== undefined) {
-  //     updateData.index = data.index;
-  //   }
+    return slug;
+  }
 
-  //   if (data.maxStudent !== undefined) {
-  //     updateData.maxStudent = data.maxStudent;
-  //   }
+  static async update(
+    id: number,
+    data: UpdateContestInput
+  ): Promise<Contest | null> {
+    const updateData: any = {};
 
-  //   if (data.questionFrom !== undefined) {
-  //     updateData.questionFrom = data.questionFrom;
-  //   }
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+      const slug = await ContestService.generateUniqueSlug(data.name);
+      updateData.slug = slug;
+    }
 
-  //   if (data.questionTo !== undefined) {
-  //     updateData.questionTo = data.questionTo;
-  //   }
+    if (data.rule !== undefined) {
+      updateData.rule = data.rule;
+      const textplan = await htmlToPlainText(data.rule);
+      updateData.plainText = textplan;
+    }
 
-  //   if (data.remainingContestants !== undefined) {
-  //     updateData.remainingContestants = data.remainingContestants;
-  //   }
+    if (data.startTime !== undefined) {
+      updateData.startTime = data.startTime;
+    }
 
-  //   if (data.rescueType !== undefined) {
-  //     updateData.rescueType = data.rescueType;
-  //   }
+    if (data.endTime !== undefined) {
+      updateData.endTime = data.endTime;
+    }
 
-  //   if (data.status !== undefined) {
-  //     updateData.status = data.status;
-  //   }
+    if (data.slogan !== undefined) {
+      updateData.slogan = data.slogan;
+    }
 
-  //   if (data.studentIds !== undefined) {
-  //     updateData.studentIds = data.studentIds;
-  //   }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
 
-  //   if (data.supportAnswers !== undefined) {
-  //     updateData.supportAnswers = data.supportAnswers;
-  //   }
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+    }
 
-  //   return prisma.rescue.update({
-  //     where: { id: id },
-  //     data: {
-  //       ...updateData,
-  //     },
-  //   });
-  // }
+    return prisma.contest.update({
+      where: { id: id },
+      data: {
+        ...updateData,
+      },
+    });
+  }
 
   static async delete(id: number): Promise<Contest> {
     return prisma.contest.delete({

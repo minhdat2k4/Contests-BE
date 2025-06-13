@@ -9,18 +9,19 @@ import { log } from "console";
 import { validateData } from "@/middlewares/validation";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
+import { string } from "zod";
 export default class SchoolController {
   static async createSchool(req: Request, res: Response): Promise<void> {
     try {
       const input: CreateSchoolInput = req.body;
       const existingEmail = await SchoolService.existingEmail(input.email);
       if (existingEmail) {
-        res.json(validateData("email", "Email đã tồn tại"));
+        res.status(400).json(validateData("email", "Email đã tồn tại"));
         return;
       }
       const existingPhone = await SchoolService.existingPhone(input.phone);
       if (existingPhone) {
-        res.json(validateData("phone", "Số điện thoại đã tồn tại"));
+        res.status(400).json(validateData("phone", "Số điện thoại đã tồn tại"));
         return;
       }
       const school = await SchoolService.createSchool(input);
@@ -67,7 +68,7 @@ export default class SchoolController {
           school.id
         );
         if (existingEmail) {
-          res.json(validateData("email", "Email đã tồn tại"));
+          res.status(400).json(validateData("email", "Email đã tồn tại"));
           return;
         }
       }
@@ -77,7 +78,9 @@ export default class SchoolController {
           school.id
         );
         if (existingPhone) {
-          res.json(validateData("phone", "Số điện thoại đã tồn tại"));
+          res
+            .status(400)
+            .json(validateData("phone", "Số điện thoại đã tồn tại"));
           return;
         }
       }
@@ -108,7 +111,7 @@ export default class SchoolController {
         isActive: !school.isActive,
       });
       if (!schoolUpdate) {
-        throw new Error("Cập nhật trường thất bại ");
+        throw new Error("Cập nhật trạng thái trường thất bại ");
       }
 
       logger.info(`Cập nhật trạng thái trường  ${school.name} thành công`);
@@ -154,7 +157,7 @@ export default class SchoolController {
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
-            : true,
+            : undefined,
       };
       const data = await SchoolService.getAllShool(query);
       if (!data) {
@@ -167,6 +170,73 @@ export default class SchoolController {
           "Lấy danh sách trường học thành công"
         )
       );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async deleteSchools(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids)) {
+        throw new Error(`Danh sách không hợp lệ`);
+      }
+
+      const messages: { status: "success" | "error"; msg: string }[] = [];
+
+      for (const id of ids) {
+        const school = await SchoolService.getSchoolBy({ id: Number(id) });
+
+        if (!school) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy trường học với ID = ${id}`,
+          });
+          continue;
+        }
+
+        const countClass = await SchoolService.countClassBySchoolId(school.id);
+        if (countClass > 0) {
+          messages.push({
+            status: "error",
+            msg: `Trường "${school.name}" có ${countClass} lớp, không thể xóa`,
+          });
+          continue;
+        }
+
+        const deletedSchool = await SchoolService.deleteSchool(school.id);
+        if (!deletedSchool) {
+          messages.push({
+            status: "error",
+            msg: `Xóa trường ${school.name} thất bại`,
+          });
+          continue;
+        }
+
+        messages.push({
+          status: "success",
+          msg: `Xóa trường ${school.name} thành công`,
+        });
+      }
+
+      res.json({
+        success: true,
+        messages,
+      });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async listSchool(req: Request, res: Response): Promise<void> {
+    try {
+      const data = await SchoolService.listSchool();
+      if (!data) {
+        throw new Error("Không tìm thấy trường học ");
+      }
+      logger.info(`Lấy danh sách trường học thành công`);
+      res.json(successResponse(data, "Lấy danh sách trường học thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

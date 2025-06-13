@@ -26,6 +26,7 @@ export const RegisterSchema = z
         "Xác nhận mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
       ),
     role: z.nativeEnum(Role).default("Judge"),
+    isActive: z.boolean(),
   })
   .refine(data => data.password === data.confirmPassword, {
     message: "Xác nhận mật khẩu không khớp với mật khẩu",
@@ -71,9 +72,9 @@ export const UpdateUserSchema = z.object({
 });
 
 export const otpShema = forgotPasswordSchema.extend({
-  otp: z.number({
+  otp: z.string({
     required_error: "Vui lòng nhập mã OTP",
-    invalid_type_error: "Vui lòng nhập kí tự số ",
+    invalid_type_error: "Vui lòng nhập kí tự chuỗi ",
   }),
 });
 

@@ -9,31 +9,39 @@ export const CreateAboutSchema = z.object({
     })
     .min(1, "Vui lòng nhập tên trường")
     .max(255, "Tên trường không được quá 255 ký tự"),
-  
+
   website: z
     .string()
     .url("URL website không hợp lệ")
     .max(255, "URL website không được quá 255 ký tự")
     .optional(),
-    
+
   departmentName: z
     .string()
     .max(255, "Tên khoa không được quá 255 ký tự")
     .optional(),
-    
+
   email: z
     .string()
     .email("Email không hợp lệ")
     .max(255, "Email không được quá 255 ký tự")
     .optional(),
-    
+
   fanpage: z
     .string()
     .max(255, "URL fanpage không được quá 255 ký tự")
     .optional(),
-    
-  mapEmbedCode: z
+
+  mapEmbedCode: z.string().optional(),
+
+  logo: z
     .string()
+    .max(255, "Đường dẫn logo không được quá 255 ký tự")
+    .optional(),
+
+  banner: z
+    .string()
+    .max(255, "Đường dẫn banner không được quá 255 ký tự")
     .optional(),
 });
 
@@ -44,31 +52,39 @@ export const UpdateAboutSchema = z.object({
     .min(1, "Vui lòng nhập tên trường")
     .max(255, "Tên trường không được quá 255 ký tự")
     .optional(),
-    
+
   website: z
     .string()
     .url("URL website không hợp lệ")
     .max(255, "URL website không được quá 255 ký tự")
     .optional(),
-    
+
   departmentName: z
     .string()
     .max(255, "Tên khoa không được quá 255 ký tự")
     .optional(),
-    
+
   email: z
     .string()
     .email("Email không hợp lệ")
     .max(255, "Email không được quá 255 ký tự")
     .optional(),
-    
+
   fanpage: z
     .string()
     .max(255, "URL fanpage không được quá 255 ký tự")
     .optional(),
-    
-  mapEmbedCode: z
+
+  mapEmbedCode: z.string().optional(),
+
+  logo: z
     .string()
+    .max(255, "Đường dẫn logo không được quá 255 ký tự")
+    .optional(),
+
+  banner: z
+    .string()
+    .max(255, "Đường dẫn banner không được quá 255 ký tự")
     .optional(),
 });
 
@@ -76,25 +92,23 @@ export const UpdateAboutSchema = z.object({
 export const AboutQuerySchema = z.object({
   page: z
     .string()
-    .transform((val) => parseInt(val))
-    .refine((val) => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
     .optional()
     .default("1"),
-    
+
   limit: z
     .string()
-    .transform((val) => parseInt(val))
-    .refine((val) => !isNaN(val) && val > 0 && val <= 100, "Limit phải từ 1-100")
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0 && val <= 100, "Limit phải từ 1-100")
     .optional()
     .default("10"),
-    
-  search: z
-    .string()
-    .optional(),
-    
+
+  search: z.string().optional(),
+
   isActive: z
     .string()
-    .transform((val) => val === "true")
+    .transform(val => val === "true")
     .optional(),
 });
 
@@ -102,8 +116,8 @@ export const AboutQuerySchema = z.object({
 export const AboutIdSchema = z.object({
   id: z
     .string()
-    .transform((val) => parseInt(val))
-    .refine((val) => !isNaN(val) && val > 0, "ID phải là số nguyên dương"),
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "ID phải là số nguyên dương"),
 });
 
 // TypeScript types

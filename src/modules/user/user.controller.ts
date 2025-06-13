@@ -19,13 +19,11 @@ export default class UserController {
         input.username
       );
       if (existingUserName) {
-        res.json(validateData("username", "Tên tài khoản đã tồn tại"));
-        return;
+        throw new Error(`Tên tài khoản đã tồn tại `);
       }
       const existingEmail = await UserService.existingEmail(input.email);
       if (existingEmail) {
-        res.json(validateData("email", "Email đã tồn tại"));
-        return;
+        throw new Error(`Email đã tồn tại `);
       }
       const hashPassword = await bcrypt.hash(input.password, 10);
       const user = await UserService.creatUser({
@@ -73,6 +71,7 @@ export default class UserController {
     try {
       const id = req.params.id;
       const input: UpdateUserInput = req.body;
+
       const user = await UserService.getUserById(Number(id));
       if (input.email) {
         const existingEmail = await UserService.existingEmailForUpdate(
@@ -80,7 +79,7 @@ export default class UserController {
           Number(id)
         );
         if (existingEmail) {
-          res.json(validateData("email", "Email này đã tồn tại"));
+          throw new Error("Email đã tồn tại");
         }
       }
       if (!user) {
@@ -113,7 +112,7 @@ export default class UserController {
         throw new Error("Không tìm thấy người dùng");
       }
       const updated = await UserService.UpdateUser(user.id, {
-        isAcitve: !user.isActive,
+        isActive: !user.isActive,
       });
       if (!updated) {
         throw new Error("Cập nhật trạng thái thất bại");
@@ -153,7 +152,7 @@ export default class UserController {
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
-            : true,
+            : undefined,
         role:
           req.query.role === "Admin"
             ? "Admin"
@@ -161,8 +160,8 @@ export default class UserController {
             ? "Judge"
             : undefined,
       };
-
-      const data = await UserService.getAllUser(query);
+      const id = req.user?.userId;
+      const data = await UserService.getAllUser(query, id);
       if (!data) {
         throw new Error("Không tìm thấy người dùng");
       }
@@ -178,6 +177,7 @@ export default class UserController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
   static async deleteUser(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;
@@ -197,6 +197,62 @@ export default class UserController {
       }
       res.json(successResponse({}, "Xoá người dùng thành công"));
       logger.info(`Xoá người dùng ${user.username} thành công`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async deleteUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
+
+      const messages: { status: "success" | "error"; msg: string }[] = [];
+
+      for (const id of ids) {
+        const user = await UserService.getUserById(Number(id));
+        if (!user) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy người dùng với ID = ${id}`,
+          });
+          continue;
+        }
+
+        const countGroups = await UserService.countGroupsByUserId(user.id);
+        if (countGroups > 0) {
+          messages.push({
+            status: "error",
+            msg: `Không thể xoá "${user.username}" vì họ là trọng tài của ${countGroups} trận đấu`,
+          });
+          continue;
+        }
+
+        const result = await UserService.deleteUser(user.id);
+        if (!result) {
+          messages.push({
+            status: "error",
+            msg: `Xoá người dùng "${user.username}" thất bại`,
+          });
+          continue;
+        }
+
+        messages.push({
+          status: "success",
+          msg: `Xoá người dùng "${user.username}" thành công`,
+        });
+
+        logger.info(`Đã xoá người dùng ${user.username}`);
+      }
+
+      res.json({
+        success: true,
+        messages,
+      });
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

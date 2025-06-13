@@ -6,7 +6,7 @@ export const CreateSchoolSchema = z.object({
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
     .min(5, "Tên trường ít nhất 5 kí  tự ")
-    .max(255, "Tên trường tối đa 5 kí tự"),
+    .max(255, "Tên trường tối đa 255 kí tự"),
   email: z
     .string({
       required_error: "Vui lòng nhập tên eamil",
@@ -45,7 +45,7 @@ export const UpdeateSchoolShema = z.object({
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
     .min(5, "Tên trường ít nhất 5 kí  tự ")
-    .max(255, "Tên trường tối đa 5 kí tự")
+    .max(255, "Tên trường tối đa 255 kí tự")
     .optional(),
   email: z
     .string({
@@ -96,7 +96,14 @@ export const SchoolQuerySchema = z.object({
   isActive: z
     .string()
     .optional()
-    .transform(val => val === "true"),
+    .transform(val => val === "true")
+    .optional(),
+});
+
+export const deleteSchoolsSchema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải chọn ít nhất 1 ID để xoá"),
 });
 
 export type CreateSchoolInput = z.infer<typeof CreateSchoolSchema>;

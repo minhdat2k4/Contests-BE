@@ -1,58 +1,69 @@
 import { prisma } from "@/config/database";
 import { Class } from "@prisma/client";
-import { ClassQueryInput } from "@/modules/class";
+import {
+  ClassQueryInput,
+  CreateClassInput,
+  UpdateClassInput,
+  Classes,
+  ClassById,
+} from "@/modules/class";
+import { nativeEnum } from "zod";
 export default class ClassService {
-  // static async createSchool(data: CreateSchoolInput): Promise<School | null> {
-  //   return prisma.school.create({
-  //     data: {
-  //       ...data,
-  //     },
-  //   });
-  // }
-
-  // static async updateSchool(
-  //   id: number,
-  //   data: UpdateShoolInput
-  // ): Promise<School | null> {
-  //   const updateData: any = {};
-  //   if (data.phone !== undefined) {
-  //     updateData.name = data.name;
-  //   }
-  //   if (data.email !== undefined) {
-  //     updateData.email = data.email;
-  //   }
-  //   if (data.phone !== undefined) {
-  //     updateData.phone = data.phone;
-  //   }
-  //   if (data.address !== undefined) {
-  //     updateData.address = data.address;
-  //   }
-  //   if (data.isActive !== undefined) {
-  //     updateData.isActive = data.isActive;
-  //   }
-  //   return prisma.school.update({
-  //     where: { id: id },
-  //     data: {
-  //       ...updateData,
-  //     },
-  //   });
-  // }
-  // static async deleteSchool(id: number): Promise<School> {
-  //   return prisma.school.delete({
-  //     where: {
-  //       id: id,
-  //     },
-  //   });
-  // }
-  static async getClassBy(data: any): Promise<Class | null> {
+  static async updateClass(
+    id: number,
+    data: UpdateClassInput
+  ): Promise<Class | null> {
+    const updateData: any = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
+    if (data.schoolId !== undefined) {
+      updateData.schoolId = data.schoolId;
+    }
+    return prisma.class.update({
+      where: { id: id },
+      data: {
+        ...updateData,
+      },
+    });
+  }
+  static async deleteClass(id: number): Promise<Class> {
+    return prisma.class.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
+  static async getClassBy(data: any): Promise<ClassById | null> {
     return prisma.class.findFirst({
       where: {
+        ...data,
+      },
+      select: {
+        id: true,
+        name: true,
+        schoolId: true,
+        isActive: true,
+        school: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+  }
+  static async createClass(data: CreateClassInput): Promise<Class | null> {
+    return prisma.class.create({
+      data: {
         ...data,
       },
     });
   }
   static async getAllClass(query: ClassQueryInput): Promise<{
-    classes: Class[];
+    classes: Classes[];
     pagination: {
       page: number;
       limit: number;
@@ -75,18 +86,34 @@ export default class ClassService {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
         { name: { contains: keyword } },
+        { school: { name: { contains: keyword } } },
       ]);
     }
 
-    const classes = await prisma.class.findMany({
+    const classRaw = await prisma.class.findMany({
       where: whereClause,
       skip: skip,
       take: limit,
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        school: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
-    const total = classes.length;
+    const classes = classRaw.map(key => ({
+      id: key.id,
+      name: key.name,
+      isActive: key.isActive,
+      shoolName: key.school?.name ?? null,
+    }));
+    const total = await prisma.class.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
-
     return {
       classes: classes,
       pagination: {
@@ -98,5 +125,19 @@ export default class ClassService {
         hasPrev: page > 1,
       },
     };
+  }
+  static async countClassVieoByClassId(id: number) {
+    return prisma.classVideo.count({
+      where: {
+        classId: id,
+      },
+    });
+  }
+  static async countClassStudentClassId(id: number) {
+    return prisma.student.count({
+      where: {
+        classId: id,
+      },
+    });
   }
 }

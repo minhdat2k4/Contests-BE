@@ -33,7 +33,8 @@ export const validateBody = (
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.body = schema.safeParse(req.body);
+      const validatedBody = schema.parse(req.body);
+      req.body = validatedBody;
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -58,7 +59,9 @@ export const validateQuery = (
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.query = schema.parse(req.query);
+      const validatedQuery = schema.parse(req.query);
+      // Store validated query in a custom property since req.query is read-only
+      (req as any).validatedQuery = validatedQuery;
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -84,7 +87,9 @@ export const validateParams = (
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.params = schema.parse(req.params);
+      const validatedParams = schema.parse(req.params);
+      // Store validated params in a custom property since req.params might be read-only
+      (req as any).validatedParams = validatedParams;
       next();
     } catch (error) {
       if (error instanceof ZodError) {
@@ -110,7 +115,9 @@ export const validateHeaders = (
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.headers = schema.parse(req.headers);
+      const validatedHeaders = schema.parse(req.headers);
+      // Store validated headers in a custom property since req.headers is read-only
+      (req as any).validatedHeaders = validatedHeaders;
       next();
     } catch (error) {
       if (error instanceof ZodError) {

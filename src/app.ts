@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -10,7 +10,18 @@ import { authRouter } from "./modules/auth/auth.routes";
 import { aboutRouter } from "./modules/about/about.routes";
 import { userRouter } from "@/modules/user";
 import { schoolRouter } from "@/modules/school";
+import { studentRouter } from "@/modules/student";
+import { roundRouter } from "@/modules/round"; // Temporarily commented out
 import { classRouter } from "@/modules/class";
+import { questionTopicRoutes } from "@/modules/questionTopic";
+import { questionPackageRouter } from "@/modules/questionPackage";
+import { questionDetailRouter } from "@/modules/questionDetail";
+import { rescueRoute } from "@/modules/rescues";
+import { contestRoute } from "@/modules/contest";
+import { matchRouter } from "@/modules/match";
+
+import { enumRouter } from "@/modules/enum";
+import { mediaRouter } from "@/modules/media";
 
 // Load environment variables
 dotenv.config();
@@ -48,6 +59,9 @@ if (process.env.NODE_ENV === "development") {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Static files serving for uploads
+app.use("/uploads", express.static("uploads"));
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -57,13 +71,22 @@ app.get("/health", (req, res) => {
     environment: process.env.NODE_ENV || "development",
   });
 });
-
 // API routes
 app.use("/api/auth", authRouter);
 app.use("/api/about", aboutRouter);
 app.use("/api/user", userRouter);
 app.use("/api/school", schoolRouter);
 app.use("/api/class", classRouter);
+app.use("/api/round", roundRouter);
+app.use("/api/student", studentRouter);
+app.use("/api/question-topics", questionTopicRoutes);
+app.use("/api/question-packages", questionPackageRouter);
+app.use("/api/question-details", questionDetailRouter);
+app.use("/api/contest", contestRoute);
+app.use("/api/rescue", rescueRoute);
+app.use("/api/enums", enumRouter);
+app.use("/api/match", matchRouter);
+app.use("/api/media", mediaRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {
@@ -75,6 +98,10 @@ app.get("/api/v1", (req, res) => {
       auth: "/api/auth",
       about: "/api/about",
       users: "/api/users",
+      "question-topics": "/api/question-topics",
+      "question-packages": "/api/question-packages",
+      "question-details": "/api/question-details",
+      enums: "/api/enums",
       health: "/health",
     },
   });

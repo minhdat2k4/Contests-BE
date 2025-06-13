@@ -10,10 +10,18 @@ import {
   SchoolIdShame,
   SchoolQuerySchema,
   UpdeateSchoolShema,
+  deleteSchoolsSchema,
 } from "./school.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const schoolRouter = Router();
 // prive
+
+schoolRouter.get(
+  "/list-school",
+  authenticate,
+  role("Admin"),
+  SchoolController.listSchool
+);
 
 schoolRouter.get(
   "/",
@@ -58,4 +66,13 @@ schoolRouter.delete(
   role("Admin"),
   SchoolController.deleteSchool
 );
+
+schoolRouter.post(
+  "/delete-many",
+  authenticate,
+  validateBody(deleteSchoolsSchema),
+  role("Admin"),
+  SchoolController.deleteSchools
+);
+
 export { schoolRouter };

@@ -39,9 +39,14 @@ Thumbs.db
 coverage/
 
 # Prisma
-prisma/migrations/
+# prisma/migrations/
 
 # Temporary files
 tmp/
 temp/
 src/modules/user/user.controller.ts
+
+# Uploads directories except uploads/about
+uploads/**/*
+!uploads/about/
+!uploads/about/*

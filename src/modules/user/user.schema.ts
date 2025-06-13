@@ -14,15 +14,8 @@ export const UpdateUserSchema = z.object({
       invalid_type_error: "Vui lòng nhập kí tự chuỗi",
     })
     .optional(),
-  isAcitve: z.boolean().optional(),
-  password: z
-    .string()
-    .min(8, "Mật khẩu mới là bắt buộc và phải có ít nhất 8 ký tự")
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z]).{8,}$/,
-      "Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
-    )
-    .optional(),
+  isActive: z.boolean().optional(),
+  password: z.string().optional(),
   updateAt: z.date().optional(),
   otpCode: z.number().optional(),
   otpExpiredAt: z.date().optional(),
@@ -44,6 +37,7 @@ export const CreateUserSchema = z.object({
       "Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa và chữ thường"
     ),
   role: z.nativeEnum(Role).default("Judge"),
+  isActive: z.boolean(),
 });
 
 export const UserIdShema = z.object({
@@ -68,13 +62,18 @@ export const UserQuerySchema = z.object({
     .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
     .optional()
     .default("10"),
-  search: z
+  search: z.string().optional(),
+  isActive: z
     .string()
-    .min(2, "Từ khóa tìm kiếm phải có ít nhất 2 ký tự")
-    .max(100, "Từ khóa tìm kiếm tối đa 100 ký tự")
+    .transform(val => val === "true")
     .optional(),
-  isActive: z.string().transform(val => val === "true"),
   role: z.nativeEnum(Role).optional(),
+});
+
+export const deleteUsersSchema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải chọn ít nhất 1 ID để xoá"),
 });
 export type UserInput = z.infer<typeof UpdateUserSchema>;
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;

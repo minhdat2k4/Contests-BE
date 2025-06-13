@@ -21,6 +21,8 @@ import { contestRoute } from "@/modules/contest";
 import { matchRouter } from "@/modules/match";
 
 import { enumRouter } from "@/modules/enum";
+import { groupRouter } from "@/modules/group";
+
 import { mediaRouter } from "@/modules/media";
 
 // Load environment variables
@@ -87,6 +89,7 @@ app.use("/api/rescue", rescueRoute);
 app.use("/api/enums", enumRouter);
 app.use("/api/match", matchRouter);
 app.use("/api/media", mediaRouter);
+app.use("/api/group", groupRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

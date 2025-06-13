@@ -8,32 +8,6 @@ export const ContestsIdShame = z.object({
     .refine(val => !isNaN(val) && val > 0, "Id là 1 số nguyên dương "),
 });
 
-export const UpdateContestsSchema = z.object({
-  name: z.string().min(1, "Tên cuộc thi là bắt buộc").optional(),
-  slug: z.string().min(1, "Slug là bắt buộc").optional(),
-  rule: z.string().min(1, "Nội dung luật là bắt buộc").optional(),
-  plainText: z.string().min(1, "Mô tả ngắn là bắt buộc").optional(),
-  location: z.string().min(1, "Địa điểm là bắt buộc"),
-  startTime: z.coerce
-    .date()
-    .refine(date => !isNaN(date.getTime()), {
-      message: "Ngày bắt đầu không hợp lệ",
-    })
-    .optional(),
-  endTime: z.coerce
-    .date()
-    .refine(date => !isNaN(date.getTime()), {
-      message: "Ngày kết thúc không hợp lệ",
-    })
-    .optional(),
-  logo: z.string().or(z.string().min(1, "Logo là bắt buộc")).optional(),
-  background: z
-    .string()
-    .or(z.string().min(1, "Background là bắt buộc"))
-    .optional(),
-  isActive: z.boolean().optional(),
-});
-
 export const CreateContestsSchema = z.object({
   name: z.string().min(1, "Tên cuộc thi là bắt buộc"),
   slug: z.string().min(1, "Slug là bắt buộc").optional(),
@@ -49,6 +23,29 @@ export const CreateContestsSchema = z.object({
   logo: z.string().or(z.string().min(1, "Logo là bắt buộc")),
   background: z.string().or(z.string().min(1, "Background là bắt buộc")),
   isActive: z.boolean(),
+});
+
+export const UpdateContestsSchema = z.object({
+  name: z.string().min(1, "Tên cuộc thi là bắt buộc").optional(),
+  slug: z.string().min(1, "Slug là bắt buộc").optional(),
+  rule: z.string().min(1, "Nội dung luật là bắt buộc").optional(),
+  plainText: z.string().min(1, "Mô tả ngắn là bắt buộc").optional(),
+  location: z.string().min(1, "Địa điểm là bắt buộc").optional(),
+  startTime: z.coerce
+    .date()
+    .refine(date => !isNaN(date.getTime()), {
+      message: "Ngày bắt đầu không hợp lệ",
+    })
+    .optional(),
+  endTime: z.coerce
+    .date()
+    .refine(date => !isNaN(date.getTime()), {
+      message: "Ngày kết thúc không hợp lệ",
+    })
+    .optional(),
+  status: z.nativeEnum(ContestStatus).optional(),
+  slogan: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const ContestsQuerySchema = z.object({

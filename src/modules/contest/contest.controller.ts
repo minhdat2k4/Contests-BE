@@ -3,10 +3,11 @@ import {
   ContestQueryInput,
   Contestervice,
   CreateContestInput,
+  UpdateContestInput,
 } from "@/modules/contest";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { ContestStatus } from "@prisma/client";
+import { ContestStatus, Contest } from "@prisma/client";
 import { prisma } from "@/config/database";
 import { htmlToPlainText } from "@/utils/html";
 
@@ -91,7 +92,6 @@ export default class ContestController {
       if (!contest) {
         throw new Error("Không tìm thấy cuộc thi ");
       }
-
       const countRound = await prisma.round.count({
         where: { contestId: contest.id },
       });
@@ -100,13 +100,21 @@ export default class ContestController {
           ` Cuộc thi này đang có ${countRound} vòng đấu không thể xóa`
         );
       }
-
       const countMatch = await prisma.match.count({
         where: { contestId: contest.id },
       });
       if (countMatch > 0) {
         throw new Error(
           ` Cuộc thi này đang có ${countMatch} trận đấu không thể xóa`
+        );
+      }
+
+      const countMedia = await prisma.media.count({
+        where: { contestId: contest.id },
+      });
+      if (countMedia > 0) {
+        throw new Error(
+          ` Cuộc thi này đang có ${countMedia} media không thể xóa`
         );
       }
 
@@ -259,34 +267,54 @@ export default class ContestController {
     }
   }
 
-  // static async update(req: Request, res: Response): Promise<void> {
-  //   try {
-  //     const id = req.params.id;
-  //     const input: UpdatecontestInput = req.body;
-  //     const match = await prisma.match.findFirst({
-  //       where: { id: input.matchId },
-  //     });
-  //     if (!match) {
-  //       throw new Error("Không tìm thấy trận đấu");
-  //     }
-  //     const contest = await Contestervice.getcontestBy({ id: Number(id) });
-  //     if (!contest) {
-  //       throw new Error("Không tìm thấy cuộc thi ");
-  //     }
-  //     const updatecontest = await Contestervice.updatecontest(Number(id), input);
-  //     if (!updatecontest) {
-  //       throw new Error("Cập nhật cuộc thi thất bại");
-  //     }
-  //     logger.info(`Cập nhật vòng thi  ${contest.name} thành công`);
-  //     res.json(
-  //       successResponse(
-  //         updatecontest,
-  //         `Cập nhật vòng thi ${contest.name} thành công`
-  //       )
-  //     );
-  //   } catch (error) {
-  //     logger.error((error as Error).message);
-  //     res.status(400).json(errorResponse((error as Error).message));
-  //   }
-  // }
+  static async update(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const input: UpdateContestInput = req.body;
+      const contest = await Contestervice.getBy({ id: Number(id) });
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi ");
+      }
+      const updatecontest = await Contestervice.update(Number(id), input);
+      if (!updatecontest) {
+        throw new Error("Cập nhật trạng thái cuộc thi thất bại");
+      }
+      logger.info(`Cập nhật trạng thái cuộc thi  ${contest.name} thành công`);
+      res.json(
+        successResponse(
+          updatecontest,
+          `Cập nhật trạng thái cuộc thi ${contest.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async toggle(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const contest = await Contestervice.getBy({ id: Number(id) });
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi ");
+      }
+      const updatecontest = await Contestervice.update(Number(id), {
+        isActive: !contest.isActive,
+      });
+      if (!updatecontest) {
+        throw new Error("Cập nhật trạng thái cuộc thi thất bại");
+      }
+      logger.info(`Cập nhật trạng thái cuộc thi  ${contest.name} thành công`);
+      res.json(
+        successResponse(
+          updatecontest,
+          `Cập nhật  trạng thái cuộc thi ${contest.name} thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

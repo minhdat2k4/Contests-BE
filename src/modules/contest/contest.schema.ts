@@ -20,9 +20,9 @@ export const CreateContestsSchema = z.object({
   endTime: z.coerce.date().refine(date => !isNaN(date.getTime()), {
     message: "Ngày kết thúc không hợp lệ",
   }),
-  logo: z.string().or(z.string().min(1, "Logo là bắt buộc")),
-  background: z.string().or(z.string().min(1, "Background là bắt buộc")),
-  isActive: z.boolean(),
+  status: z.nativeEnum(ContestStatus).optional(),
+  slogan: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const UpdateContestsSchema = z.object({

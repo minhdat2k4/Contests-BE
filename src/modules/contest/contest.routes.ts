@@ -10,6 +10,7 @@ import {
   ContestsIdShame,
   deleteContestsesSchema,
   UpdateContestsSchema,
+  CreateContestsSchema,
 } from "./contest.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const contestRoute = Router();
@@ -38,7 +39,7 @@ contestRoute.post(
   "/",
   authenticate,
   role("Admin"),
-  uploadContestFiles,
+  validateBody(CreateContestsSchema),
   ContestController.create
 );
 

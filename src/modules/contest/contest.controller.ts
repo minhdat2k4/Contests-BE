@@ -11,6 +11,8 @@ import { prisma } from "@/config/database";
 import {
   prepareFileInfoCustom,
   moveUploadedFile,
+  deleteFile,
+  deleteTempFile,
 } from "../../utils/uploadFile";
 export default class ContestController {
   static async create(req: Request, res: Response): Promise<void> {
@@ -172,6 +174,11 @@ export default class ContestController {
       if (!deletecontest) {
         throw new Error(`Xóa cuộc thi ${contest.name} thất bại `);
       }
+      await deleteFile(contest.logo);
+      await deleteFile(contest.background);
+      if (Array.isArray(contest.media)) {
+        await Promise.all(contest.media.map(i => deleteFile(i as string)));
+      }
       logger.info(`Xóa cuộc thi ${contest.name} thành công`);
       res.json(
         successResponse(null, `Xóa cuộc thi ${contest.name} thành công`)
@@ -265,7 +272,11 @@ export default class ContestController {
           });
           continue;
         }
-
+        await deleteFile(contest.logo);
+        await deleteFile(contest.background);
+        if (Array.isArray(contest.media)) {
+          await Promise.all(contest.media.map(i => deleteFile(i as string)));
+        }
         messages.push({
           status: "success",
           msg: `Xóa cuộc thi "${contest.name}" thành công`,

@@ -25,6 +25,14 @@ roundRouter.get(
 );
 
 roundRouter.get(
+  "/",
+  authenticate,
+  role("Admin"),
+  validateQuery(RoundQuerySchema),
+  RoundController.getAlls
+);
+
+roundRouter.get(
   "/:id",
   authenticate,
   role("Admin"),

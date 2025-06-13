@@ -1,0 +1,187 @@
+import { prisma } from "@/config/database";
+// import {
+//   Rounds,
+//   RoundQueryInput,
+//   RoundById,
+//   CreateRoundInput,
+//   UpdateRoundInput,
+// } from "@/modules/match";
+import { Round } from "@prisma/client";
+
+export default class MatchService {
+  // static async getAll(query: RoundQueryInput): Promise<{
+  //   rounds: Rounds[];
+  //   pagination: {
+  //     page: number;
+  //     limit: number;
+  //     total: number;
+  //     totalPages: number;
+  //     hasNext: boolean;
+  //     hasPrev: boolean;
+  //   };
+  // }> {
+  //   const { page, limit, search, isActive, contestId } = query;
+  //   const skip = (page - 1) * limit;
+  //   const whereClause: any = {};
+  //   if (isActive !== undefined) {
+  //     whereClause.isActive = isActive;
+  //   }
+  //   if (contestId !== undefined) {
+  //     whereClause.contestId = contestId;
+  //   }
+  //   if (search) {
+  //     const keywords = search.trim().split(/\s+/);
+  //     whereClause.OR = keywords.flatMap((keyword: string) => [
+  //       { name: { contains: keyword } },
+  //       { contest: { is: { name: { contains: keyword } } } },
+  //     ]);
+  //   }
+
+  //   const roundRaw = await prisma.round.findMany({
+  //     where: whereClause,
+  //     skip: skip,
+  //     take: limit,
+  //     orderBy: { createdAt: "desc" },
+  //     select: {
+  //       id: true,
+  //       name: true,
+  //       isActive: true,
+  //       index: true,
+  //       endTime: true,
+  //       startTime: true,
+  //       contest: {
+  //         select: {
+  //           name: true,
+  //         },
+  //       },
+  //     },
+  //   });
+  //   const rounds = roundRaw.map(key => ({
+  //     id: key.id,
+  //     name: key.name,
+  //     isActive: key.isActive,
+  //     contestName: key.contest?.name ?? null,
+  //     index: key.index,
+  //     endTime: key.endTime,
+  //     startTime: key.startTime,
+  //   }));
+  //   const total = await prisma.round.count({ where: whereClause });
+  //   const totalPages = Math.ceil(total / limit);
+  //   return {
+  //     rounds: rounds,
+  //     pagination: {
+  //       page: page,
+  //       limit: limit,
+  //       total: total,
+  //       totalPages: totalPages,
+  //       hasNext: page < totalPages,
+  //       hasPrev: page > 1,
+  //     },
+  //   };
+  // }
+
+  // static async getRoundBy(data: any): Promise<RoundById | null> {
+  //   return prisma.round.findFirst({
+  //     where: {
+  //       ...data,
+  //     },
+  //     select: {
+  //       id: true,
+  //       name: true,
+  //       contestId: true,
+  //       isActive: true,
+  //       index: true,
+  //       endTime: true,
+  //       startTime: true,
+  //       contest: {
+  //         select: {
+  //           name: true,
+  //         },
+  //       },
+  //     },
+  //   });
+  // }
+
+  // static async createRound(data: CreateRoundInput): Promise<Round | null> {
+  //   return prisma.round.create({
+  //     data: {
+  //       ...data,
+  //     },
+  //   });
+  // }
+
+  // static async updateRound(
+  //   id: number,
+  //   data: UpdateRoundInput
+  // ): Promise<Round | null> {
+  //   const updateData: any = {};
+
+  //   if (data.name !== undefined) {
+  //     updateData.name = data.name;
+  //   }
+
+  //   if (data.isActive !== undefined) {
+  //     updateData.isActive = data.isActive;
+  //   }
+
+  //   if (data.contestId !== undefined) {
+  //     updateData.contestId = data.contestId;
+  //   }
+
+  //   if (data.index !== undefined) {
+  //     updateData.index = data.index;
+  //   }
+
+  //   if (data.endTime !== undefined) {
+  //     updateData.endTime = data.endTime;
+  //   }
+
+  //   if (data.startTime !== undefined) {
+  //     updateData.startTime = data.startTime;
+  //   }
+
+  //   return prisma.round.update({
+  //     where: { id: id },
+  //     data: {
+  //       ...updateData,
+  //     },
+  //   });
+  // }
+  // static async deleteRound(id: number): Promise<Round> {
+  //   return prisma.round.delete({
+  //     where: {
+  //       id: id,
+  //     },
+  //   });
+  // }
+
+  // static async countMatchesByRoundId(id: number) {
+  //   return prisma.match.count({
+  //     where: {
+  //       roundId: id,
+  //     },
+  //   });
+  // }
+  // static async countContestantsByRoundId(id: number) {
+  //   return prisma.contestant.count({
+  //     where: {
+  //       roundId: id,
+  //     },
+  //   });
+  // }
+
+  static async getListMatch(slug: string) {
+    return prisma.match.findMany({
+      where: {
+        isActive: true,
+        contest: {
+          slug: slug,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
+}

@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -16,6 +16,10 @@ import { classRouter } from "@/modules/class";
 import { questionTopicRoutes } from "@/modules/questionTopic";
 import { questionPackageRouter } from "@/modules/questionPackage";
 import { questionDetailRouter } from "@/modules/questionDetail";
+import { rescueRoute } from "@/modules/rescues";
+import { contestRoute } from "@/modules/contest";
+import { matchRouter } from "@/modules/match";
+
 import { enumRouter } from "@/modules/enum";
 
 // Load environment variables
@@ -66,7 +70,6 @@ app.get("/health", (req, res) => {
     environment: process.env.NODE_ENV || "development",
   });
 });
-
 // API routes
 app.use("/api/auth", authRouter);
 app.use("/api/about", aboutRouter);
@@ -78,7 +81,10 @@ app.use("/api/student", studentRouter);
 app.use("/api/question-topics", questionTopicRoutes);
 app.use("/api/question-packages", questionPackageRouter);
 app.use("/api/question-details", questionDetailRouter);
+app.use("/api/contest", contestRoute);
+app.use("/api/rescue", rescueRoute);
 app.use("/api/enums", enumRouter);
+app.use("/api/match", matchRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

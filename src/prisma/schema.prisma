@@ -56,6 +56,13 @@ enum ContestantMatchStatus {
   completed
 }
 
+enum ContestMedia {
+  logo
+  background
+  images
+}
+
+
 enum RescueType {
   resurrected
   lifelineUsed
@@ -264,12 +271,12 @@ model Contest {
   location     String          @db.VarChar(255)
   startTime    DateTime
   endTime      DateTime
-  logo         String?         @db.VarChar(255)
-  background   String?         @db.VarChar(255)
-  media        Json?       
   slogan       String?         @db.VarChar(255)
   status       ContestStatus   @default(upcoming)
   isActive     Boolean         @default(true)
+
+  // Quan hệ mới
+  mediaFiles   Media[]
 
   matches      Match[]
   contestants  Contestant[]
@@ -282,6 +289,20 @@ model Contest {
   updatedAt    DateTime        @updatedAt
 
   @@map("Contests")
+}
+
+
+model Media {
+  id         Int        @id @default(autoincrement())
+  url        String     @db.VarChar(255)
+  type       ContestMedia
+  contest    Contest?   @relation(fields: [contestId], references: [id])
+  contestId  Int?
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@map("Media")
 }
 
 model Round {

@@ -1,6 +1,7 @@
 import { prisma } from "@/config/database";
 import { ContestQueryInput, CreateContestInput } from "./contest.schema";
 import { Contest } from "@prisma/client";
+import slugify from "slugify";
 export default class ContestService {
   static async getAll(query: ContestQueryInput): Promise<{
     Contest: Contest[];
@@ -68,6 +69,30 @@ export default class ContestService {
         ...data,
       },
     });
+  }
+
+  static async generateUniqueSlug(
+    name: string,
+    excludeId?: number
+  ): Promise<string> {
+    const baseSlug = slugify(name, { lower: true, locale: "vi", strict: true });
+    let slug = baseSlug;
+    let suffix = 1;
+
+    while (true) {
+      const exists = await prisma.contest.findFirst({
+        where: {
+          slug,
+          ...(excludeId && { NOT: { id: excludeId } }),
+        },
+      });
+
+      if (!exists) break;
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
+    }
+
+    return slug;
   }
 
   // static async updateRescue(

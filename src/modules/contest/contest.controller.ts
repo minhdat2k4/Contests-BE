@@ -8,54 +8,29 @@ import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { ContestStatus } from "@prisma/client";
 import { prisma } from "@/config/database";
-import {
-  prepareFileInfoCustom,
-  moveUploadedFile,
-  deleteFile,
-  deleteTempFile,
-} from "../../utils/uploadFile";
+import { htmlToPlainText } from "@/utils/html";
+
 export default class ContestController {
   static async create(req: Request, res: Response): Promise<void> {
     try {
       const input: CreateContestInput = req.body;
-      const files = req.files as {
-        logo?: Express.Multer.File[];
-        background?: Express.Multer.File[];
-        media?: Express.Multer.File[];
-      };
-      const folderPath = "uploads/contest";
-      const logoInfo = files?.logo?.[0]
-        ? prepareFileInfoCustom(files.logo[0], folderPath)
-        : null;
-      const bgInfo = files?.background?.[0]
-        ? prepareFileInfoCustom(files.background[0], folderPath)
-        : null;
-      const mediaInfos =
-        files?.media?.map(file => prepareFileInfoCustom(file, folderPath)) ||
-        [];
-
-      const contest = await Contestervice.create({
-        name: input.ContestName,
-        slug: input.slug,
+      const slug = await Contestervice.generateUniqueSlug(input.name);
+      const textplan = await htmlToPlainText(input.rule);
+      const data = {
+        name: input.name,
+        slug: slug,
         rule: input.rule,
-        plainText: input.plainText,
+        plainText: textplan,
         location: input.location,
         startTime: input.startTime,
         endTime: input.endTime,
         slogan: input.slogan,
         status: input.status,
-        logo: logoInfo ? `/uploads/contest/${logoInfo.fileName}` : undefined,
-        background: bgInfo ? `/uploads/contest/${bgInfo.fileName}` : undefined,
-        media: mediaInfos.length
-          ? mediaInfos.map(i => `/uploads/contest/${i.fileName}`)
-          : [],
-      });
+        isActive: input.isActive,
+      };
 
-      if (logoInfo) moveUploadedFile(logoInfo.tempPath!, logoInfo.destPath!);
-      if (bgInfo) moveUploadedFile(bgInfo.tempPath!, bgInfo.destPath!);
-      mediaInfos.forEach(info =>
-        moveUploadedFile(info.tempPath!, info.destPath!)
-      );
+      const contest = await Contestervice.create(data);
+
       logger.info(`Thêm cuộc thi thành công`);
       res.json(successResponse(contest, "Thêm cuộc thi thành công"));
     } catch (error) {
@@ -174,11 +149,6 @@ export default class ContestController {
       if (!deletecontest) {
         throw new Error(`Xóa cuộc thi ${contest.name} thất bại `);
       }
-      await deleteFile(contest.logo);
-      await deleteFile(contest.background);
-      if (Array.isArray(contest.media)) {
-        await Promise.all(contest.media.map(i => deleteFile(i as string)));
-      }
       logger.info(`Xóa cuộc thi ${contest.name} thành công`);
       res.json(
         successResponse(null, `Xóa cuộc thi ${contest.name} thành công`)
@@ -271,11 +241,6 @@ export default class ContestController {
             msg: `Xóa cuộc thi "${contest.name}" thất bại`,
           });
           continue;
-        }
-        await deleteFile(contest.logo);
-        await deleteFile(contest.background);
-        if (Array.isArray(contest.media)) {
-          await Promise.all(contest.media.map(i => deleteFile(i as string)));
         }
         messages.push({
           status: "success",

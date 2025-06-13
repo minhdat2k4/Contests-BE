@@ -18,9 +18,8 @@ import { questionPackageRouter } from "@/modules/questionPackage";
 import { questionDetailRouter } from "@/modules/questionDetail";
 import { rescueRoute } from "@/modules/rescues";
 import { contestRoute } from "@/modules/contest";
-import multer from "multer";
+import { matchRouter } from "@/modules/match";
 
-import fs from "fs";
 import { enumRouter } from "@/modules/enum";
 
 // Load environment variables
@@ -85,6 +84,7 @@ app.use("/api/question-details", questionDetailRouter);
 app.use("/api/contest", contestRoute);
 app.use("/api/rescue", rescueRoute);
 app.use("/api/enums", enumRouter);
+app.use("/api/match", matchRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

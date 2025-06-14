@@ -109,7 +109,7 @@ export default class ScreenService {
       controlValue: k.controlValue,
       matchId: k.matchId,
       matchName: k.match?.name ?? null,
-      media: k.media,
+      media: k.media ?? null,
     }));
     const total = await prisma.student.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);

@@ -12,7 +12,7 @@ export const ScreenSchema = z.object({
   controlKey: z.nativeEnum(ControlKey),
   controlValue: z.nativeEnum(ControlValue),
   matchId: z.number(),
-  media: z.string(),
+  media: z.string().nullable(),
   matchName: z.string(),
 });
 

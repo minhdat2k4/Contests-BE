@@ -1,174 +1,212 @@
 import { prisma } from "@/config/database";
-// import {
-//   Rounds,
-//   RoundQueryInput,
-//   RoundById,
-//   CreateRoundInput,
-//   UpdateRoundInput,
-// } from "@/modules/match";
-import { Round } from "@prisma/client";
+import {
+  MatchById,
+  CreateMatchInput,
+  UpdateMatchInput,
+  MatchQuerySchema,
+  MatchType,
+  MatchQueryInput,
+} from "@/modules/match";
+import { Match } from "@prisma/client";
+import slugify from "slugify";
 
 export default class MatchService {
-  // static async getAll(query: RoundQueryInput): Promise<{
-  //   rounds: Rounds[];
-  //   pagination: {
-  //     page: number;
-  //     limit: number;
-  //     total: number;
-  //     totalPages: number;
-  //     hasNext: boolean;
-  //     hasPrev: boolean;
-  //   };
-  // }> {
-  //   const { page, limit, search, isActive, contestId } = query;
-  //   const skip = (page - 1) * limit;
-  //   const whereClause: any = {};
-  //   if (isActive !== undefined) {
-  //     whereClause.isActive = isActive;
-  //   }
-  //   if (contestId !== undefined) {
-  //     whereClause.contestId = contestId;
-  //   }
-  //   if (search) {
-  //     const keywords = search.trim().split(/\s+/);
-  //     whereClause.OR = keywords.flatMap((keyword: string) => [
-  //       { name: { contains: keyword } },
-  //       { contest: { is: { name: { contains: keyword } } } },
-  //     ]);
-  //   }
+  static async getAll(query: MatchQueryInput): Promise<{
+    matches: MatchType[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search, isActive, contestId } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive;
+    }
+    if (contestId !== undefined) {
+      whereClause.contestId = contestId;
+    }
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { name: { contains: keyword } },
+        { contest: { is: { name: { contains: keyword } } } },
+      ]);
+    }
 
-  //   const roundRaw = await prisma.round.findMany({
-  //     where: whereClause,
-  //     skip: skip,
-  //     take: limit,
-  //     orderBy: { createdAt: "desc" },
-  //     select: {
-  //       id: true,
-  //       name: true,
-  //       isActive: true,
-  //       index: true,
-  //       endTime: true,
-  //       startTime: true,
-  //       contest: {
-  //         select: {
-  //           name: true,
-  //         },
-  //       },
-  //     },
-  //   });
-  //   const rounds = roundRaw.map(key => ({
-  //     id: key.id,
-  //     name: key.name,
-  //     isActive: key.isActive,
-  //     contestName: key.contest?.name ?? null,
-  //     index: key.index,
-  //     endTime: key.endTime,
-  //     startTime: key.startTime,
-  //   }));
-  //   const total = await prisma.round.count({ where: whereClause });
-  //   const totalPages = Math.ceil(total / limit);
-  //   return {
-  //     rounds: rounds,
-  //     pagination: {
-  //       page: page,
-  //       limit: limit,
-  //       total: total,
-  //       totalPages: totalPages,
-  //       hasNext: page < totalPages,
-  //       hasPrev: page > 1,
-  //     },
-  //   };
-  // }
+    const matchRaw = await prisma.match.findMany({
+      where: whereClause,
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        remainingTime: true,
+        name: true,
+        contestId: true,
+        isActive: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        currentQuestion: true,
+        questionPackageId: true,
+        studentId: true,
+        student: { select: { fullName: true } },
+        questionPackage: { select: { name: true } },
+        round: { select: { name: true } },
+        contest: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    const matches = matchRaw.map(key => ({
+      contestId: key.contestId,
+      name: key.name,
+      startTime: key.startTime,
+      endTime: key.endTime,
+      currentQuestion: key.currentQuestion,
+      questionPackageId: key.questionPackageId,
+      studentFullName: key.student?.fullName ?? "",
+      contestName: key.contest?.name ?? "",
+      isActive: key.isActive,
+      status: key.status ?? "",
+      slug: key.slug ?? "",
+      remainingTime: key.remainingTime ?? 0,
+      studentId: key.studentId ?? undefined,
+      roundName: key.round.name ?? "",
+    }));
 
-  // static async getRoundBy(data: any): Promise<RoundById | null> {
-  //   return prisma.round.findFirst({
-  //     where: {
-  //       ...data,
-  //     },
-  //     select: {
-  //       id: true,
-  //       name: true,
-  //       contestId: true,
-  //       isActive: true,
-  //       index: true,
-  //       endTime: true,
-  //       startTime: true,
-  //       contest: {
-  //         select: {
-  //           name: true,
-  //         },
-  //       },
-  //     },
-  //   });
-  // }
+    const total = await prisma.match.count({ where: whereClause });
+    const totalPages = Math.ceil(total / limit);
+    return {
+      matches: matches,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
 
-  // static async createRound(data: CreateRoundInput): Promise<Round | null> {
-  //   return prisma.round.create({
-  //     data: {
-  //       ...data,
-  //     },
-  //   });
-  // }
+  static async getMatchBy(data: any): Promise<MatchById | null> {
+    return prisma.match.findFirst({
+      where: {
+        ...data,
+      },
+      select: {
+        id: true,
+        slug: true,
+        remainingTime: true,
+        name: true,
+        contestId: true,
+        isActive: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        currentQuestion: true,
+        questionPackageId: true,
+        studentId: true,
+        student: { select: { fullName: true } },
+        questionPackage: { select: { name: true } },
+        round: { select: { name: true } },
+        contest: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+  }
 
-  // static async updateRound(
-  //   id: number,
-  //   data: UpdateRoundInput
-  // ): Promise<Round | null> {
-  //   const updateData: any = {};
+  static async create(data: CreateMatchInput): Promise<Match | null> {
+    return prisma.match.create({
+      data: {
+        ...data,
+      },
+    });
+  }
 
-  //   if (data.name !== undefined) {
-  //     updateData.name = data.name;
-  //   }
+  static async update(
+    id: number,
+    data: UpdateMatchInput
+  ): Promise<Match | null> {
+    const updateData: any = {};
 
-  //   if (data.isActive !== undefined) {
-  //     updateData.isActive = data.isActive;
-  //   }
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+      const slug = await MatchService.generateUniqueSlug(data.name);
+      updateData.slug = slug;
+    }
 
-  //   if (data.contestId !== undefined) {
-  //     updateData.contestId = data.contestId;
-  //   }
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive;
+    }
 
-  //   if (data.index !== undefined) {
-  //     updateData.index = data.index;
-  //   }
+    if (data.contestId !== undefined) {
+      updateData.contestId = data.contestId;
+    }
 
-  //   if (data.endTime !== undefined) {
-  //     updateData.endTime = data.endTime;
-  //   }
+    if (data.endTime !== undefined) {
+      updateData.endTime = data.endTime;
+    }
 
-  //   if (data.startTime !== undefined) {
-  //     updateData.startTime = data.startTime;
-  //   }
+    if (data.startTime !== undefined) {
+      updateData.startTime = data.startTime;
+    }
 
-  //   return prisma.round.update({
-  //     where: { id: id },
-  //     data: {
-  //       ...updateData,
-  //     },
-  //   });
-  // }
-  // static async deleteRound(id: number): Promise<Round> {
-  //   return prisma.round.delete({
-  //     where: {
-  //       id: id,
-  //     },
-  //   });
-  // }
+    if (data.remainingTime !== undefined) {
+      updateData.remainingTime = data.remainingTime;
+    }
 
-  // static async countMatchesByRoundId(id: number) {
-  //   return prisma.match.count({
-  //     where: {
-  //       roundId: id,
-  //     },
-  //   });
-  // }
-  // static async countContestantsByRoundId(id: number) {
-  //   return prisma.contestant.count({
-  //     where: {
-  //       roundId: id,
-  //     },
-  //   });
-  // }
+    if (data.roundId !== undefined) {
+      updateData.roundId = data.roundId;
+    }
+
+    if (data.studentId !== undefined) {
+      updateData.studentId = data.studentId;
+    }
+
+    if (data.currentQuestion !== undefined) {
+      updateData.currentQuestion = data.currentQuestion;
+    }
+
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+    }
+
+    if (data.questionPackageId !== undefined) {
+      updateData.questionPackageId = data.questionPackageId;
+    }
+
+    if (data.slug !== undefined) {
+      updateData.slug = data.slug;
+    }
+
+    return prisma.match.update({
+      where: { id: id },
+      data: {
+        ...updateData,
+      },
+    });
+  }
+  static async deleteMatch(id: number): Promise<Match> {
+    return prisma.match.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
 
   static async getListMatch(slug: string) {
     return prisma.match.findMany({
@@ -183,5 +221,29 @@ export default class MatchService {
         name: true,
       },
     });
+  }
+
+  static async generateUniqueSlug(
+    name: string,
+    excludeId?: number
+  ): Promise<string> {
+    const baseSlug = slugify(name, { lower: true, locale: "vi", strict: true });
+    let slug = baseSlug;
+    let suffix = 1;
+
+    while (true) {
+      const exists = await prisma.match.findFirst({
+        where: {
+          slug,
+          ...(excludeId && { NOT: { id: excludeId } }),
+        },
+      });
+
+      if (!exists) break;
+      slug = `${baseSlug}-${suffix}`;
+      suffix++;
+    }
+
+    return slug;
   }
 }

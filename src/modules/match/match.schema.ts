@@ -1,47 +1,149 @@
-import z, { number } from "zod";
-export const MatchShema = z.object({
-  id: z.number(),
-  name: z.string(),
+import z, { nativeEnum } from "zod";
+import { ContestStatus, Match } from "@prisma/client";
+
+export const MatchSchema = z.object({
+  name: z.string().min(1, "Tên trận không được để trống"),
+  startTime: z.coerce.date(), // Chuyển từ string nếu cần
+  endTime: z.coerce.date(),
+  slug: z.string().optional(), // Có thể auto-gen từ name
+  remainingTime: z.number().int().optional(),
+  status: nativeEnum(ContestStatus).optional(), // Prisma đã có default
+  currentQuestion: z.number().int(),
+  questionPackageId: z.number().int(),
+  contestId: z.number().int(),
+  roundName: z.string(),
+  isActive: z.boolean().optional(), // Prisma đã có default
+  studentId: z.number().int().optional(),
+  studentFullName: z.string(),
   contestName: z.string(),
-  isActive: z.boolean(),
-  index: z.number(),
-  endTime: z.date(),
-  startTime: z.date(),
 });
 
-export const CreateMatchShema = z.object({
-  name: z
-    .string({
-      required_error: "Vui lòng nhập tên vòng đấu",
-      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
-    })
-    .min(1, "Vui lòng nhập tên vòng đấu")
-    .max(255, "Tên vòng đấu tối đa 255 kí tự"),
-  contestId: z
+export const CreateMatchSchema = z.object({
+  name: z.string().min(1, "Tên trận đấu không được để trống"),
+  startTime: z.coerce.date().refine(d => !isNaN(d.getTime()), {
+    message: "Thời gian bắt đầu không hợp lệ",
+  }),
+  endTime: z.coerce.date().refine(d => !isNaN(d.getTime()), {
+    message: "Thời gian kết thúc không hợp lệ",
+  }),
+  slug: z.string().optional(),
+
+  remainingTime: z.coerce
     .number({
-      required_error: "Vui lòng nhập id cuộc thi",
-      invalid_type_error: "Id là một số nguyên",
+      invalid_type_error: "Thời gian còn lại phải là số",
+      required_error: "Vui lòng nhập thời gian còn lại",
     })
-    .refine(
-      val => !isNaN(val) && val > 0,
-      "Id cuộc thi là một số nguyên dương"
-    ),
-  startTime: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), {
-      message: "Ngày bắt đầu không hợp lệ",
-    })
-    .transform(val => new Date(val)),
+    .int("Thời gian còn lại phải là số nguyên")
+    .nonnegative("Thời gian còn lại không hợp lệ")
+    .optional(),
 
-  endTime: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), {
-      message: "Ngày kết thúc không hợp lệ",
+  currentQuestion: z.coerce
+    .number({
+      invalid_type_error: "Câu hỏi hiện tại phải là số",
+      required_error: "Vui lòng nhập số thứ tự câu hỏi",
     })
-    .transform(val => new Date(val)),
+    .int("Câu hỏi hiện tại phải là số nguyên")
+    .nonnegative("Câu hỏi hiện tại không được âm"),
 
-  index: z.number(),
-  isActive: z.boolean(),
+  questionPackageId: z.coerce
+    .number({
+      invalid_type_error: "ID gói câu hỏi phải là số",
+      required_error: "Vui lòng chọn gói câu hỏi",
+    })
+    .int("ID gói câu hỏi phải là số nguyên"),
+
+  contestId: z.coerce
+    .number({
+      invalid_type_error: "ID cuộc thi phải là số",
+      required_error: "Vui lòng chọn cuộc thi",
+    })
+    .int("ID cuộc thi phải là số nguyên"),
+
+  roundId: z.coerce
+    .number({
+      invalid_type_error: "ID vòng thi phải là số",
+      required_error: "Vui lòng chọn vòng thi",
+    })
+    .int("ID vòng thi phải là số nguyên"),
+
+  studentId: z.coerce
+    .number({
+      invalid_type_error: "ID sinh viên phải là số",
+    })
+    .int("ID sinh viên phải là số nguyên")
+    .optional(),
+
+  status: nativeEnum(ContestStatus),
+  isActive: z.boolean().optional(),
+});
+
+export const UpdateMatchSchema = z.object({
+  name: z.string().min(1, "Tên trận đấu không được để trống").optional(),
+  startTime: z.coerce
+    .date()
+    .refine(d => !isNaN(d.getTime()), {
+      message: "Thời gian bắt đầu không hợp lệ",
+    })
+    .optional(),
+  endTime: z.coerce
+    .date()
+    .refine(d => !isNaN(d.getTime()), {
+      message: "Thời gian kết thúc không hợp lệ",
+    })
+    .optional(),
+  slug: z.string().optional(),
+
+  remainingTime: z.coerce
+    .number({
+      invalid_type_error: "Thời gian còn lại phải là số",
+      required_error: "Vui lòng nhập thời gian còn lại",
+    })
+    .int("Thời gian còn lại phải là số nguyên")
+    .nonnegative("Thời gian còn lại không hợp lệ")
+    .optional(),
+
+  currentQuestion: z.coerce
+    .number({
+      invalid_type_error: "Câu hỏi hiện tại phải là số",
+      required_error: "Vui lòng nhập số thứ tự câu hỏi",
+    })
+    .int("Câu hỏi hiện tại phải là số nguyên")
+    .nonnegative("Câu hỏi hiện tại không được âm")
+    .optional(),
+
+  questionPackageId: z.coerce
+    .number({
+      invalid_type_error: "ID gói câu hỏi phải là số",
+      required_error: "Vui lòng chọn gói câu hỏi",
+    })
+    .int("ID gói câu hỏi phải là số nguyên")
+    .optional(),
+
+  contestId: z.coerce
+    .number({
+      invalid_type_error: "ID cuộc thi phải là số",
+      required_error: "Vui lòng chọn cuộc thi",
+    })
+    .int("ID cuộc thi phải là số nguyên")
+    .optional(),
+
+  roundId: z.coerce
+    .number({
+      invalid_type_error: "ID vòng thi phải là số",
+      required_error: "Vui lòng chọn vòng thi",
+    })
+    .int("ID vòng thi phải là số nguyên")
+    .optional(),
+
+  studentId: z.coerce
+    .number({
+      invalid_type_error: "ID sinh viên phải là số",
+    })
+    .int("ID sinh viên phải là số nguyên")
+    .optional(),
+
+  status: nativeEnum(ContestStatus).optional(),
+  isActive: z.boolean().optional(),
 });
 
 export const MatchIdShame = z.object({
@@ -49,42 +151,6 @@ export const MatchIdShame = z.object({
     .string()
     .transform(val => parseInt(val))
     .refine(val => !isNaN(val) && val > 0, "Id là 1 số nguyên dương "),
-});
-
-export const UpdeateMatchhema = z.object({
-  name: z
-    .string({
-      required_error: "Vui lòng nhập tên vòng đấu",
-      invalid_type_error: "Vui lòng nhập kí tự chuỗi",
-    })
-    .min(1, "Vui lòng nhập tên vòng đấu")
-    .max(255, "Tên vòng đấu tối đa 255 kí tự")
-    .optional(),
-  contestId: z
-    .number({
-      required_error: "Vui lòng nhập id cuộc thi",
-      invalid_type_error: "Id là một số nguyên",
-    })
-    .refine(val => !isNaN(val) && val > 0, "Id cuộc thi là một số nguyên dương")
-    .optional(),
-  startTime: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), {
-      message: "Ngày bắt đầu không hợp lệ",
-    })
-    .transform(val => new Date(val))
-    .optional(),
-
-  endTime: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), {
-      message: "Ngày kết thúc không hợp lệ",
-    })
-    .transform(val => new Date(val))
-    .optional(),
-
-  index: z.number().optional(),
-  isActive: z.boolean().optional(),
 });
 
 export const MatchQuerySchema = z.object({
@@ -113,6 +179,22 @@ export const MatchQuerySchema = z.object({
       "Id cuộc thi phải là số nguyên dương"
     )
     .optional(),
+  roundId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id cuộc thi phải là số nguyên dương"
+    )
+    .optional(),
+  questionPackageId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id cuộc thi phải là số nguyên dương"
+    )
+    .optional(),
 });
 
 export const deleteMatchesSchema = z.object({
@@ -123,16 +205,22 @@ export const deleteMatchesSchema = z.object({
 
 export type MatchById = {
   id: number;
+  slug: string | null;
+  remainingTime: number | null;
   name: string;
-  contestId: number;
   contest: { name: string };
-  index: number;
   isActive: boolean;
   startTime: Date;
   endTime: Date;
+  status: ContestStatus;
+  currentQuestion: number;
+  questionPackageId: number;
+  student: { fullName: string } | null;
+  round: { name: string };
 };
-export type CreateMatchInput = z.infer<typeof CreateMatchShema>;
+
+export type CreateMatchInput = z.infer<typeof CreateMatchSchema>;
 export type MatchIdParams = z.infer<typeof MatchIdShame>;
-export type UpdateMatchInput = z.infer<typeof UpdeateMatchhema>;
+export type UpdateMatchInput = z.infer<typeof UpdateMatchSchema>;
 export type MatchQueryInput = z.infer<typeof MatchQuerySchema>;
-export type Matchs = z.infer<typeof MatchShema>;
+export type MatchType = z.infer<typeof MatchSchema>;

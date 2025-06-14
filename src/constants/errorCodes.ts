@@ -30,11 +30,16 @@ export const ERROR_CODES = {  // Authentication & Authorization
   NOT_FOUND: 'NOT_FOUND',
   METHOD_NOT_ALLOWED: 'METHOD_NOT_ALLOWED',
   TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
-
   // File & Upload
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
   INVALID_FILE_TYPE: 'INVALID_FILE_TYPE',
   UPLOAD_FAILED: 'UPLOAD_FAILED',
+
+  // Contest & Award Related
+  CONTEST_NOT_FOUND: 'CONTEST_NOT_FOUND',
+  CONTESTANT_NOT_FOUND: 'CONTESTANT_NOT_FOUND',
+  AWARD_NOT_FOUND: 'AWARD_NOT_FOUND',
+  AWARD_TYPE_EXISTS: 'AWARD_TYPE_EXISTS',
 } as const;
 
 export const ERROR_MESSAGES = {  [ERROR_CODES.UNAUTHORIZED]: 'Unauthorized access',
@@ -64,8 +69,12 @@ export const ERROR_MESSAGES = {  [ERROR_CODES.UNAUTHORIZED]: 'Unauthorized acces
   [ERROR_CODES.NOT_FOUND]: 'Resource not found',
   [ERROR_CODES.METHOD_NOT_ALLOWED]: 'Method not allowed',
   [ERROR_CODES.TOO_MANY_REQUESTS]: 'Too many requests',
-
   [ERROR_CODES.FILE_TOO_LARGE]: 'File too large',
   [ERROR_CODES.INVALID_FILE_TYPE]: 'Invalid file type',
   [ERROR_CODES.UPLOAD_FAILED]: 'Upload failed',
+
+  [ERROR_CODES.CONTEST_NOT_FOUND]: 'Contest not found',
+  [ERROR_CODES.CONTESTANT_NOT_FOUND]: 'Contestant not found',
+  [ERROR_CODES.AWARD_NOT_FOUND]: 'Award not found',
+  [ERROR_CODES.AWARD_TYPE_EXISTS]: 'Award type already exists',
 } as const;

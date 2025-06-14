@@ -27,6 +27,7 @@ import { awardRoutes } from "@/modules/award";
 import { groupRouter } from "@/modules/group";
 
 import { mediaRouter } from "@/modules/media";
+import { resultRouter } from "@/modules/result";
 
 // Load environment variables
 dotenv.config();
@@ -96,6 +97,7 @@ app.use("/api/media", mediaRouter);
 app.use("/api/group", groupRouter);
 app.use("/api/screen", screenRouter);
 app.use("/api/questions", questionRoutes);
+app.use("/api/results", resultRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

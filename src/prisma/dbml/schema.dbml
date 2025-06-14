@@ -224,7 +224,6 @@ Table Groups {
 
 Table Contestants {
   id Int [pk, increment]
-  name String [not null]
   contestId Int [not null]
   contest Contests [not null]
   studentId Int [not null]

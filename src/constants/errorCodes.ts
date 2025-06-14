@@ -33,8 +33,7 @@ export const ERROR_CODES = {  // Authentication & Authorization
   // File & Upload
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
   INVALID_FILE_TYPE: 'INVALID_FILE_TYPE',
-  UPLOAD_FAILED: 'UPLOAD_FAILED',
-  // Contest & Award Related
+  UPLOAD_FAILED: 'UPLOAD_FAILED',  // Contest & Award Related
   CONTEST_NOT_FOUND: 'CONTEST_NOT_FOUND',
   CONTESTANT_NOT_FOUND: 'CONTESTANT_NOT_FOUND',
   AWARD_NOT_FOUND: 'AWARD_NOT_FOUND',
@@ -51,6 +50,9 @@ export const ERROR_CODES = {  // Authentication & Authorization
 
   // Match Related
   MATCH_NOT_FOUND: 'MATCH_NOT_FOUND',
+
+  // Sponsor Related
+  SPONSOR_NOT_FOUND: 'SPONSOR_NOT_FOUND',
 } as const;
 
 export const ERROR_MESSAGES = {  [ERROR_CODES.UNAUTHORIZED]: 'Unauthorized access',
@@ -96,7 +98,9 @@ export const ERROR_MESSAGES = {  [ERROR_CODES.UNAUTHORIZED]: 'Unauthorized acces
   // Result Related
   [ERROR_CODES.RESULT_NOT_FOUND]: 'Result not found',
   [ERROR_CODES.RESULT_ALREADY_EXISTS]: 'Result already exists',
-
   // Match Related
   [ERROR_CODES.MATCH_NOT_FOUND]: 'Match not found',
+
+  // Sponsor Related
+  [ERROR_CODES.SPONSOR_NOT_FOUND]: 'Sponsor not found',
 } as const;

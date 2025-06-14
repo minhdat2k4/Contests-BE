@@ -28,6 +28,7 @@ import { groupRouter } from "@/modules/group";
 
 import { mediaRouter } from "@/modules/media";
 import { resultRouter } from "@/modules/result";
+import { sponsorRouter } from "@/modules/sponsor";
 
 // Load environment variables
 dotenv.config();
@@ -98,6 +99,7 @@ app.use("/api/group", groupRouter);
 app.use("/api/screen", screenRouter);
 app.use("/api/questions", questionRoutes);
 app.use("/api/results", resultRouter);
+app.use("/api/sponsors", sponsorRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

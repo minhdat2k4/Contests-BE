@@ -4,6 +4,7 @@ import { CustomError } from "@/middlewares/errorHandler";
 import { ERROR_CODES } from "@/constants/errorCodes";
 import {
   CreateAwardData,
+  CreateAwardByContestData,
   UpdateAwardData,
   GetAwardsQuery,
   AwardResponse,
@@ -95,6 +96,82 @@ export default class AwardService {
   }
 
   /**
+   * Create award by contest slug
+   */
+  async createAwardByContestSlug(contestSlug: string, data: CreateAwardByContestData): Promise<AwardResponse> {
+    try {
+      // Find contest by slug
+      const contest = await this.prisma.contest.findUnique({
+        where: { slug: contestSlug }
+      });
+      if (!contest) {
+        throw new CustomError("Contest không tồn tại", 404, ERROR_CODES.CONTEST_NOT_FOUND);
+      }
+
+      // Check if contestant exists (if provided)
+      if (data.contestantId) {
+        const contestant = await this.prisma.contestant.findUnique({
+          where: { id: data.contestantId }
+        });
+        if (!contestant) {
+          throw new CustomError("Contestant không tồn tại", 404, ERROR_CODES.CONTESTANT_NOT_FOUND);
+        }
+      }
+
+      // Check if award type already exists for this contest
+      const existingAward = await this.prisma.award.findFirst({
+        where: {
+          contestId: contest.id,
+          type: data.type
+        }
+      });
+      if (existingAward) {
+        throw new CustomError("Loại giải thưởng này đã tồn tại cho cuộc thi", 409, ERROR_CODES.AWARD_TYPE_EXISTS);
+      }
+
+      const award = await this.prisma.award.create({
+        data: {
+          name: data.name,
+          contestId: contest.id,
+          contestantId: data.contestantId || null,
+          type: data.type
+        },
+        include: {
+          contest: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          },
+          contestant: {
+            select: {
+              id: true,
+              name: true,
+              student: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  studentCode: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      logger.info(`Award created by contest slug successfully with ID: ${award.id}`);
+      return award;
+    } catch (error) {
+      logger.error("Error creating award by contest slug:", error);
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw new CustomError("Lỗi khi tạo giải thưởng", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
    * Get award by ID
    */
   async getAwardById(id: number): Promise<AwardResponse> {
@@ -136,6 +213,57 @@ export default class AwardService {
         throw error;
       }
       throw new CustomError("Lỗi khi lấy thông tin giải thưởng", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * Get awards by contest slug
+   */
+  async getAwardsByContestSlug(contestSlug: string): Promise<AwardResponse[]> {
+    try {
+      // Find contest by slug
+      const contest = await this.prisma.contest.findUnique({
+        where: { slug: contestSlug }
+      });
+      if (!contest) {
+        throw new CustomError("Contest không tồn tại", 404, ERROR_CODES.CONTEST_NOT_FOUND);
+      }
+
+      const awards = await this.prisma.award.findMany({
+        where: { contestId: contest.id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          contest: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          },
+          contestant: {
+            select: {
+              id: true,
+              name: true,
+              student: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  studentCode: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      logger.info(`Retrieved ${awards.length} awards for contest: ${contestSlug}`);
+      return awards;
+    } catch (error) {
+      logger.error("Error getting awards by contest slug:", error);
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw new CustomError("Lỗi khi lấy danh sách giải thưởng", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
     }
   }
 

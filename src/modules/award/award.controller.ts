@@ -6,6 +6,8 @@ import { ERROR_CODES } from "@/constants/errorCodes";
 import AwardService from "./award.service";
 import {
   CreateAwardData,
+  CreateAwardByContestData,
+  GetContestSlugParams,
   UpdateAwardData,
   GetAwardsQuery,
   BatchDeleteAwardsData
@@ -150,6 +152,47 @@ export default class AwardController {
       }
     } catch (error) {
       logger.error("Error in batchDeleteAwards controller:", error);
+      if (error instanceof CustomError) {
+        res.status(error.statusCode).json(errorResponse(error.message, error.code));
+      } else {
+        res.status(500).json(errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR));
+      }
+    }
+  }
+
+  /**
+   * Create award by contest slug
+   */
+  async createAwardByContestSlug(req: Request, res: Response): Promise<void> {
+    try {
+      const { slug } = req.params;
+      const data: CreateAwardByContestData = req.body;
+      const award = await this.awardService.createAwardByContestSlug(slug, data);
+
+      logger.info(`Award created by contest slug successfully: ${award.id}`);
+      res.status(201).json(successResponse(award, "Tạo giải thưởng thành công"));
+    } catch (error) {
+      logger.error("Error in createAwardByContestSlug controller:", error);
+      if (error instanceof CustomError) {
+        res.status(error.statusCode).json(errorResponse(error.message, error.code));
+      } else {
+        res.status(500).json(errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR));
+      }
+    }
+  }
+
+  /**
+   * Get awards by contest slug
+   */
+  async getAwardsByContestSlug(req: Request, res: Response): Promise<void> {
+    try {
+      const { slug } = req.params;
+      const awards = await this.awardService.getAwardsByContestSlug(slug);
+
+      logger.info(`Retrieved awards for contest: ${slug}`);
+      res.json(successResponse(awards, "Lấy danh sách giải thưởng thành công"));
+    } catch (error) {
+      logger.error("Error in getAwardsByContestSlug controller:", error);
       if (error instanceof CustomError) {
         res.status(error.statusCode).json(errorResponse(error.message, error.code));
       } else {

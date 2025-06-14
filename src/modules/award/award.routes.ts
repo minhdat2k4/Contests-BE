@@ -4,6 +4,8 @@ import { validateBody, validateParams, validateQuery } from "@/utils/validation"
 import { authenticate, role } from "@/middlewares/auth";
 import {
   createAwardSchema,
+  createAwardByContestSchema,
+  getContestSlugSchema,
   updateAwardSchema,
   getAwardByIdSchema,
   deleteAwardSchema,
@@ -13,6 +15,33 @@ import {
 
 const router = express.Router();
 const awardController = new AwardController();
+
+// Contest-specific routes
+
+/**
+ * @route POST /api/awards/contest/:slug
+ * @desc Create award for specific contest by slug
+ * @access Private (Admin only)
+ */
+router.post(
+  "/contest/:slug",
+  authenticate,
+  role("Admin"),
+  validateParams(getContestSlugSchema),
+  validateBody(createAwardByContestSchema),
+  awardController.createAwardByContestSlug.bind(awardController)
+);
+
+/**
+ * @route GET /api/awards/contest/:slug
+ * @desc Get awards for specific contest by slug
+ * @access Public
+ */
+router.get(
+  "/contest/:slug",
+  validateParams(getContestSlugSchema),
+  awardController.getAwardsByContestSlug.bind(awardController)
+);
 
 // Public routes (no authentication required)
 

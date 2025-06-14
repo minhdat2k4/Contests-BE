@@ -40,7 +40,6 @@ export default class QuestionPackageService {
             question: {
               select: {
                 id: true,
-                plainText: true,
                 questionType: true,
                 difficulty: true,
               },

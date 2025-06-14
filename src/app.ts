@@ -16,6 +16,7 @@ import { classRouter } from "@/modules/class";
 import { questionTopicRoutes } from "@/modules/questionTopic";
 import { questionPackageRouter } from "@/modules/questionPackage";
 import { questionDetailRouter } from "@/modules/questionDetail";
+import questionRoutes from "@/modules/question/question.routes";
 import { rescueRoute } from "@/modules/rescues";
 import { contestRoute } from "@/modules/contest";
 import { matchRouter } from "@/modules/match";
@@ -94,6 +95,7 @@ app.use("/api/match", matchRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/group", groupRouter);
 app.use("/api/screen", screenRouter);
+app.use("/api/questions", questionRoutes);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

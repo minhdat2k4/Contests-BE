@@ -229,7 +229,6 @@ model Question {
   intro          String?         @db.VarChar(255)
   defaultTime    Int                     
   questionType   QuestionType   
-  plainText      String          @db.Text
   content        String          @db.Text
   questionMedia  Json?         
   options        Json?           

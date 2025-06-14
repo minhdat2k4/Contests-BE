@@ -262,7 +262,6 @@ export interface QuestionDetailListResponse {
   updatedAt: Date;
   question: {
     id: number;
-    plainText: string;
     questionType: string;
     difficulty: string;
   };

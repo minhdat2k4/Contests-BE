@@ -103,7 +103,6 @@ Table Questions {
   intro String
   defaultTime Int [not null]
   questionType QuestionType [not null]
-  plainText String [not null]
   content String [not null]
   questionMedia Json
   options Json

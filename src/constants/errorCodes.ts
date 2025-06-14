@@ -40,6 +40,11 @@ export const ERROR_CODES = {  // Authentication & Authorization
   CONTESTANT_NOT_FOUND: 'CONTESTANT_NOT_FOUND',
   AWARD_NOT_FOUND: 'AWARD_NOT_FOUND',
   AWARD_TYPE_EXISTS: 'AWARD_TYPE_EXISTS',
+
+  // Question Related
+  QUESTION_NOT_FOUND: 'QUESTION_NOT_FOUND',
+  QUESTION_TOPIC_NOT_FOUND: 'QUESTION_TOPIC_NOT_FOUND',
+  QUESTION_PACKAGE_NOT_FOUND: 'QUESTION_PACKAGE_NOT_FOUND',
 } as const;
 
 export const ERROR_MESSAGES = {  [ERROR_CODES.UNAUTHORIZED]: 'Unauthorized access',
@@ -76,5 +81,10 @@ export const ERROR_MESSAGES = {  [ERROR_CODES.UNAUTHORIZED]: 'Unauthorized acces
   [ERROR_CODES.CONTEST_NOT_FOUND]: 'Contest not found',
   [ERROR_CODES.CONTESTANT_NOT_FOUND]: 'Contestant not found',
   [ERROR_CODES.AWARD_NOT_FOUND]: 'Award not found',
-  [ERROR_CODES.AWARD_TYPE_EXISTS]: 'Award type already exists',
+  [ERROR_CODES.AWARD_TYPE_EXISTS]: 'Award type already exists for this contest',
+
+  // Question Related
+  [ERROR_CODES.QUESTION_NOT_FOUND]: 'Question not found',
+  [ERROR_CODES.QUESTION_TOPIC_NOT_FOUND]: 'Question topic not found',
+  [ERROR_CODES.QUESTION_PACKAGE_NOT_FOUND]: 'Question package not found',
 } as const;

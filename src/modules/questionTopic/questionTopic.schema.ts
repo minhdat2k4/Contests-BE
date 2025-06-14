@@ -90,7 +90,6 @@ export interface QuestionTopicResponse {
 export interface QuestionTopicDetailResponse extends QuestionTopicResponse {
   questions?: Array<{
     id: number;
-    plainText: string;
     questionType: string;
     difficulty: string;
   }>;

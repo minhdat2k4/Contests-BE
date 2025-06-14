@@ -94,7 +94,6 @@ export interface QuestionPackageDetailResponse extends QuestionPackageResponse {
     isActive: boolean;
     question: {
       id: number;
-      plainText: string;
       questionType: string;
       difficulty: string;
     };

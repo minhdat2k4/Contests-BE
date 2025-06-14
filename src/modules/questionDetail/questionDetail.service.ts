@@ -45,7 +45,6 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
-            plainText: true,
             questionType: true,
             difficulty: true,
             defaultTime: true,
@@ -351,13 +350,11 @@ export default class QuestionDetailService {
 
     if (isActive !== undefined) {
       whereClause.isActive = isActive;
-    }
-
-    if (search) {
+    }    if (search) {
       whereClause.OR = [
         {
           question: {
-            plainText: {
+            content: {
               contains: search,
             },
           },
@@ -384,12 +381,11 @@ export default class QuestionDetailService {
       take: limit,
       orderBy: {
         [sortBy]: sortOrder,
-      },
-      include: {
+      },      include: {
         question: {
           select: {
             id: true,
-            plainText: true,
+            content: true,
             questionType: true,
             difficulty: true,
           },
@@ -504,10 +500,8 @@ export default class QuestionDetailService {
     
     if (difficulty) {
       questionFilters.difficulty = difficulty;
-    }
-
-    if (search) {
-      questionFilters.plainText = {
+    }    if (search) {
+      questionFilters.content = {
         contains: search,
       };
     }
@@ -554,7 +548,6 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
-            plainText: true,
             questionType: true,
             difficulty: true,
           },
@@ -618,7 +611,6 @@ export default class QuestionDetailService {
   ): Promise<{
     questionInfo: {
       id: number;
-      plainText: string;
       questionType: string;
       difficulty: string;
     } | null;
@@ -640,7 +632,6 @@ export default class QuestionDetailService {
       where: { id: questionId },
       select: { 
         id: true, 
-        plainText: true, 
         questionType: true, 
         difficulty: true 
       },
@@ -677,7 +668,6 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
-            plainText: true,
             questionType: true,
             difficulty: true,
           },

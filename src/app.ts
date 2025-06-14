@@ -19,6 +19,7 @@ import { questionDetailRouter } from "@/modules/questionDetail";
 import { rescueRoute } from "@/modules/rescues";
 import { contestRoute } from "@/modules/contest";
 import { matchRouter } from "@/modules/match";
+import { screenRouter } from "@/modules/screen";
 
 import { enumRouter } from "@/modules/enum";
 import { groupRouter } from "@/modules/group";
@@ -90,6 +91,7 @@ app.use("/api/enums", enumRouter);
 app.use("/api/match", matchRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/group", groupRouter);
+app.use("/api/screen", screenRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

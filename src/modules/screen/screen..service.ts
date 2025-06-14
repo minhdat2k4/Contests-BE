@@ -1,16 +1,65 @@
 import { prisma } from "@/config/database";
 import {
-  CreateGroupInput,
-  UpdateGroupInput,
-  GroupQueryInput,
-  GrouType,
-  GroupByIdType,
+  UpdateScreenInput,
+  CreateScreenInput,
+  ScreenQueryInput,
+  SceenType,
 } from "./screen.schema";
-import { Group } from "@prisma/client";
+import { ScreenControl } from "@prisma/client";
+export default class ScreenService {
+  static async getBy(
+    data: Partial<ScreenControl>
+  ): Promise<ScreenControl | null> {
+    return prisma.screenControl.findFirst({
+      where: {
+        ...data,
+      },
+    });
+  }
 
-export default class GroupService {
-  static async getAll(query: GroupQueryInput): Promise<{
-    groups: GrouType[];
+  static async create(data: CreateScreenInput): Promise<ScreenControl | null> {
+    return prisma.screenControl.create({
+      data: {
+        ...data,
+      },
+    });
+  }
+
+  static async update(
+    id: number,
+    data: UpdateScreenInput
+  ): Promise<ScreenControl | null> {
+    const updateData: any = {};
+
+    if (data.controlKey !== undefined) {
+      updateData.controlKey = data.controlKey;
+    }
+    if (data.controlValue !== undefined) {
+      updateData.controlValue = data.controlValue;
+    }
+
+    if (data.media !== undefined) {
+      updateData.media = data.media;
+    }
+
+    return prisma.screenControl.update({
+      where: { id: id },
+      data: {
+        ...updateData,
+      },
+    });
+  }
+
+  static async delete(id: number): Promise<ScreenControl> {
+    return prisma.screenControl.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
+
+  static async getAlls(query: ScreenQueryInput): Promise<{
+    screens: SceenType[];
     pagination: {
       page: number;
       limit: number;
@@ -20,56 +69,52 @@ export default class GroupService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search, matchId, userId } = query;
+    const { page, limit, search, isActive, matchId } = query;
     const skip = (page - 1) * limit;
-
     const whereClause: any = {};
-
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive;
+    }
     if (matchId !== undefined) {
       whereClause.matchId = matchId;
     }
-
-    if (userId !== undefined) {
-      whereClause.userId = userId;
-    }
-
     if (search) {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
-        { name: { contains: keyword } },
-        { user: { is: { username: { contains: keyword } } } },
         { match: { is: { name: { contains: keyword } } } },
       ]);
     }
 
-    const groupRaw = await prisma.group.findMany({
+    const screenRaw = await prisma.screenControl.findMany({
       where: whereClause,
-      skip,
+      skip: skip,
       take: limit,
       orderBy: { createdAt: "desc" },
       select: {
-        name: true,
-        confirmCurrentQuestion: true,
         id: true,
-        user: {
-          select: { username: true },
+        controlKey: true,
+        controlValue: true,
+        media: true,
+        matchId: true,
+        match: {
+          select: {
+            name: true,
+          },
         },
-        match: { select: { name: true } },
       },
     });
-
-    const group = groupRaw.map(key => ({
-      id: key.id,
-      name: key.name,
-      confirmCurrentQuestion: key.confirmCurrentQuestion,
-      userName: key.user?.username,
-      matchName: key.match?.name,
+    const screens = screenRaw.map(k => ({
+      id: k.id,
+      controlKey: k.controlKey,
+      controlValue: k.controlValue,
+      matchId: k.matchId,
+      matchName: k.match?.name ?? null,
+      media: k.media,
     }));
-
-    const total = await prisma.group.count({ where: whereClause });
+    const total = await prisma.student.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
     return {
-      groups: group,
+      screens: screens,
       pagination: {
         page: page,
         limit: limit,
@@ -79,69 +124,5 @@ export default class GroupService {
         hasPrev: page > 1,
       },
     };
-  }
-
-  static async getBy(data: Partial<Group>): Promise<GroupByIdType | null> {
-    return prisma.group.findFirst({
-      where: {
-        ...data,
-      },
-      select: {
-        id: true,
-        name: true,
-        matchId: true,
-        userId: true,
-        confirmCurrentQuestion: true,
-        user: {
-          select: { username: true },
-        },
-        match: { select: { name: true } },
-      },
-    });
-  }
-
-  static async create(data: CreateGroupInput): Promise<Group | null> {
-    return prisma.group.create({
-      data: {
-        ...data,
-      },
-    });
-  }
-
-  static async update(
-    id: number,
-    data: UpdateGroupInput
-  ): Promise<Group | null> {
-    const updateData: any = {};
-
-    if (data.name !== undefined) {
-      updateData.name = data.name;
-    }
-
-    if (data.confirmCurrentQuestion !== undefined) {
-      updateData.confirmCurrentQuestion = data.confirmCurrentQuestion;
-    }
-
-    if (data.matchId !== undefined) {
-      updateData.matchId = data.matchId;
-    }
-
-    if (data.userId !== undefined) {
-      updateData.userId = data.userId;
-    }
-    return prisma.group.update({
-      where: { id: id },
-      data: {
-        ...updateData,
-      },
-    });
-  }
-
-  static async delete(id: number): Promise<Group> {
-    return prisma.group.delete({
-      where: {
-        id: id,
-      },
-    });
   }
 }

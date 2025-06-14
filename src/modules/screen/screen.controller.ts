@@ -1,55 +1,23 @@
 import { Request, Response } from "express";
 import {
-  CreateGroupInput,
-  UpdateGroupInput,
-  GroupQueryInput,
-  GrouType,
-  GroupByIdType,
-} from "./screen.schema";
+  CreateScreenInput,
+  UpdateScreenInput,
+  ScreenService,
+  ScreenQueryInput,
+} from "@/modules/screen";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
-import GroupService from "./screen..service";
-import { Group } from "@prisma/client";
-import { group } from "console";
-export default class GroupController {
-  static async getAlls(req: Request, res: Response): Promise<void> {
-    try {
-      const query: GroupQueryInput = {
-        page: parseInt(req.query.page as string) || 1,
-        limit: parseInt(req.query.limit as string) || 10,
-        search: (req.query.search as string) || undefined,
-        matchId: parseInt(req.query.contestId as string) || undefined,
-        userId: parseInt(req.query.contestId as string) || undefined,
-      };
-      const data = await GroupService.getAll(query);
-      if (!data) {
-        throw new Error("Không tìm thấy nhóm ");
-      }
-      logger.info(`Lấy danh sách nhóm thành công`);
-      res.json(
-        successResponse(
-          { Groups: data.groups, pagination: data.pagination },
-          "Lấy danh sách nhóm thành công"
-        )
-      );
-    } catch (error) {
-      logger.error((error as Error).message);
-      res.status(400).json(errorResponse((error as Error).message));
-    }
-  }
-
+export default class ScreenController {
   static async getById(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;
-      const Group = await GroupService.getBy({ id: Number(id) });
-      if (!Group) {
-        throw new Error("Không tìm thấy nhóm ");
+      const screen = await ScreenService.getBy({ id: Number(id) });
+      if (!screen) {
+        throw new Error("Không tìm thấy màn hình ");
       }
-      logger.info(`Lấy thông tin nhóm ${Group.name} thành công`);
-      res.json(
-        successResponse(Group, `Lấy thông tin nhóm ${Group.name} thành công`)
-      );
+      logger.info(`Lấy thông tin màn hình thành công`);
+      res.json(successResponse(screen, `Lấy thông tin màn hình thành công`));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -58,61 +26,21 @@ export default class GroupController {
 
   static async create(req: Request, res: Response): Promise<void> {
     try {
-      const input: CreateGroupInput = req.body;
-      const user = await prisma.user.findFirst({ where: { id: input.userId } });
-      if (!user) throw "Không tìm thấy trọng tài";
-      const match = await prisma.match.findFirst({
+      const input: CreateScreenInput = req.body;
+      const extingMatchId = await ScreenService.getBy({
+        matchId: input.matchId,
+      });
+      if (extingMatchId) throw new Error("Trận đấu này đã có màn hình chiếu");
+      const match = await prisma.match.findUnique({
         where: { id: input.matchId },
       });
-      if (!match) throw "Không tìm thấy trận đấu";
-      const existedGroup = await prisma.group.findFirst({
-        where: {
-          userId: input.userId,
-          matchId: input.matchId,
-        },
-      });
-
-      if (existedGroup) {
-        throw new Error(
-          `Trọng tài ${user.username} đã được phân vào nhóm ${existedGroup.name} trong trận đấu này`
-        );
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+      const screen = await ScreenService.create(input);
+      if (!screen) {
+        throw new Error(`Thêm màn hình thành công`);
       }
-      const conflictGroup = await prisma.group.findFirst({
-        where: {
-          userId: input.userId,
-          NOT: {
-            matchId: input.matchId,
-          },
-          match: {
-            AND: [
-              {
-                startTime: {
-                  lt: match.endTime,
-                },
-              },
-              {
-                endTime: {
-                  gt: match.startTime,
-                },
-              },
-            ],
-          },
-        },
-        include: {
-          match: true,
-        },
-      });
-
-      if (conflictGroup)
-        throw new Error(
-          ` Trọng tài này ${user.username} đang có nhóm ${conflictGroup.name} trùng thời gian `
-        );
-      const Group = await GroupService.create(input);
-      if (!Group) {
-        throw new Error(`Thêm nhóm ${input.name} thành công`);
-      }
-      logger.info(`Thêm nhóm ${input.name} thành công`);
-      res.json(successResponse(Group, `Thêm nhóm ${input.name} thành công`));
+      logger.info(`Thêm màn hình thành công`);
+      res.json(successResponse(screen, `Thêm màn hình thành công`));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -121,74 +49,12 @@ export default class GroupController {
 
   static async update(req: Request, res: Response): Promise<void> {
     try {
-      const input: CreateGroupInput = req.body;
+      const input: UpdateScreenInput = req.body;
       const id = Number(req.params.id);
-
-      const group = await GroupService.getBy({ id: id });
-      if (!group) throw new Error(` Không tìm thấy nhóm`);
-
-      const newUserId = input.userId ?? group.userId;
-      const newMatchId = input.matchId ?? group.matchId;
-
-      const newUser = await prisma.user.findFirst({
-        where: { id: newUserId },
-      });
-      if (!newUser) throw "Không tìm thấy trọng tài";
-
-      const newMatch = await prisma.match.findFirst({
-        where: { id: newMatchId },
-      });
-      if (!newMatch) throw "Không tìm thấy trận đấu";
-      const existedGroup = await prisma.group.findFirst({
-        where: {
-          userId: newUserId,
-          matchId: newMatchId,
-          id: { not: id }, // tránh chính nó
-        },
-      });
-
-      if (existedGroup) {
-        throw new Error(
-          `Trọng tài này đã có nhóm trong trận này: ${existedGroup.name}`
-        );
-      }
-
-      const conflictGroup = await prisma.group.findFirst({
-        where: {
-          userId: newUserId,
-          NOT: {
-            matchId: input.matchId,
-          },
-          match: {
-            AND: [
-              {
-                startTime: {
-                  lt: newMatch.endTime,
-                },
-              },
-              {
-                endTime: {
-                  gt: newMatch.startTime,
-                },
-              },
-            ],
-          },
-        },
-        include: {
-          match: true,
-        },
-      });
-
-      if (conflictGroup)
-        throw new Error(
-          ` Trọng tài này ${newUser.username} đang có trận đấu khác trùng thời gian `
-        );
-      const Group = await GroupService.create(input);
-      if (!Group) {
-        throw new Error(`Thêm nhóm ${input.name} thành công`);
-      }
-      logger.info(`Thêm nhóm ${input.name} thành công`);
-      res.json(successResponse(Group, `Thêm nhóm ${input.name} thành công`));
+      const screen = await ScreenService.update(id, input);
+      if (!screen) throw new Error(` Cập nhật màn hình thất bại`);
+      logger.info(`Cập nhật màn hình thành công`);
+      res.json(successResponse(screen, `Cập nhật màn hình thành công`));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -198,26 +64,16 @@ export default class GroupController {
   static async delete(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;
-      const group = await GroupService.getBy({ id: Number(id) });
-      if (!group) {
-        throw new Error("Không tìm thấy nhóm ");
+      const screen = await ScreenService.getBy({ id: Number(id) });
+      if (!screen) {
+        throw new Error("Không tìm thấy màn hình ");
       }
-
-      const countContestant = await prisma.contestantMatch.count({
-        where: { groupId: group.id },
-      });
-
-      if (countContestant > 0)
-        throw new Error(
-          ` Nhóm này ${countContestant} thí sinh nên không thể xóa`
-        );
-
-      const deleteGroup = await GroupService.delete(group.id);
-      if (!deleteGroup) {
-        throw new Error(`Xóa nhóm ${group.name} thất bại `);
+      const deletescreen = await ScreenService.delete(screen.id);
+      if (!deletescreen) {
+        throw new Error(`Xóa màn hình thất bại `);
       }
-      logger.info(`Xóa nhóm ${group.name} thành công`);
-      res.json(successResponse(null, `Xóa nhóm ${group.name} thành công`));
+      logger.info(`Xóa màn hình thành công`);
+      res.json(successResponse(null, `Xóa màn hình thành công`));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -235,47 +91,59 @@ export default class GroupController {
       const messages: { status: "success" | "error"; msg: string }[] = [];
 
       for (const id of ids) {
-        const group = await GroupService.getBy({ id: Number(id) });
-        if (!group) {
+        const screen = await ScreenService.getBy({ id: Number(id) });
+        if (!screen) {
           messages.push({
             status: "error",
-            msg: `Không tìm thấy nhóm với ID = ${id}`,
+            msg: `Không tìm thấy màn hình với ID = ${id}`,
           });
           continue;
         }
 
-        const countContestant = await prisma.contestantMatch.count({
-          where: { groupId: group.id },
-        });
-
-        if (countContestant > 0) {
-          messages.push({
-            status: "error",
-            msg: ` Nhóm này ${countContestant} thí sinh nên không thể xóa`,
-          });
-          continue;
-        }
-
-        const deleted = await GroupService.delete(group.id);
+        const deleted = await ScreenService.delete(screen.id);
 
         if (!deleted) {
           messages.push({
             status: "error",
-            msg: `Xóa nhóm "${group.name}" thất bại`,
+            msg: `Xóa màn hình thất bại`,
           });
           continue;
         }
         messages.push({
           status: "success",
-          msg: `Xóa nhóm "${group.name}" thành công`,
+          msg: `Xóa màn hình thành công`,
         });
-        logger.info(`Xóa nhóm "${group.name}" thành công`);
+        logger.info(`Xóa màn hình thành công`);
       }
-
       res.json({
         success: true,
         messages,
       });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getAlls(req: Request, res: Response): Promise<void> {
+    try {
+      const query: ScreenQueryInput = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: (req.query.search as string) || undefined,
+        matchId: parseInt(req.query.matchId as string) || undefined,
+      };
+      const data = await ScreenService.getAlls(query);
+      if (!data) {
+        throw new Error("Không tìm thấy màn hình ");
+      }
+      logger.info(`Lấy danh sách màn hình thành công`);
+      res.json(
+        successResponse(
+          { screens: data.screens, pagination: data.pagination },
+          "Lấy danh màn hình thành công"
+        )
+      );
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

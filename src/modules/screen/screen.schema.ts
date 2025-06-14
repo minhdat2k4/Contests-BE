@@ -1,6 +1,20 @@
 import z, { number, string } from "zod";
+import { ControlKey, ControlValue } from "@prisma/client";
+import { deleteContestsesSchema } from "../contest/contest.schema";
+export const CreateScreenSchema = z.object({
+  controlKey: z.nativeEnum(ControlKey),
+  controlValue: z.nativeEnum(ControlValue),
+  matchId: z.number(),
+  media: z.string(),
+});
 
-export const CreateScreensSchema = z.object({});
+export const ScreenSchema = z.object({
+  controlKey: z.nativeEnum(ControlKey),
+  controlValue: z.nativeEnum(ControlValue),
+  matchId: z.number(),
+  media: z.string(),
+  matchName: z.string(),
+});
 
 export const ScreensIdShema = z.object({
   id: z
@@ -9,13 +23,48 @@ export const ScreensIdShema = z.object({
     .refine(val => !isNaN(val) && val > 0, "Id là 1 số nguyên dương "),
 });
 
-export const UpdateScreensSchema = z.object({
-  name: z.string().min(1, "Vui lòng nhập tên nhóm").optional(),
-  userId: z.number().optional(),
+export const UpdateScreenSchema = z.object({
+  controlKey: z.nativeEnum(ControlKey).optional(),
+  controlValue: z.nativeEnum(ControlValue).optional(),
   matchId: z.number().optional(),
-  confirmCurrentQuestion: z.number().optional(),
+  media: z.string().optional(),
+});
+
+export const ScreenQuerySchema = z.object({
+  page: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
+    .optional()
+    .default("10"),
+  search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
+  isActive: z
+    .string()
+    .optional()
+    .transform(val => val === "true")
+    .optional(),
+  matchId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Id lớp phải là số nguyên dương")
+    .optional(),
+});
+
+export const deleteScreensSchema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải chọn ít nhất 1 ID để xoá"),
 });
 
 export type ScreensIdParams = z.infer<typeof ScreensIdShema>;
-export type UpdateScreenInput = z.infer<typeof UpdateScreensSchema>;
-export type CreateScreenInput = z.infer<typeof CreateScreensSchema>;
+export type UpdateScreenInput = z.infer<typeof UpdateScreenSchema>;
+export type CreateScreenInput = z.infer<typeof CreateScreenSchema>;
+export type ScreenQueryInput = z.infer<typeof ScreenQuerySchema>;
+export type DeleteScreenType = z.infer<typeof deleteContestsesSchema>;
+export type SceenType = z.infer<typeof ScreenSchema>;

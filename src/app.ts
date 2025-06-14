@@ -25,6 +25,7 @@ import { screenRouter } from "@/modules/screen";
 import { enumRouter } from "@/modules/enum";
 import { awardRoutes } from "@/modules/award";
 import { groupRouter } from "@/modules/group";
+import { contestantRouter } from "@/modules/contestant";
 
 import { mediaRouter } from "@/modules/media";
 import { resultRouter } from "@/modules/result";
@@ -97,9 +98,11 @@ app.use("/api/match", matchRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/group", groupRouter);
 app.use("/api/screen", screenRouter);
+
 app.use("/api/questions", questionRoutes);
 app.use("/api/results", resultRouter);
 app.use("/api/sponsors", sponsorRouter);
+app.use("/api/contestant", contestantRouter);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

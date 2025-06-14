@@ -365,7 +365,6 @@ model Group {
 
 model Contestant {
   id                Int               @id @default(autoincrement())
-  name              String            @db.VarChar(255)
   contestId         Int              
   contest           Contest           @relation(fields: [contestId], references: [id],onDelete:Restrict,onUpdate:Restrict)
   studentId         Int              

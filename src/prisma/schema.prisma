@@ -56,6 +56,13 @@ enum ContestantMatchStatus {
   completed
 }
 
+enum ContestMedia {
+  logo
+  background
+  images
+}
+
+
 enum RescueType {
   resurrected
   lifelineUsed
@@ -170,6 +177,7 @@ model Student {
   class        Class    @relation(fields: [classId], references: [id],onUpdate:Restrict, onDelete:Restrict)
   isActive     Boolean  @default(true) 
   contestants  Contestant[]
+  match        Match[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -219,14 +227,13 @@ model QuestionPackage {
 model Question {
   id             Int             @id @default(autoincrement())
   intro          String?         @db.VarChar(255)
-  defaultTime    Int             
-  remainingTime  Int?           
+  defaultTime    Int                     
   questionType   QuestionType   
   plainText      String          @db.Text
   content        String          @db.Text
   questionMedia  Json?         
   options        Json?           
-  correctAnswer  String          @db.Text @map("correct_answer")
+  correctAnswer  String          @db.Text
   mediaAnswer    Json?          
   score          Int             @default(1)
   difficulty     Difficulty
@@ -256,27 +263,46 @@ model QuestionDetail {
 }
 
 model Contest {
-  id           Int            @id @default(autoincrement())
-  name         String         @db.VarChar(255)
-  slug         String         @db.VarChar(255) @unique
-  rule         String         @db.Text
-  plainText    String         @db.Text 
-  location     String         @db.VarChar(255)
-  startTime    DateTime       
-  endTime      DateTime   
-  logo         String?        @db.VarChar(255)
-  background   String?        @db.VarChar(255)
-  media        String?        @db.VarChar(255)
-  slogan       String?        @db.VarChar(255)
-  status       ContestStatus  @default(upcoming)
-  isActive     Boolean        @default(true) 
+  id           Int             @id @default(autoincrement())
+  name         String          @db.VarChar(255)
+  slug         String          @db.VarChar(255) @unique
+  rule         String          @db.Text
+  plainText    String          @db.Text
+  location     String          @db.VarChar(255)
+  startTime    DateTime
+  endTime      DateTime
+  slogan       String?         @db.VarChar(255)
+  status       ContestStatus   @default(upcoming)
+  isActive     Boolean         @default(true)
+
+  // Quan hệ mới
+  mediaFiles   Media[]
+
   matches      Match[]
   contestants  Contestant[]
   awards       Award[]
   round        Round[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ClassVideo   ClassVideo[]
+  Sponsor      Sponsor[]
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
   @@map("Contests")
+}
+
+
+model Media {
+  id         Int        @id @default(autoincrement())
+  url        String     @db.VarChar(255)
+  type       ContestMedia
+  contest    Contest?   @relation(fields: [contestId], references: [id])
+  contestId  Int?
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@map("Media")
 }
 
 model Round {
@@ -300,6 +326,7 @@ model Match {
   name             String             @db.VarChar(255)
   startTime        DateTime        
   endTime          DateTime          
+  remainingTime  Int?   
   status           ContestStatus      @default(upcoming)
   currentQuestion  Int               
   questionPackageId Int             
@@ -309,6 +336,8 @@ model Match {
   roundId          Int 
   round            Round              @relation(fields:[roundId],references:[id],onDelete :Restrict , onUpdate :Restrict)
   isActive         Boolean            @default(true) 
+  studentId        Int?              
+  student           Student?           @relation(fields: [studentId], references: [id] , onDelete:Restrict ,onUpdate:Restrict)
   groups           Group[]
   contestantMatches ContestantMatch[]
   results          Result[]
@@ -349,7 +378,6 @@ model Contestant {
   awards            Award[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@map("Contestants")
 }
 
@@ -390,10 +418,10 @@ model Rescue {
   rescueType         RescueType  
   questionFrom       Int         
   questionTo         Int        
-  studentIds         Json         
-  supportAnswers     Json       
-  remainingContestants Int?      
-  maxStudent         Int?       
+  studentIds         Json?        
+  supportAnswers     Json?      
+  remainingContestants Int     
+  maxStudent         Int      
   index              Int         
   status             RescueStatus
   matchId            Int          @map("match_id")
@@ -419,28 +447,36 @@ model Award {
 }
 
 model Sponsor {
-  id      Int     @id @default(autoincrement())
-  name    String  @db.VarChar(255)
-  logo    String? @db.VarChar(255)
-  images  String? @db.VarChar(255)
-  videos  String  @db.VarChar(255)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  logo       String?  @db.VarChar(255)
+  images     String?  @db.VarChar(255)
+  videos     String   @db.VarChar(255)
+
+  contestId  Int?
+  contest    Contest? @relation(fields: [contestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@map("Sponsors")
 }
 
 model ClassVideo {
-  id       Int     @id @default(autoincrement())
-  name     String  @db.VarChar(255)
-  slogan   String? @db.VarChar(255)
-  classId  Int    
-  class    Class   @relation(fields: [classId], references: [id],onDelete :Restrict , onUpdate :Restrict)
-  videos   String  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  slogan     String?   @db.VarChar(255)
+  classId    Int
+  class      Class     @relation(fields: [classId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  contestId  Int?
+  contest    Contest?  @relation(fields: [contestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  videos     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
   @@map("Class_Videos")
 }
+
 
 model ScreenControl {
   id           Int          @id @default(autoincrement())

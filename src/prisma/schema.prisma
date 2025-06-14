@@ -177,6 +177,7 @@ model Student {
   class        Class    @relation(fields: [classId], references: [id],onUpdate:Restrict, onDelete:Restrict)
   isActive     Boolean  @default(true) 
   contestants  Contestant[]
+  match        Match[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -226,14 +227,13 @@ model QuestionPackage {
 model Question {
   id             Int             @id @default(autoincrement())
   intro          String?         @db.VarChar(255)
-  defaultTime    Int             
-  remainingTime  Int?           
+  defaultTime    Int                     
   questionType   QuestionType   
   plainText      String          @db.Text
   content        String          @db.Text
   questionMedia  Json?         
   options        Json?           
-  correctAnswer  String          @db.Text @map("correct_answer")
+  correctAnswer  String          @db.Text
   mediaAnswer    Json?          
   score          Int             @default(1)
   difficulty     Difficulty
@@ -326,6 +326,7 @@ model Match {
   name             String             @db.VarChar(255)
   startTime        DateTime        
   endTime          DateTime          
+  remainingTime  Int?   
   status           ContestStatus      @default(upcoming)
   currentQuestion  Int               
   questionPackageId Int             
@@ -335,6 +336,8 @@ model Match {
   roundId          Int 
   round            Round              @relation(fields:[roundId],references:[id],onDelete :Restrict , onUpdate :Restrict)
   isActive         Boolean            @default(true) 
+  studentId        Int?              
+  student           Student?           @relation(fields: [studentId], references: [id] , onDelete:Restrict ,onUpdate:Restrict)
   groups           Group[]
   contestantMatches ContestantMatch[]
   results          Result[]
@@ -375,7 +378,6 @@ model Contestant {
   awards            Award[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@map("Contestants")
 }
 

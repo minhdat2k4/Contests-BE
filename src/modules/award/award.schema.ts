@@ -1,0 +1,143 @@
+import { z } from "zod";
+import { AwardType } from "@prisma/client";
+
+// Create Award Schema
+export const createAwardSchema = z.object({
+  name: z.string()
+    .min(1, "Tên giải thưởng không được để trống")
+    .max(255, "Tên giải thưởng không được vượt quá 255 ký tự"),
+  contestId: z.number()
+    .int("Contest ID phải là số nguyên")
+    .positive("Contest ID phải là số dương"),
+  contestantId: z.number()
+    .int("Contestant ID phải là số nguyên")
+    .positive("Contestant ID phải là số dương")
+    .optional()
+    .nullable(),
+  type: z.nativeEnum(AwardType, {
+    errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" })
+  })
+});
+
+// Update Award Schema (using PATCH method for flexible updates)
+export const updateAwardSchema = z.object({
+  name: z.string()
+    .min(1, "Tên giải thưởng không được để trống")
+    .max(255, "Tên giải thưởng không được vượt quá 255 ký tự")
+    .optional(),
+  contestId: z.number()
+    .int("Contest ID phải là số nguyên")
+    .positive("Contest ID phải là số dương")
+    .optional(),
+  contestantId: z.number()
+    .int("Contestant ID phải là số nguyên")
+    .positive("Contestant ID phải là số dương")
+    .optional()
+    .nullable(),
+  type: z.nativeEnum(AwardType, {
+    errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" })
+  }).optional()
+}).strict(); // Prevent unknown fields
+
+// Get Award by ID Schema
+export const getAwardByIdSchema = z.object({
+  id: z.string()
+    .regex(/^\d+$/, "ID phải là số")
+    .transform(Number)
+});
+
+// Delete Award Schema
+export const deleteAwardSchema = z.object({
+  id: z.string()
+    .regex(/^\d+$/, "ID phải là số")
+    .transform(Number)
+});
+
+// Batch Delete Awards Schema
+export const batchDeleteAwardsSchema = z.object({
+  ids: z.array(z.number().int().positive())
+    .min(1, "Danh sách ID không được để trống")
+    .max(100, "Không thể xóa quá 100 giải thưởng cùng lúc")
+});
+
+// Get Awards with Query Schema
+export const getAwardsQuerySchema = z.object({
+  page: z.string()
+    .regex(/^\d+$/, "Page phải là số")
+    .transform(Number)
+    .refine(val => val >= 1, "Page phải lớn hơn hoặc bằng 1")
+    .optional()
+    .default("1"),
+  limit: z.string()
+    .regex(/^\d+$/, "Limit phải là số")
+    .transform(Number)
+    .refine(val => val >= 1 && val <= 100, "Limit phải từ 1 đến 100")
+    .optional()
+    .default("10"),
+  contestId: z.string()
+    .regex(/^\d+$/, "Contest ID phải là số")
+    .transform(Number)
+    .optional(),
+  type: z.nativeEnum(AwardType).optional(),
+  search: z.string()
+    .max(255, "Từ khóa tìm kiếm không được vượt quá 255 ký tự")
+    .optional(),
+  hasContestant: z.string()
+    .refine(val => val === "true" || val === "false" || val === undefined, "hasContestant phải là 'true' hoặc 'false'")
+    .transform(val => val === "true" ? true : val === "false" ? false : undefined)
+    .optional()
+});
+
+// TypeScript types
+export type CreateAwardData = z.infer<typeof createAwardSchema>;
+export type UpdateAwardData = z.infer<typeof updateAwardSchema>;
+export type GetAwardByIdParams = z.infer<typeof getAwardByIdSchema>;
+export type DeleteAwardParams = z.infer<typeof deleteAwardSchema>;
+export type GetAwardsQuery = z.infer<typeof getAwardsQuerySchema>;
+export type BatchDeleteAwardsData = z.infer<typeof batchDeleteAwardsSchema>;
+
+// Response types
+export interface AwardResponse {
+  id: number;
+  name: string;
+  contestId: number;
+  contestantId: number | null;
+  type: AwardType;
+  createdAt: Date;
+  updatedAt: Date;
+  contest?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  contestant?: {
+    id: number;
+    name: string;
+    student: {
+      id: number;
+      fullName: string;
+      studentCode: string | null;
+    };
+  } | null;
+}
+
+export interface AwardListResponse {
+  awards: AwardResponse[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export interface BatchDeleteResult {
+  successIds: number[];
+  failedIds: number[];
+  errors: Array<{
+    id: number;
+    error: string;
+  }>;
+}

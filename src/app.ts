@@ -22,6 +22,7 @@ import { matchRouter } from "@/modules/match";
 import { screenRouter } from "@/modules/screen";
 
 import { enumRouter } from "@/modules/enum";
+import { awardRoutes } from "@/modules/award";
 import { groupRouter } from "@/modules/group";
 
 import { mediaRouter } from "@/modules/media";
@@ -88,6 +89,7 @@ app.use("/api/question-details", questionDetailRouter);
 app.use("/api/contest", contestRoute);
 app.use("/api/rescue", rescueRoute);
 app.use("/api/enums", enumRouter);
+app.use("/api/awards", awardRoutes);
 app.use("/api/match", matchRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/group", groupRouter);

@@ -88,8 +88,58 @@ export const getAwardsQuerySchema = z.object({
     .optional()
 });
 
+// Contest Slug Parameter Schema
+export const contestSlugSchema = z.object({
+  slug: z.string()
+    .min(1, "Contest slug không được để trống")
+    .max(255, "Contest slug không được vượt quá 255 ký tự")
+});
+
+// Create Award by Contest Slug Schema (không cần contestId vì lấy từ slug)
+export const createAwardByContestSlugSchema = z.object({
+  name: z.string()
+    .min(1, "Tên giải thưởng không được để trống")
+    .max(255, "Tên giải thưởng không được vượt quá 255 ký tự"),
+  slug: z.string()
+    .min(1, "Slug không được để trống")
+    .max(255, "Slug không được vượt quá 255 ký tự")
+    .regex(/^[a-z0-9-]+$/, "Slug chỉ được chứa chữ thường, số và dấu gạch ngang"),
+  contestantId: z.number()
+    .int("Contestant ID phải là số nguyên")
+    .positive("Contestant ID phải là số dương")
+    .optional()
+    .nullable(),
+  type: z.nativeEnum(AwardType, {
+    errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" })
+  })
+});
+
+// Get Contest Slug Schema
+export const getContestSlugSchema = z.object({
+  slug: z.string()
+    .min(1, "Contest slug không được để trống")
+    .max(255, "Contest slug không được vượt quá 255 ký tự")
+});
+
+// Create Award by Contest Schema
+export const createAwardByContestSchema = z.object({
+  name: z.string()
+    .min(1, "Tên giải thưởng không được để trống")
+    .max(255, "Tên giải thưởng không được vượt quá 255 ký tự"),
+  contestantId: z.number()
+    .int("Contestant ID phải là số nguyên")
+    .positive("Contestant ID phải là số dương")
+    .optional()
+    .nullable(),
+  type: z.nativeEnum(AwardType, {
+    errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" })
+  })
+});
+
 // TypeScript types
 export type CreateAwardData = z.infer<typeof createAwardSchema>;
+export type CreateAwardByContestData = z.infer<typeof createAwardByContestSchema>;
+export type GetContestSlugParams = z.infer<typeof getContestSlugSchema>;
 export type UpdateAwardData = z.infer<typeof updateAwardSchema>;
 export type GetAwardByIdParams = z.infer<typeof getAwardByIdSchema>;
 export type DeleteAwardParams = z.infer<typeof deleteAwardSchema>;

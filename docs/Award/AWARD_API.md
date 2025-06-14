@@ -527,3 +527,117 @@ curl -X DELETE http://localhost:3000/api/awards/batch \
 - ✅ **Status Code Variety**: 200 (all success), 207 (partial), 400 (all failed)
 - ✅ **Transaction Safety**: Each deletion is independent
 - ✅ **Comprehensive Logging**: Track all batch operations
+
+## Contest-Specific Endpoints
+
+### 7. Create Award by Contest Slug
+**POST** `/api/awards/contest/:slug`
+**Authentication:** Required (Admin only)
+
+**Parameters:**
+- `slug` (path): Contest slug
+
+**Request Body:**
+```json
+{
+  "name": "Giải Nhất Cuộc Thi ABC",
+  "contestantId": 123,
+  "type": "firstPrize"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Tạo giải thưởng thành công",
+  "data": {
+    "id": 1,
+    "name": "Giải Nhất Cuộc Thi ABC",
+    "contestId": 5,
+    "contestantId": 123,
+    "type": "firstPrize",
+    "createdAt": "2025-06-14T03:00:00.000Z",
+    "updatedAt": "2025-06-14T03:00:00.000Z",
+    "contest": {
+      "id": 5,
+      "name": "Cuộc Thi ABC",
+      "slug": "contest-abc-2025"
+    },
+    "contestant": {
+      "id": 123,
+      "name": "Contestant Name",
+      "student": {
+        "id": 456,
+        "fullName": "Student Full Name",
+        "studentCode": "STU001"
+      }
+    }
+  }
+}
+```
+
+### 8. Get Awards by Contest Slug
+**GET** `/api/awards/contest/:slug`
+
+**Parameters:**
+- `slug` (path): Contest slug
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách giải thưởng thành công",
+  "data": [
+    {
+      "id": 1,
+      "name": "Giải Nhất",
+      "contestId": 5,
+      "contestantId": 123,
+      "type": "firstPrize",
+      "createdAt": "2025-06-14T03:00:00.000Z",
+      "updatedAt": "2025-06-14T03:00:00.000Z",
+      "contest": {
+        "id": 5,
+        "name": "Cuộc Thi ABC",
+        "slug": "contest-abc-2025"
+      },
+      "contestant": {
+        "id": 123,
+        "name": "Contestant Name",
+        "student": {
+          "id": 456,
+          "fullName": "Student Full Name",
+          "studentCode": "STU001"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Contest-Specific Operations
+
+#### Create Award for Specific Contest
+```bash
+curl -X POST http://localhost:3000/api/awards/contest/contest-abc-2025 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "name": "Giải Nhất Cuộc Thi ABC",
+    "type": "firstPrize",
+    "contestantId": 123
+  }'
+```
+
+#### Get All Awards for Specific Contest
+```bash
+curl "http://localhost:3000/api/awards/contest/contest-abc-2025"
+```
+
+**Contest Slug Features:**
+- ✅ **Auto Contest Lookup**: Automatically finds contest by slug
+- ✅ **Simplified Creation**: No need to specify contestId manually
+- ✅ **Contest Validation**: Ensures contest exists before creating award
+- ✅ **Organized by Contest**: Easy to get all awards for specific contest
+- ✅ **SEO Friendly**: Uses readable slugs instead of numeric IDs

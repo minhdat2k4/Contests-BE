@@ -4,65 +4,65 @@ import {
   validateParams,
   validateQuery,
 } from "@/utils/validation";
-import { GroupController } from "@/modules/group";
+import { ScreenController } from "@/modules/screen";
 import {
-  CreateGroupsSchema,
-  GroupsIdShema,
-  GroupsQuerySchema,
-  UpdateGroupsSchema,
-  deleteGroupsesSchema,
+  CreateScreenSchema,
+  UpdateScreenSchema,
+  ScreensIdShema,
+  ScreenQuerySchema,
+  deleteScreensSchema,
 } from "./screen.schema";
 import { authenticate, role } from "@/middlewares/auth";
-const groupRouter = Router();
+const screenRouter = Router();
 // prive
 
-groupRouter.get(
+screenRouter.get(
   "/",
   authenticate,
   role("Admin"),
-  validateQuery(GroupsQuerySchema),
-  GroupController.getAlls
+  validateQuery(ScreenQuerySchema),
+  ScreenController.getAlls
 );
 
-groupRouter.get(
+screenRouter.get(
   "/:id",
   authenticate,
   role("Admin"),
-  validateParams(GroupsIdShema),
-  GroupController.getById
+  validateParams(ScreensIdShema),
+  ScreenController.getById
 );
 
-groupRouter.post(
+screenRouter.post(
   "/",
   authenticate,
   role("Admin"),
-  validateBody(CreateGroupsSchema),
-  GroupController.create
+  validateBody(CreateScreenSchema),
+  ScreenController.create
 );
 
-groupRouter.patch(
+screenRouter.patch(
   "/:id",
   authenticate,
   role("Admin"),
-  validateBody(UpdateGroupsSchema),
-  validateParams(GroupsIdShema),
-  GroupController.update
+  validateBody(UpdateScreenSchema),
+  validateParams(ScreensIdShema),
+  ScreenController.update
 );
 
-groupRouter.delete(
+screenRouter.delete(
   "/:id",
   authenticate,
   role("Admin"),
-  validateParams(GroupsIdShema),
-  GroupController.delete
+  validateParams(ScreensIdShema),
+  ScreenController.delete
 );
 
-groupRouter.post(
+screenRouter.post(
   "/delete-many",
   authenticate,
   role("Admin"),
-  validateBody(deleteGroupsesSchema),
-  GroupController.deletes
+  validateBody(deleteScreensSchema),
+  ScreenController.deletes
 );
 
-export { groupRouter };
+export { screenRouter };

@@ -480,11 +480,11 @@ model ClassVideo {
 
 model ScreenControl {
   id           Int          @id @default(autoincrement())
-  controlKey   ControlKey  
-  controlValue ControlValue 
+  controlKey   ControlKey   @default(background)
+  controlValue ControlValue @default(start)
   matchId      Int          @unique     
   match        Match        @relation(fields: [matchId], references: [id],onDelete:Restrict,onUpdate:Restrict)
-  media        String       @db.VarChar(255)
+  media        String?       @db.VarChar(255)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

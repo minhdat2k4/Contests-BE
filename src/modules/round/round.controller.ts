@@ -11,17 +11,22 @@ import { prisma } from "@/config/database";
 export default class RoundController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
+      const slug = req.params.slug;
+      const contest = await prisma.contest.findUnique({
+        where: { slug: slug },
+      });
+      if (!contest) throw new Error(` Không tim thấy cuộc thi`);
+
       const query: RoundQueryInput = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: (req.query.search as string) || undefined,
-        contestId: parseInt(req.query.contestId as string) || undefined,
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
             : undefined,
       };
-      const data = await RoundService.getAll(query);
+      const data = await RoundService.getAll(query, contest.id);
       if (!data) {
         throw new Error("Không tìm thấy vòng đấu ");
       }
@@ -60,14 +65,19 @@ export default class RoundController {
 
   static async createRound(req: Request, res: Response): Promise<void> {
     try {
-      const input: CreateRoundInput = req.body;
+      const slug = req.params.slug;
+      const input: Omit<CreateRoundInput, "contestId"> = req.body;
       const contest = await prisma.contest.findFirst({
-        where: { id: input.contestId },
+        where: { slug: slug },
       });
       if (!contest) {
         throw new Error("Không tìm thấy cuộc thi");
       }
-      const round = await RoundService.createRound(input);
+
+      const round = await RoundService.createRound({
+        ...input,
+        contestId: contest.id,
+      });
       if (!round) {
         throw new Error(`Thêm vòng đấu ${input.name} thành công`);
       }

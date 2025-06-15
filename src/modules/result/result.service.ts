@@ -8,7 +8,7 @@ import {
   GetResultsQuery,
   ResultResponse,
   ResultListResponse,
-  BatchDeleteResult
+  BatchDeleteResult,
 } from "./result.schema";
 
 export class ResultService {
@@ -32,7 +32,7 @@ export class ResultService {
         isCorrect,
         questionOrder,
         sortBy,
-        sortOrder
+        sortOrder,
       } = query;
 
       const skip = (page - 1) * limit;
@@ -42,7 +42,7 @@ export class ResultService {
       if (search) {
         where.name = {
           contains: search,
-          mode: 'insensitive'
+          mode: "insensitive",
         };
       }
 
@@ -75,16 +75,16 @@ export class ResultService {
           contestant: {
             select: {
               id: true,
-              name: true,
+
               studentId: true,
               student: {
                 select: {
                   id: true,
                   fullName: true,
-                  studentCode: true
-                }
-              }
-            }
+                  studentCode: true,
+                },
+              },
+            },
           },
           match: {
             select: {
@@ -94,12 +94,12 @@ export class ResultService {
               round: {
                 select: {
                   id: true,
-                  name: true
-                }
-              }
-            }
-          }
-        }
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       const totalPages = Math.ceil(total / limit);
@@ -112,12 +112,16 @@ export class ResultService {
           total,
           totalPages,
           hasNext: page < totalPages,
-          hasPrev: page > 1
-        }
+          hasPrev: page > 1,
+        },
       };
     } catch (error) {
       logger.error("Error getting results:", error);
-      throw new CustomError("Lỗi khi lấy danh sách kết quả", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi lấy danh sách kết quả",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -132,16 +136,16 @@ export class ResultService {
           contestant: {
             select: {
               id: true,
-              name: true,
+
               studentId: true,
               student: {
                 select: {
                   id: true,
                   fullName: true,
-                  studentCode: true
-                }
-              }
-            }
+                  studentCode: true,
+                },
+              },
+            },
           },
           match: {
             select: {
@@ -151,16 +155,20 @@ export class ResultService {
               round: {
                 select: {
                   id: true,
-                  name: true
-                }
-              }
-            }
-          }
-        }
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!result) {
-        throw new CustomError("Kết quả không tìm thấy", 404, ERROR_CODES.RESULT_NOT_FOUND);
+        throw new CustomError(
+          "Kết quả không tìm thấy",
+          404,
+          ERROR_CODES.RESULT_NOT_FOUND
+        );
       }
 
       return result as ResultResponse;
@@ -169,7 +177,11 @@ export class ResultService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi lấy thông tin kết quả", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi lấy thông tin kết quả",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -180,18 +192,26 @@ export class ResultService {
     try {
       // Validate contestant exists
       const contestant = await this.prisma.contestant.findUnique({
-        where: { id: data.contestantId }
+        where: { id: data.contestantId },
       });
       if (!contestant) {
-        throw new CustomError("Contestant không tồn tại", 404, ERROR_CODES.CONTESTANT_NOT_FOUND);
+        throw new CustomError(
+          "Contestant không tồn tại",
+          404,
+          ERROR_CODES.CONTESTANT_NOT_FOUND
+        );
       }
 
       // Validate match exists
       const match = await this.prisma.match.findUnique({
-        where: { id: data.matchId }
+        where: { id: data.matchId },
       });
       if (!match) {
-        throw new CustomError("Match không tồn tại", 404, ERROR_CODES.MATCH_NOT_FOUND);
+        throw new CustomError(
+          "Match không tồn tại",
+          404,
+          ERROR_CODES.MATCH_NOT_FOUND
+        );
       }
 
       // Check if result already exists for this contestant, match, and question order
@@ -199,14 +219,14 @@ export class ResultService {
         where: {
           contestantId: data.contestantId,
           matchId: data.matchId,
-          questionOrder: data.questionOrder
-        }
+          questionOrder: data.questionOrder,
+        },
       });
 
       if (existingResult) {
         throw new CustomError(
-          "Kết quả đã tồn tại cho contestant, match và question order này", 
-          409, 
+          "Kết quả đã tồn tại cho contestant, match và question order này",
+          409,
           ERROR_CODES.RESULT_ALREADY_EXISTS
         );
       }
@@ -218,22 +238,21 @@ export class ResultService {
           contestantId: data.contestantId,
           matchId: data.matchId,
           isCorrect: data.isCorrect,
-          questionOrder: data.questionOrder
+          questionOrder: data.questionOrder,
         },
         include: {
           contestant: {
             select: {
               id: true,
-              name: true,
               studentId: true,
               student: {
                 select: {
                   id: true,
                   fullName: true,
-                  studentCode: true
-                }
-              }
-            }
+                  studentCode: true,
+                },
+              },
+            },
           },
           match: {
             select: {
@@ -243,12 +262,12 @@ export class ResultService {
               round: {
                 select: {
                   id: true,
-                  name: true
-                }
-              }
-            }
-          }
-        }
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       logger.info(`Result created successfully with ID: ${result.id}`);
@@ -258,40 +277,59 @@ export class ResultService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi tạo kết quả", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi tạo kết quả",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
   /**
    * Update result (PATCH method)
    */
-  async updateResult(id: number, data: UpdateResultData): Promise<ResultResponse> {
+  async updateResult(
+    id: number,
+    data: UpdateResultData
+  ): Promise<ResultResponse> {
     try {
       // Check if result exists
       const existingResult = await this.prisma.result.findUnique({
-        where: { id }
+        where: { id },
       });
       if (!existingResult) {
-        throw new CustomError("Kết quả không tìm thấy", 404, ERROR_CODES.RESULT_NOT_FOUND);
+        throw new CustomError(
+          "Kết quả không tìm thấy",
+          404,
+          ERROR_CODES.RESULT_NOT_FOUND
+        );
       }
 
       // Validate contestant if provided
       if (data.contestantId) {
         const contestant = await this.prisma.contestant.findUnique({
-          where: { id: data.contestantId }
+          where: { id: data.contestantId },
         });
         if (!contestant) {
-          throw new CustomError("Contestant không tồn tại", 404, ERROR_CODES.CONTESTANT_NOT_FOUND);
+          throw new CustomError(
+            "Contestant không tồn tại",
+            404,
+            ERROR_CODES.CONTESTANT_NOT_FOUND
+          );
         }
       }
 
       // Validate match if provided
       if (data.matchId) {
         const match = await this.prisma.match.findUnique({
-          where: { id: data.matchId }
+          where: { id: data.matchId },
         });
         if (!match) {
-          throw new CustomError("Match không tồn tại", 404, ERROR_CODES.MATCH_NOT_FOUND);
+          throw new CustomError(
+            "Match không tồn tại",
+            404,
+            ERROR_CODES.MATCH_NOT_FOUND
+          );
         }
       }
 
@@ -302,14 +340,14 @@ export class ResultService {
             contestantId: data.contestantId || existingResult.contestantId,
             matchId: data.matchId || existingResult.matchId,
             questionOrder: data.questionOrder || existingResult.questionOrder,
-            id: { not: id } // Exclude current result
-          }
+            id: { not: id }, // Exclude current result
+          },
         });
 
         if (duplicateCheck) {
           throw new CustomError(
-            "Kết quả đã tồn tại cho contestant, match và question order này", 
-            409, 
+            "Kết quả đã tồn tại cho contestant, match và question order này",
+            409,
             ERROR_CODES.RESULT_ALREADY_EXISTS
           );
         }
@@ -323,22 +361,22 @@ export class ResultService {
           ...(data.contestantId && { contestantId: data.contestantId }),
           ...(data.matchId && { matchId: data.matchId }),
           ...(data.isCorrect !== undefined && { isCorrect: data.isCorrect }),
-          ...(data.questionOrder && { questionOrder: data.questionOrder })
+          ...(data.questionOrder && { questionOrder: data.questionOrder }),
         },
         include: {
           contestant: {
             select: {
               id: true,
-              name: true,
+
               studentId: true,
               student: {
                 select: {
                   id: true,
                   fullName: true,
-                  studentCode: true
-                }
-              }
-            }
+                  studentCode: true,
+                },
+              },
+            },
           },
           match: {
             select: {
@@ -348,12 +386,12 @@ export class ResultService {
               round: {
                 select: {
                   id: true,
-                  name: true
-                }
-              }
-            }
-          }
-        }
+                  name: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       logger.info(`Result updated successfully: ${result.id}`);
@@ -363,7 +401,11 @@ export class ResultService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi cập nhật kết quả", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi cập nhật kết quả",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -374,15 +416,19 @@ export class ResultService {
     try {
       // Check if result exists
       const existingResult = await this.prisma.result.findUnique({
-        where: { id }
+        where: { id },
       });
       if (!existingResult) {
-        throw new CustomError("Kết quả không tìm thấy", 404, ERROR_CODES.RESULT_NOT_FOUND);
+        throw new CustomError(
+          "Kết quả không tìm thấy",
+          404,
+          ERROR_CODES.RESULT_NOT_FOUND
+        );
       }
 
       // Hard delete result
       await this.prisma.result.delete({
-        where: { id }
+        where: { id },
       });
 
       logger.info(`Result hard deleted: ${id}`);
@@ -391,7 +437,11 @@ export class ResultService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi xóa kết quả", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi xóa kết quả",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -408,7 +458,7 @@ export class ResultService {
         try {
           // Check if result exists
           const existingResult = await this.prisma.result.findUnique({
-            where: { id }
+            where: { id },
           });
 
           if (!existingResult) {
@@ -419,16 +469,16 @@ export class ResultService {
 
           // Delete result
           await this.prisma.result.delete({
-            where: { id }
+            where: { id },
           });
 
           successIds.push(id);
           logger.info(`Result ${id} deleted successfully in batch operation`);
         } catch (error) {
           failedIds.push(id);
-          errors.push({ 
-            id, 
-            error: error instanceof Error ? error.message : "Unknown error" 
+          errors.push({
+            id,
+            error: error instanceof Error ? error.message : "Unknown error",
           });
           logger.error(`Error deleting result ${id} in batch:`, error);
         }
@@ -441,19 +491,25 @@ export class ResultService {
         summary: {
           total: ids.length,
           success: successIds.length,
-          failed: failedIds.length
-        }
+          failed: failedIds.length,
+        },
       };
     } catch (error) {
       logger.error("Error in batch delete results:", error);
-      throw new CustomError("Lỗi khi xóa hàng loạt kết quả", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi xóa hàng loạt kết quả",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
   /**
    * Get results by contestant ID
    */
-  async getResultsByContestant(contestantId: number): Promise<ResultResponse[]> {
+  async getResultsByContestant(
+    contestantId: number
+  ): Promise<ResultResponse[]> {
     try {
       const results = await this.prisma.result.findMany({
         where: { contestantId },
@@ -461,25 +517,29 @@ export class ResultService {
           contestant: {
             select: {
               id: true,
-              name: true,
-              studentId: true
-            }
+
+              studentId: true,
+            },
           },
           match: {
             select: {
               id: true,
               name: true,
-              roundId: true
-            }
-          }
+              roundId: true,
+            },
+          },
         },
-        orderBy: { questionOrder: 'asc' }
+        orderBy: { questionOrder: "asc" },
       });
 
       return results as ResultResponse[];
     } catch (error) {
       logger.error("Error getting results by contestant:", error);
-      throw new CustomError("Lỗi khi lấy kết quả theo contestant", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi lấy kết quả theo contestant",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -494,28 +554,29 @@ export class ResultService {
           contestant: {
             select: {
               id: true,
-              name: true,
-              studentId: true
-            }
+
+              studentId: true,
+            },
           },
           match: {
             select: {
               id: true,
               name: true,
-              roundId: true
-            }
-          }
+              roundId: true,
+            },
+          },
         },
-        orderBy: [
-          { contestantId: 'asc' },
-          { questionOrder: 'asc' }
-        ]
+        orderBy: [{ contestantId: "asc" }, { questionOrder: "asc" }],
       });
 
       return results as ResultResponse[];
     } catch (error) {
       logger.error("Error getting results by match:", error);
-      throw new CustomError("Lỗi khi lấy kết quả theo match", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi lấy kết quả theo match",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -530,23 +591,28 @@ export class ResultService {
   }> {
     try {
       const results = await this.prisma.result.findMany({
-        where: { contestantId }
+        where: { contestantId },
       });
 
       const totalQuestions = results.length;
       const correctAnswers = results.filter(r => r.isCorrect).length;
       const incorrectAnswers = totalQuestions - correctAnswers;
-      const accuracy = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+      const accuracy =
+        totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
 
       return {
         totalQuestions,
         correctAnswers,
         incorrectAnswers,
-        accuracy: Math.round(accuracy * 100) / 100 // Round to 2 decimal places
+        accuracy: Math.round(accuracy * 100) / 100, // Round to 2 decimal places
       };
     } catch (error) {
       logger.error("Error getting contestant statistics:", error);
-      throw new CustomError("Lỗi khi lấy thống kê contestant", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi lấy thống kê contestant",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 }

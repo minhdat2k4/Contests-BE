@@ -121,8 +121,8 @@ export default async function seedQuestions({ prisma, logger }: SeedParams) {
                 questions.push({
                     ...q,
                     questionTopicId: topic.id,
-                    questionMedia: null,
-                    mediaAnswer: null
+                    questionMedia: "/uploads/questions/test-img.jpg",
+                    mediaAnswer: "/uploads/questions/test-img.jpg"
                 });
             }
         }

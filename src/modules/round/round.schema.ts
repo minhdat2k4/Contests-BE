@@ -26,19 +26,6 @@ export const CreateRoundShema = z.object({
       val => !isNaN(val) && val > 0,
       "Id cuộc thi là một số nguyên dương"
     ),
-  startTime: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), {
-      message: "Ngày bắt đầu không hợp lệ",
-    })
-    .transform(val => new Date(val)),
-
-  endTime: z
-    .string()
-    .refine(val => !isNaN(Date.parse(val)), {
-      message: "Ngày kết thúc không hợp lệ",
-    })
-    .transform(val => new Date(val)),
 
   index: z.number(),
   isActive: z.boolean(),
@@ -104,14 +91,6 @@ export const RoundQuerySchema = z.object({
   isActive: z
     .string()
     .transform(val => val === "true")
-    .optional(),
-  contestId: z
-    .string()
-    .transform(val => parseInt(val))
-    .refine(
-      val => !isNaN(val) && val > 0,
-      "Id cuộc thi phải là số nguyên dương"
-    )
     .optional(),
 });
 

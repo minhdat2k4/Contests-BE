@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+// Media object schema for logo and banner
+export const MediaObjectSchema = z.object({
+  url: z.string().url("URL không hợp lệ"),
+  filename: z.string().min(1, "Filename không được để trống"),
+  originalName: z.string().min(1, "Original name không được để trống"),
+  size: z.number().positive("Size phải là số dương"),
+  mimeType: z.string().min(1, "MIME type không được để trống"),
+  type: z.enum(["image", "video"], { 
+    errorMap: () => ({ message: "Type phải là image hoặc video" })
+  }),
+  description: z.string().optional()
+});
+
+export type MediaObject = z.infer<typeof MediaObjectSchema>;
+
 // Create About schema
 export const CreateAboutSchema = z.object({
   schoolName: z
@@ -29,20 +44,15 @@ export const CreateAboutSchema = z.object({
 
   fanpage: z
     .string()
+    .url("URL fanpage không hợp lệ")
     .max(255, "URL fanpage không được quá 255 ký tự")
     .optional(),
 
   mapEmbedCode: z.string().optional(),
 
-  logo: z
-    .string()
-    .max(255, "Đường dẫn logo không được quá 255 ký tự")
-    .optional(),
+  logo: z.array(MediaObjectSchema).optional(),
 
-  banner: z
-    .string()
-    .max(255, "Đường dẫn banner không được quá 255 ký tự")
-    .optional(),
+  banner: z.array(MediaObjectSchema).optional(),
 });
 
 // Update About schema
@@ -72,20 +82,15 @@ export const UpdateAboutSchema = z.object({
 
   fanpage: z
     .string()
+    .url("URL fanpage không hợp lệ")
     .max(255, "URL fanpage không được quá 255 ký tự")
     .optional(),
 
   mapEmbedCode: z.string().optional(),
 
-  logo: z
-    .string()
-    .max(255, "Đường dẫn logo không được quá 255 ký tự")
-    .optional(),
+  logo: z.array(MediaObjectSchema).optional(),
 
-  banner: z
-    .string()
-    .max(255, "Đường dẫn banner không được quá 255 ký tự")
-    .optional(),
+  banner: z.array(MediaObjectSchema).optional(),
 });
 
 // Query parameters schema

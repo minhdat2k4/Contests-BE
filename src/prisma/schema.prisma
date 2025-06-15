@@ -192,8 +192,8 @@ model About {
   email         String?  @db.VarChar(255)
   fanpage       String?  @db.VarChar(255)
   mapEmbedCode  String?  @db.Text
-  logo          String?  @db.VarChar(255)
-  banner        String?  @db.VarChar(255)
+  logo          Json?    // Array of logo media objects
+  banner        Json?    // Array of banner media objects
   isActive      Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

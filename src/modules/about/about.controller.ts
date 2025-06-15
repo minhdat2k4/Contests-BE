@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { CreateAboutInput, UpdateAboutInput, AboutQueryInput } from "./about.schema";
 import AboutService from "./about.service";
 import { logger } from "@/utils/logger";
-import { successResponse, paginatedResponse } from "@/utils/response";
+import { successResponse, errorResponse, paginatedResponse } from "@/utils/response";
 import { handleServiceError, validateId } from "@/utils/errorHandler";
 
 export default class AboutController {
@@ -13,7 +13,9 @@ export default class AboutController {
   static async createAbout(req: Request, res: Response): Promise<void> {
     try {
       const data: CreateAboutInput = req.body;
-      const result = await AboutService.createAbout(data);
+      const files = req.files as any;
+      
+      const result = await AboutService.createAbout(data, files);
 
       logger.info("About information created successfully via API", { aboutId: result.id });
 
@@ -90,6 +92,7 @@ export default class AboutController {
       );
     }
   }
+
   /**
    * Update about information
    */
@@ -97,21 +100,9 @@ export default class AboutController {
     try {
       const id = validateId(req.params.id);
       const data: UpdateAboutInput = req.body;
-      
-      // Get uploaded files from multer
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-      const processedFiles: { logo?: Express.Multer.File; banner?: Express.Multer.File } = {};
-      
-      if (files) {
-        if (files.logo && files.logo[0]) {
-          processedFiles.logo = files.logo[0];
-        }
-        if (files.banner && files.banner[0]) {
-          processedFiles.banner = files.banner[0];
-        }
-      }
+      const files = req.files as any;
 
-      const result = await AboutService.updateAbout(id, data, processedFiles);
+      const result = await AboutService.updateAbout(id, data, files);
 
       logger.info("About information updated successfully via API", { aboutId: id });
 

@@ -7,14 +7,14 @@ import {
   AboutQuerySchema, 
   AboutIdSchema 
 } from "./about.schema";
-import { authenticate } from "@/middlewares/auth";
-import { uploadAboutImages } from "@/middlewares/multer/aboutMulter";
+import { authenticate, role } from "@/middlewares/auth";
+import { aboutMediaUpload } from "./about.upload";
 import { handleUploadError } from "@/middlewares/multer/uploadErrorHandler";
 
 const aboutRouter = Router();
 
 // Apply authentication middleware to all routes
-aboutRouter.use(authenticate);
+// aboutRouter.use(authenticate);
 
 // Get all about information with pagination
 aboutRouter.get(
@@ -30,13 +30,31 @@ aboutRouter.get(
   AboutController.getAboutById
 );
 
+// Create about information
+aboutRouter.post(
+  "/",
+  authenticate,
+  role("Admin", "Judge"),
+  (req, res, next) => {
+    aboutMediaUpload(req, res, (error) => {
+      if (error) {
+        return handleUploadError(error, req, res, next);
+      }
+      next();
+    });
+  },
+  validateBody(CreateAboutSchema),
+  AboutController.createAbout
+);
+
 // Update about information
 aboutRouter.put(
   "/:id",
-  // authenticate,
+  authenticate,
+  role("Admin", "Judge"),
   validateParams(AboutIdSchema),
   (req, res, next) => {
-    uploadAboutImages(req, res, (error) => {
+    aboutMediaUpload(req, res, (error) => {
       if (error) {
         return handleUploadError(error, req, res, next);
       }
@@ -51,6 +69,7 @@ aboutRouter.put(
 aboutRouter.delete(
   "/:id",
   authenticate,
+  role("Admin", "Judge"),
   validateParams(AboutIdSchema),
   AboutController.deleteAbout
 );
@@ -59,6 +78,7 @@ aboutRouter.delete(
 aboutRouter.patch(
   "/:id/restore",
   authenticate,
+  role("Admin", "Judge"),
   validateParams(AboutIdSchema),
   AboutController.restoreAbout
 );
@@ -67,6 +87,7 @@ aboutRouter.patch(
 aboutRouter.delete(
   "/:id/permanent",
   authenticate,
+  role("Admin", "Judge"),
   validateParams(AboutIdSchema),
   AboutController.permanentDeleteAbout
 );

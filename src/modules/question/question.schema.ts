@@ -26,7 +26,7 @@ export const mediaFileSchema = z.object({
   }).optional() // For images/videos
 });
 
-export const questionMediaSchema = z.array(mediaFileSchema).optional();
+export const questionMediaSchema = z.array(mediaFileSchema).optional().nullable();
 
 // Option schema for multiple choice questions
 // Only support simple string array format
@@ -58,9 +58,8 @@ export const createQuestionSchema = z.object({
     .int("Điểm phải là số nguyên")
     .min(1, "Điểm tối thiểu là 1")
     .max(100, "Điểm tối đa là 100")
-    .default(1),
-  difficulty: DifficultyEnum,
-  explanation: z.string().optional(),
+    .default(1),  difficulty: DifficultyEnum,
+  explanation: z.string().optional().nullable(),
   questionTopicId: z.number()
     .int("Question Topic ID phải là số nguyên")
     .positive("Question Topic ID phải là số dương")
@@ -68,12 +67,12 @@ export const createQuestionSchema = z.object({
 
 // Update Question Schema (PATCH method)
 export const updateQuestionSchema = z.object({
-  intro: z.string().optional(),
+  intro: z.string().optional().nullable(),
   defaultTime: z.number()
     .int("Thời gian phải là số nguyên")
     .min(10, "Thời gian tối thiểu là 10 giây")
     .max(1800, "Thời gian tối đa là 30 phút")
-    .optional(),
+    .optional().nullable(),
   questionType: QuestionTypeEnum.optional(),
   content: z.string()
     .min(1, "Nội dung HTML không được để trống")
@@ -91,13 +90,13 @@ export const updateQuestionSchema = z.object({
     .int("Điểm phải là số nguyên")
     .min(1, "Điểm tối thiểu là 1")
     .max(100, "Điểm tối đa là 100")
-    .optional(),
+    .optional().nullable(),
   difficulty: DifficultyEnum.optional(),
-  explanation: z.string().optional(),
+  explanation: z.string().optional().nullable(),
   questionTopicId: z.number()
     .int("Question Topic ID phải là số nguyên")
     .positive("Question Topic ID phải là số dương")
-    .optional(),
+    .optional().nullable(),
   isActive: z.boolean().optional()
 }).refine(
   (data) => Object.keys(data).length > 0,

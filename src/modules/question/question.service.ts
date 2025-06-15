@@ -119,13 +119,11 @@ export class QuestionService {
       } = query;
 
       const skip = (page - 1) * limit;
-      const where: any = {};
-
-      // Apply filters
+      const where: any = {};      // Apply filters
       if (search) {
         where.OR = [
-          { content: { contains: search, mode: 'insensitive' } },
-          { explanation: { contains: search, mode: 'insensitive' } }
+          { content: { contains: search } },
+          { explanation: { contains: search } }
         ];
       }
 
@@ -339,38 +337,59 @@ export class QuestionService {
         }      }      // Validate options for multiple choice questions
       if (data.questionType === QuestionType.multiple_choice && data.options === null) {
         throw new CustomError("Câu hỏi trắc nghiệm phải có options", 400, ERROR_CODES.VALIDATION_ERROR);
-      }
-
-      // Process uploaded media files
+      }      // Process uploaded media files and handle null values
       let questionMedia: MediaFile[] | null = null;
       let mediaAnswer: MediaFile[] | null = null;
+      let shouldUpdateQuestionMedia = false;
+      let shouldUpdateMediaAnswer = false;
 
-      if (uploadedFiles?.questionMedia) {        // Delete old question media files
+      // Handle questionMedia updates
+      if (uploadedFiles?.questionMedia) {
+        // Delete old question media files
         if (existingQuestion.questionMedia) {
           const oldQuestionMedia = existingQuestion.questionMedia as MediaFile[];
           await this.deleteMediaFiles(oldQuestionMedia);
         }
         questionMedia = await this.processMediaFiles(uploadedFiles.questionMedia);
+        shouldUpdateQuestionMedia = true;
+      } else if (data.questionMedia === null) {
+        // Frontend explicitly wants to remove questionMedia
+        if (existingQuestion.questionMedia) {
+          const oldQuestionMedia = existingQuestion.questionMedia as MediaFile[];
+          await this.deleteMediaFiles(oldQuestionMedia);
+        }
+        questionMedia = null;
+        shouldUpdateQuestionMedia = true;
       }
 
-      if (uploadedFiles?.mediaAnswer) {        // Delete old media answer files
+      // Handle mediaAnswer updates
+      if (uploadedFiles?.mediaAnswer) {
+        // Delete old media answer files
         if (existingQuestion.mediaAnswer) {
           const oldMediaAnswer = existingQuestion.mediaAnswer as MediaFile[];
           await this.deleteMediaFiles(oldMediaAnswer);
         }
         mediaAnswer = await this.processMediaFiles(uploadedFiles.mediaAnswer);
-      }
-
-      // Prepare update data
+        shouldUpdateMediaAnswer = true;
+      } else if (data.mediaAnswer === null) {
+        // Frontend explicitly wants to remove mediaAnswer
+        if (existingQuestion.mediaAnswer) {
+          const oldMediaAnswer = existingQuestion.mediaAnswer as MediaFile[];
+          await this.deleteMediaFiles(oldMediaAnswer);
+        }
+        mediaAnswer = null;
+        shouldUpdateMediaAnswer = true;
+      }      // Prepare update data
       const updateData: any = {};
 
       if (data.intro !== undefined) updateData.intro = data.intro;
       if (data.defaultTime !== undefined) updateData.defaultTime = data.defaultTime;
-      if (data.questionType !== undefined) updateData.questionType = data.questionType; 
-      if (questionMedia !== null) updateData.questionMedia = questionMedia;
+      if (data.questionType !== undefined) updateData.questionType = data.questionType;
+      if (data.content !== undefined) updateData.content = data.content;
+      if (shouldUpdateQuestionMedia) updateData.questionMedia = questionMedia;
       if (data.options !== undefined) updateData.options = data.options;
       if (data.correctAnswer !== undefined) updateData.correctAnswer = data.correctAnswer;
-      if (mediaAnswer !== null) updateData.mediaAnswer = mediaAnswer;
+      if (shouldUpdateMediaAnswer) updateData.mediaAnswer = mediaAnswer;
       if (data.score !== undefined) updateData.score = data.score;
       if (data.difficulty !== undefined) updateData.difficulty = data.difficulty;
       if (data.explanation !== undefined) updateData.explanation = data.explanation;

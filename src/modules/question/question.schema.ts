@@ -40,63 +40,85 @@ export const optionsSchema = z.array(stringOptionSchema)
 // Create Question Schema
 export const createQuestionSchema = z.object({
   intro: z.string().optional(),
-  defaultTime: z.number()
+  defaultTime: z.preprocess((val) => Number(val), z.number()
     .int("Thời gian phải là số nguyên")
     .min(10, "Thời gian tối thiểu là 10 giây")
-    .max(1800, "Thời gian tối đa là 30 phút"),
+    .max(1800, "Thời gian tối đa là 30 phút")),
   questionType: QuestionTypeEnum,
   content: z.string()
     .min(1, "Nội dung HTML không được để trống"),
-  questionMedia: questionMediaSchema,  options: z.union([
-    optionsSchema,
-    z.null()
-  ]).optional(),
+  questionMedia: questionMediaSchema,
+  options: z.preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return undefined;
+        }
+      }
+      return val;
+    },
+    z.union([
+      optionsSchema,
+      z.null()
+    ])
+  ).optional(),
   correctAnswer: z.string()
     .min(1, "Đáp án đúng không được để trống"),
   mediaAnswer: questionMediaSchema,
-  score: z.number()
+  score: z.preprocess((val) => Number(val), z.number()
     .int("Điểm phải là số nguyên")
     .min(1, "Điểm tối thiểu là 1")
-    .max(100, "Điểm tối đa là 100")
-    .default(1),  difficulty: DifficultyEnum,
+    .max(100, "Điểm tối đa là 100")).default(1),
+  difficulty: DifficultyEnum,
   explanation: z.string().optional().nullable(),
-  questionTopicId: z.number()
+  questionTopicId: z.preprocess((val) => Number(val), z.number()
     .int("Question Topic ID phải là số nguyên")
-    .positive("Question Topic ID phải là số dương")
+    .positive("Question Topic ID phải là số dương"))
 });
 
 // Update Question Schema (PATCH method)
 export const updateQuestionSchema = z.object({
   intro: z.string().optional().nullable(),
-  defaultTime: z.number()
+  defaultTime: z.preprocess((val) => val === undefined || val === null ? undefined : Number(val), z.number()
     .int("Thời gian phải là số nguyên")
     .min(10, "Thời gian tối thiểu là 10 giây")
-    .max(1800, "Thời gian tối đa là 30 phút")
-    .optional().nullable(),
+.max(1800, "Thời gian tối đa là 30 phút")).optional().nullable(),
   questionType: QuestionTypeEnum.optional(),
   content: z.string()
     .min(1, "Nội dung HTML không được để trống")
     .optional(),
   questionMedia: questionMediaSchema,
-  options: z.union([
-    optionsSchema,
-    z.null()
-  ]).optional(),
+  options: z.preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return undefined;
+        }
+      }
+      return val;
+    },
+    z.union([
+      optionsSchema,
+      z.null()
+    ])
+  ).optional(),
   correctAnswer: z.string()
     .min(1, "Đáp án đúng không được để trống")
     .optional(),
   mediaAnswer: questionMediaSchema,
-  score: z.number()
+  score: z.preprocess((val) => val === undefined || val === null ? undefined : Number(val), z.number()
     .int("Điểm phải là số nguyên")
     .min(1, "Điểm tối thiểu là 1")
-    .max(100, "Điểm tối đa là 100")
-    .optional().nullable(),
+    .max(100, "Điểm tối đa là 100")).optional().nullable(),
   difficulty: DifficultyEnum.optional(),
   explanation: z.string().optional().nullable(),
-  questionTopicId: z.number()
+  questionTopicId: z.preprocess((val) => val === undefined || val === null ? undefined : Number(val), z.number()
     .int("Question Topic ID phải là số nguyên")
-    .positive("Question Topic ID phải là số dương")
-    .optional().nullable(),
+    .positive("Question Topic ID phải là số dương")).optional().nullable(),
   isActive: z.boolean().optional()
 }).refine(
   (data) => Object.keys(data).length > 0,
@@ -159,7 +181,7 @@ export const getQuestionsQuerySchema = z.object({
 
 // Batch Delete Questions Schema
 export const batchDeleteQuestionsSchema = z.object({
-  ids: z.array(z.number().int().positive())
+ids: z.array(z.number().int().positive())
     .min(1, "Danh sách ID không được để trống")
     .max(100, "Không thể xóa quá 100 câu hỏi cùng lúc"),
   hardDelete: z.boolean().default(false)

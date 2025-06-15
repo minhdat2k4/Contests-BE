@@ -9,7 +9,10 @@ import {
 import { Round } from "@prisma/client";
 
 export default class RoundService {
-  static async getAll(query: RoundQueryInput): Promise<{
+  static async getAll(
+    query: RoundQueryInput,
+    contestId: number
+  ): Promise<{
     rounds: Rounds[];
     pagination: {
       page: number;
@@ -20,7 +23,7 @@ export default class RoundService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search, isActive, contestId } = query;
+    const { page, limit, search, isActive } = query;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
     if (isActive !== undefined) {

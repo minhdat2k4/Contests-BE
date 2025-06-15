@@ -41,7 +41,7 @@ export default class ContestantController {
   }
   static async create(req: Request, res: Response): Promise<void> {
     try {
-      const input: CreateContestantInput = req.body;
+      const input: Omit<CreateContestantInput, "contestId"> = req.body;
       const contest = await prisma.contest.findFirst({
         where: { slug: req.params.slug },
       });

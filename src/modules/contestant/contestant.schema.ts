@@ -9,12 +9,10 @@ export const ContestantSchema = z.object({
 });
 
 export const CreateContestantSchema = z.object({
-  contestId: z
-    .number({
-      required_error: "Vui lòng id cuộc thi",
-      invalid_type_error: "Vui lòng nhập kí tự số",
-    })
-    .optional(),
+  contestId: z.number({
+    required_error: "Vui lòng id cuộc thi",
+    invalid_type_error: "Vui lòng nhập kí tự số",
+  }),
   studentId: z.number({
     required_error: "Vui lòng id cuộc thi",
     invalid_type_error: "Vui lòng nhập kí tự số",

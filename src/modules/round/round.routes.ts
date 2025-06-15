@@ -17,7 +17,7 @@ const roundRouter = Router();
 // prive
 
 roundRouter.get(
-  "/",
+  "/contest/:slug",
   authenticate,
   role("Admin"),
   validateQuery(RoundQuerySchema),
@@ -41,7 +41,7 @@ roundRouter.get(
 );
 
 roundRouter.post(
-  "/",
+  "/contest/:slug",
   authenticate,
   role("Admin"),
   validateBody(CreateRoundShema),

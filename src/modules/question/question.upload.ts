@@ -177,25 +177,34 @@ export const questionMediaUpload = {
 };
 
 // Move file from temp to permanent location
-export const moveFileFromTemp = (tempPath: string, permanentPath: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    // Ensure permanent directory exists
-    const permanentDir = path.dirname(permanentPath);
-    if (!fs.existsSync(permanentDir)) {
-      fs.mkdirSync(permanentDir, { recursive: true });
+export const moveFileFromTemp = async (tempPath: string, permanentPath: string): Promise<void> => {
+  try {
+    // Kiểm tra file tạm có tồn tại không
+    try {
+      await fs.promises.access(tempPath, fs.constants.F_OK);
+    } catch (error) {
+      logger.error(`Temp file does not exist: ${tempPath}`);
+      throw new Error(`File tạm không tồn tại: ${tempPath}`);
     }
+
+    // Đảm bảo thư mục đích tồn tại
+    const permanentDir = path.dirname(permanentPath);
+    await fs.promises.mkdir(permanentDir, { recursive: true });
     
-    // Move file
-    fs.rename(tempPath, permanentPath, (error) => {
-      if (error) {
-        logger.error(`Error moving file from ${tempPath} to ${permanentPath}:`, error);
-        reject(error);
-      } else {
-        logger.info(`File moved successfully from ${tempPath} to ${permanentPath}`);
-        resolve();
-      }
-    });
-  });
+    // Đọc file tạm
+    const fileContent = await fs.promises.readFile(tempPath);
+    
+    // Ghi file vào thư mục đích
+    await fs.promises.writeFile(permanentPath, fileContent);
+    
+    // Xóa file tạm sau khi copy thành công
+    await fs.promises.unlink(tempPath);
+    
+    logger.info(`File moved successfully from ${tempPath} to ${permanentPath}`);
+  } catch (error) {
+    logger.error(`Error moving file from ${tempPath} to ${permanentPath}:`, error);
+    throw error;
+  }
 };
 
 // Clean up temp files

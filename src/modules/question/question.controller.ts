@@ -147,7 +147,8 @@ export class QuestionController {
       
       // Get current question to merge with existing files
       const currentQuestion = await this.questionService.getQuestionById(Number(id));
-        // Handle uploaded files
+      
+      // Handle uploaded files
       const uploadedFiles: { questionMedia?: Express.Multer.File[], mediaAnswer?: Express.Multer.File[] } = {};
       
       if (req.files) {
@@ -201,26 +202,71 @@ export class QuestionController {
       if (data.deleteQuestionMedia) {
         if (typeof data.deleteQuestionMedia === 'string') {
           try {
-            filesToDeleteFromQuestionMedia = JSON.parse(data.deleteQuestionMedia);
+            // Thử parse JSON nếu là string
+            const parsed = JSON.parse(data.deleteQuestionMedia);
+            // Nếu kết quả là array, sử dụng nó
+            if (Array.isArray(parsed)) {
+              filesToDeleteFromQuestionMedia = parsed;
+            } else {
+              // Nếu không phải array, đưa vào array
+              filesToDeleteFromQuestionMedia = [parsed];
+            }
           } catch {
+            // Nếu không parse được, sử dụng giá trị nguyên bản
             filesToDeleteFromQuestionMedia = [data.deleteQuestionMedia];
           }
         } else if (Array.isArray(data.deleteQuestionMedia)) {
-          filesToDeleteFromQuestionMedia = data.deleteQuestionMedia;
+          // Xử lý từng phần tử trong mảng để đảm bảo định dạng đúng
+          filesToDeleteFromQuestionMedia = data.deleteQuestionMedia.map(item => {
+            if (typeof item === 'string') {
+              try {
+                // Thử parse nếu item là JSON string
+                const parsed = JSON.parse(item);
+                return typeof parsed === 'string' ? parsed : item;
+              } catch {
+                return item;
+              }
+            }
+            return String(item);
+          });
         }
       }
       
       if (data.deleteMediaAnswer) {
         if (typeof data.deleteMediaAnswer === 'string') {
           try {
-            filesToDeleteFromMediaAnswer = JSON.parse(data.deleteMediaAnswer);
+            // Thử parse JSON nếu là string
+            const parsed = JSON.parse(data.deleteMediaAnswer);
+            // Nếu kết quả là array, sử dụng nó
+            if (Array.isArray(parsed)) {
+              filesToDeleteFromMediaAnswer = parsed;
+            } else {
+              // Nếu không phải array, đưa vào array
+              filesToDeleteFromMediaAnswer = [parsed];
+            }
           } catch {
+            // Nếu không parse được, sử dụng giá trị nguyên bản
             filesToDeleteFromMediaAnswer = [data.deleteMediaAnswer];
           }
         } else if (Array.isArray(data.deleteMediaAnswer)) {
-          filesToDeleteFromMediaAnswer = data.deleteMediaAnswer;
+          // Xử lý từng phần tử trong mảng để đảm bảo định dạng đúng
+          filesToDeleteFromMediaAnswer = data.deleteMediaAnswer.map(item => {
+            if (typeof item === 'string') {
+              try {
+                // Thử parse nếu item là JSON string
+                const parsed = JSON.parse(item);
+                return typeof parsed === 'string' ? parsed : item;
+              } catch {
+                return item;
+              }
+            }
+            return String(item);
+          });
         }
       }
+
+      console.log('Files to delete from questionMedia:', filesToDeleteFromQuestionMedia);
+      console.log('Files to delete from mediaAnswer:', filesToDeleteFromMediaAnswer);
 
       // Auto-merge logic: Start with existing files, remove deleted ones, then add new ones
       let finalQuestionMedia = [...(currentQuestion.questionMedia || [])];
@@ -240,28 +286,18 @@ export class QuestionController {
         );
         logger.info(`Removing ${filesToDeleteFromMediaAnswer.length} files from mediaAnswer: ${filesToDeleteFromMediaAnswer.join(', ')}`);
       }
-        // Process and add new files
-      if (uploadedFiles.questionMedia) {
-        const newQuestionMedia = await this.questionService['processMediaFiles'](uploadedFiles.questionMedia);
-        finalQuestionMedia.push(...newQuestionMedia);
-        logger.info(`Adding ${newQuestionMedia.length} new files to questionMedia`);
-      }
       
-      if (uploadedFiles.mediaAnswer) {
-        const newMediaAnswer = await this.questionService['processMediaFiles'](uploadedFiles.mediaAnswer);
-        finalMediaAnswer.push(...newMediaAnswer);
-        logger.info(`Adding ${newMediaAnswer.length} new files to mediaAnswer`);
-      }
-
       // Prepare clean data for service (remove delete fields)
-      const { deleteQuestionMedia, deleteMediaAnswer, ...cleanData } = data as any;
+      const { ...cleanData } = data as any;
       
-      // Add final media arrays to clean data if they were modified
-      if (uploadedFiles.questionMedia || filesToDeleteFromQuestionMedia.length > 0) {
+      // Thêm thông tin về các file cần xóa
+      if (filesToDeleteFromQuestionMedia.length > 0) {
+        cleanData.deleteQuestionMedia = filesToDeleteFromQuestionMedia;
         cleanData.questionMedia = finalQuestionMedia.length > 0 ? finalQuestionMedia : null;
       }
       
-      if (uploadedFiles.mediaAnswer || filesToDeleteFromMediaAnswer.length > 0) {
+      if (filesToDeleteFromMediaAnswer.length > 0) {
+        cleanData.deleteMediaAnswer = filesToDeleteFromMediaAnswer;
         cleanData.mediaAnswer = finalMediaAnswer.length > 0 ? finalMediaAnswer : null;
       }
 
@@ -273,7 +309,36 @@ export class QuestionController {
         otherFields: Object.keys(cleanData).filter(k => !['content', 'questionMedia', 'mediaAnswer'].includes(k))
       });
 
-      const question = await this.questionService.updateQuestion(Number(id), cleanData, uploadedFiles);
+      // Xử lý file trước khi gọi updateQuestion để tránh xử lý hai lần
+      let questionMedia: any[] | null = null;
+      let mediaAnswer: any[] | null = null;
+
+      // Process and add new files
+      if (uploadedFiles.questionMedia && uploadedFiles.questionMedia.length > 0) {
+        const newQuestionMedia = await this.questionService['processMediaFiles'](uploadedFiles.questionMedia);
+        finalQuestionMedia.push(...newQuestionMedia);
+        questionMedia = finalQuestionMedia;
+        logger.info(`Adding ${newQuestionMedia.length} new files to questionMedia`);
+      }
+      
+      if (uploadedFiles.mediaAnswer && uploadedFiles.mediaAnswer.length > 0) {
+        const newMediaAnswer = await this.questionService['processMediaFiles'](uploadedFiles.mediaAnswer);
+        finalMediaAnswer.push(...newMediaAnswer);
+        mediaAnswer = finalMediaAnswer;
+        logger.info(`Adding ${newMediaAnswer.length} new files to mediaAnswer`);
+      }
+
+      // Cập nhật cleanData với media đã xử lý
+      if (questionMedia !== null) {
+        cleanData.questionMedia = questionMedia;
+      }
+      
+      if (mediaAnswer !== null) {
+        cleanData.mediaAnswer = mediaAnswer;
+      }
+
+      // Gọi updateQuestion không có uploadedFiles để tránh xử lý file hai lần
+      const question = await this.questionService.updateQuestion(Number(id), cleanData);
 
       logger.info(`Question updated successfully with auto-merge and delete: ${question.id}`);
       logger.info(`QuestionMedia: ${filesToDeleteFromQuestionMedia.length} deleted, ${uploadedFiles.questionMedia?.length || 0} added`);

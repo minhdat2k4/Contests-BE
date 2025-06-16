@@ -20,9 +20,9 @@ interface QuestionMediaConfig extends UploadConfig {
 export const QUESTION_MEDIA_CONFIG: QuestionMediaConfig = {
   uploadDir: "questions",
   filePrefix: "question",
-  maxFileSize: 5 * 1024 * 1024, // 5MB for images
-  maxVideoSize: 100 * 1024 * 1024, // 100MB for videos
-  maxAudioSize: 20 * 1024 * 1024, // 20MB for audio
+  maxFileSize: 30 * 1024 * 1024, // 30MB for images
+  maxVideoSize: 100 * 1024 * 1024, // 100MB for videos  
+  maxAudioSize: 50 * 1024 * 1024, // 50MB for audio
   allowedTypes: /jpeg|jpg|png|gif|webp|svg/,
   allowedMimeTypes: /^image\/(jpeg|jpg|png|gif|webp|svg\+xml)$/,
   allowedVideoTypes: /mp4|avi|mov|wmv|flv|webm|mkv/,
@@ -118,17 +118,38 @@ export const createQuestionMediaFilter = (): multer.Options["fileFilter"] => {
   return (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     try {
       const mediaType = detectMediaTypeFromMime(file.mimetype);
-      const maxSize = getMaxFileSize(mediaType);
-      
-      // Check if file size is within limits (note: this is not 100% reliable in multer filter)
-      // The actual size check will be done in the middleware
       
       logger.info(`Uploading ${mediaType} file: ${file.originalname}, MIME: ${file.mimetype}`);
-      cb(null, true);    } catch (error) {
+      cb(null, true);
+    } catch (error) {
       logger.error(`File filter error: ${error}`);
-      cb(null, false);
+      cb(new Error(`Unsupported file type: ${file.mimetype}`) as any, false);
     }
   };
+};
+
+// Validate file sizes after upload
+export const validateFileSizes = (files: Express.Multer.File[]): void => {
+  for (const file of files) {
+    try {
+      const mediaType = detectMediaTypeFromMime(file.mimetype);
+      const maxSize = getMaxFileSize(mediaType);
+      
+      if (file.size > maxSize) {
+        const maxSizeMB = Math.round(maxSize / (1024 * 1024));
+        const fileSizeMB = Math.round(file.size / (1024 * 1024) * 10) / 10;
+        
+        throw new Error(
+          `File "${file.originalname}" (${fileSizeMB}MB) exceeds maximum size for ${mediaType} files (${maxSizeMB}MB)`
+        );
+      }
+      
+      logger.info(`File size validation passed: ${file.originalname} (${Math.round(file.size / (1024 * 1024) * 10) / 10}MB)`);
+    } catch (error) {
+      logger.error(`File size validation failed: ${error}`);
+      throw error;
+    }
+  }
 };
 
 // Create question media uploader

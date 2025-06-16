@@ -77,8 +77,7 @@ export class QuestionController {
   async createQuestion(req: Request, res: Response): Promise<void> {
     try {
       const data: CreateQuestionData = req.body;
-      
-      // Handle uploaded files
+        // Handle uploaded files
       const uploadedFiles: { questionMedia?: Express.Multer.File[], mediaAnswer?: Express.Multer.File[] } = {};
       
       if (req.files) {
@@ -96,6 +95,32 @@ export class QuestionController {
             uploadedFiles.mediaAnswer = Array.isArray(req.files.mediaAnswer) 
               ? req.files.mediaAnswer 
               : [req.files.mediaAnswer];
+          }
+        }
+        
+        // Validate file sizes
+        const allFiles: Express.Multer.File[] = [
+          ...(uploadedFiles.questionMedia || []),
+          ...(uploadedFiles.mediaAnswer || [])
+        ];
+        
+        if (allFiles.length > 0) {
+          const { validateFileSizes } = await import('./question.upload');
+          try {
+            validateFileSizes(allFiles);
+          } catch (error) {
+            // Clean up uploaded files if validation fails
+            for (const file of allFiles) {
+              try {
+                const fs = await import('fs');
+                if (fs.existsSync(file.path)) {
+                  fs.unlinkSync(file.path);
+                }
+              } catch (cleanupError) {
+                logger.error(`Failed to cleanup file ${file.path}:`, cleanupError);
+              }
+            }
+            throw new CustomError((error as Error).message, 400, ERROR_CODES.VALIDATION_ERROR);
           }
         }
       }
@@ -122,8 +147,7 @@ export class QuestionController {
       
       // Get current question to merge with existing files
       const currentQuestion = await this.questionService.getQuestionById(Number(id));
-      
-      // Handle uploaded files
+        // Handle uploaded files
       const uploadedFiles: { questionMedia?: Express.Multer.File[], mediaAnswer?: Express.Multer.File[] } = {};
       
       if (req.files) {
@@ -140,6 +164,32 @@ export class QuestionController {
             uploadedFiles.mediaAnswer = Array.isArray(files.mediaAnswer) 
               ? files.mediaAnswer 
               : [files.mediaAnswer];
+          }
+        }
+        
+        // Validate file sizes
+        const allFiles: Express.Multer.File[] = [
+          ...(uploadedFiles.questionMedia || []),
+          ...(uploadedFiles.mediaAnswer || [])
+        ];
+        
+        if (allFiles.length > 0) {
+          const { validateFileSizes } = await import('./question.upload');
+          try {
+            validateFileSizes(allFiles);
+          } catch (error) {
+            // Clean up uploaded files if validation fails
+            for (const file of allFiles) {
+              try {
+                const fs = await import('fs');
+                if (fs.existsSync(file.path)) {
+                  fs.unlinkSync(file.path);
+                }
+              } catch (cleanupError) {
+                logger.error(`Failed to cleanup file ${file.path}:`, cleanupError);
+              }
+            }
+            throw new CustomError((error as Error).message, 400, ERROR_CODES.VALIDATION_ERROR);
           }
         }
       }

@@ -25,7 +25,7 @@ matchRouter.get(
 );
 
 matchRouter.get(
-  "/",
+  "/contest/:slug/all",
   authenticate,
   role("Admin"),
   validateQuery(MatchQuerySchema),
@@ -41,7 +41,7 @@ matchRouter.get(
 );
 
 matchRouter.post(
-  "/",
+  "/contest/:slug",
   authenticate,
   role("Admin"),
   validateBody(CreateMatchSchema),

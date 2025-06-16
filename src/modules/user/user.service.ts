@@ -159,4 +159,13 @@ export default class UserService {
       },
     });
   }
+  static async getListUser() {
+    return prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+      },
+      where: { isActive: true },
+    });
+  }
 }

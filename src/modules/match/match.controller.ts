@@ -9,10 +9,16 @@ import {
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
+import { ContestStatus } from "@prisma/client";
 
 export default class MatchController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
+      const slug = req.params.slug;
+      const statusQuery = req.query.status as string;
+
+      const contest = await prisma.contest.findFirst({ where: { slug: slug } });
+      if (!contest) throw new Error("Không tìm thấy cuộc thi");
       const query: MatchQueryInput = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
@@ -21,12 +27,17 @@ export default class MatchController {
         questionPackageId:
           parseInt(req.query.questionPackageId as string) || undefined,
         roundId: parseInt(req.query.roundId as string) || undefined,
+        status: Object.values(ContestStatus).includes(
+          statusQuery as ContestStatus
+        )
+          ? (statusQuery as ContestStatus)
+          : undefined,
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
             : undefined,
       };
-      const data = await MatchService.getAll(query);
+      const data = await MatchService.getAll(query, contest.id);
       if (!data) {
         throw new Error("Không tìm thấy trận đấu");
       }
@@ -45,8 +56,9 @@ export default class MatchController {
   static async create(req: Request, res: Response): Promise<void> {
     try {
       const input: CreateMatchInput = req.body;
+
       const contest = await prisma.contest.findFirst({
-        where: { id: input.contestId },
+        where: { slug: req.params.slug },
       });
       if (!contest) {
         throw new Error("Không tìm thấy cuộc thi");
@@ -63,6 +75,7 @@ export default class MatchController {
       if (!round) throw Error("Không tìm thấy vòng đấu");
       const slug = await MatchService.generateUniqueSlug(input.name);
       input.slug = slug;
+      input.contestId = contest.id;
       const Match = await MatchService.create(input);
       if (!Match) {
         throw new Error(`Thêm trận đấu${input.name} thành công`);

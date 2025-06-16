@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { successResponse, errorResponse, paginatedResponse } from "@/utils/response";
+import {
+  successResponse,
+  errorResponse,
+  paginatedResponse,
+} from "@/utils/response";
 import { logger } from "@/utils/logger";
 import { CustomError } from "@/middlewares/errorHandler";
 import { ERROR_CODES } from "@/constants/errorCodes";
@@ -16,7 +20,10 @@ export default class QuestionPackageController {
   /**
    * Create a new question package
    */
-  static async createQuestionPackage(req: Request, res: Response): Promise<void> {
+  static async createQuestionPackage(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const data: CreateQuestionPackageInput = req.body;
 
@@ -30,30 +37,36 @@ export default class QuestionPackageController {
         );
       }
 
-      const questionPackage = await QuestionPackageService.createQuestionPackage(data);
+      const questionPackage =
+        await QuestionPackageService.createQuestionPackage(data);
 
-      logger.info(`Question package created successfully: ${questionPackage.id}`, {
-        questionPackageId: questionPackage.id,
-        name: questionPackage.name,
-      });
-
-      res.status(201).json(
-        successResponse(questionPackage, "Tạo gói câu hỏi thành công")
+      logger.info(
+        `Question package created successfully: ${questionPackage.id}`,
+        {
+          questionPackageId: questionPackage.id,
+          name: questionPackage.name,
+        }
       );
+
+      res
+        .status(201)
+        .json(successResponse(questionPackage, "Tạo gói câu hỏi thành công"));
     } catch (error) {
       logger.error("Error creating question package:", error);
-      
+
       if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
       } else {
-        res.status(500).json(
-          errorResponse(
-            "Lỗi server khi tạo gói câu hỏi",
-            ERROR_CODES.INTERNAL_SERVER_ERROR
-          )
-        );
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              "Lỗi server khi tạo gói câu hỏi",
+              ERROR_CODES.INTERNAL_SERVER_ERROR
+            )
+          );
       }
     }
   }
@@ -61,12 +74,15 @@ export default class QuestionPackageController {
   /**
    * Get question package by ID
    */
-  static async getQuestionPackageById(req: Request, res: Response): Promise<void> {
+  static async getQuestionPackageById(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       // Parse ID manually for consistent validation
       const idParam = req.params.id;
       const id = parseInt(idParam, 10);
-      
+
       if (isNaN(id) || id <= 0) {
         throw new CustomError(
           "ID phải là số nguyên dương",
@@ -76,7 +92,8 @@ export default class QuestionPackageController {
       }
 
       logger.info(`Getting question package by ID: ${id} (type: ${typeof id})`);
-      const questionPackage = await QuestionPackageService.getQuestionPackageById(id);
+      const questionPackage =
+        await QuestionPackageService.getQuestionPackageById(id);
 
       if (!questionPackage) {
         throw new CustomError(
@@ -86,23 +103,30 @@ export default class QuestionPackageController {
         );
       }
 
-      res.status(200).json(
-        successResponse(questionPackage, "Lấy thông tin gói câu hỏi thành công")
-      );
-    } catch (error) {
-      logger.error("Error getting question package by ID:", error);
-      
-      if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
-      } else {
-        res.status(500).json(
-          errorResponse(
-            "Lỗi server khi lấy thông tin gói câu hỏi",
-            ERROR_CODES.INTERNAL_SERVER_ERROR
+      res
+        .status(200)
+        .json(
+          successResponse(
+            questionPackage,
+            "Lấy thông tin gói câu hỏi thành công"
           )
         );
+    } catch (error) {
+      logger.error("Error getting question package by ID:", error);
+
+      if (error instanceof CustomError) {
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
+      } else {
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              "Lỗi server khi lấy thông tin gói câu hỏi",
+              ERROR_CODES.INTERNAL_SERVER_ERROR
+            )
+          );
       }
     }
   }
@@ -110,13 +134,20 @@ export default class QuestionPackageController {
   /**
    * Update question package
    */
-  static async updateQuestionPackage(req: Request, res: Response): Promise<void> {
+  static async updateQuestionPackage(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const idParam = req.params.id;
       const id = parseInt(idParam, 10);
-      
+
       if (isNaN(id) || id <= 0) {
-        throw new CustomError("ID phải là số nguyên dương", 400, ERROR_CODES.VALIDATION_ERROR);
+        throw new CustomError(
+          "ID phải là số nguyên dương",
+          400,
+          ERROR_CODES.VALIDATION_ERROR
+        );
       }
 
       const data: UpdateQuestionPackageInput = req.body;
@@ -133,7 +164,10 @@ export default class QuestionPackageController {
 
       // Check if name already exists (excluding current record)
       if (data.name) {
-        const nameExists = await QuestionPackageService.nameExists(data.name, id);
+        const nameExists = await QuestionPackageService.nameExists(
+          data.name,
+          id
+        );
         if (nameExists) {
           throw new CustomError(
             "Tên gói câu hỏi đã tồn tại",
@@ -143,30 +177,38 @@ export default class QuestionPackageController {
         }
       }
 
-      const updatedQuestionPackage = await QuestionPackageService.updateQuestionPackage(id, data);
+      const updatedQuestionPackage =
+        await QuestionPackageService.updateQuestionPackage(id, data);
 
       logger.info(`Question package updated successfully: ${id}`, {
         questionPackageId: id,
         updates: data,
       });
 
-      res.status(200).json(
-        successResponse(updatedQuestionPackage, "Cập nhật gói câu hỏi thành công")
-      );
-    } catch (error) {
-      logger.error("Error updating question package:", error);
-      
-      if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
-      } else {
-        res.status(500).json(
-          errorResponse(
-            "Lỗi server khi cập nhật gói câu hỏi",
-            ERROR_CODES.INTERNAL_SERVER_ERROR
+      res
+        .status(200)
+        .json(
+          successResponse(
+            updatedQuestionPackage,
+            "Cập nhật gói câu hỏi thành công"
           )
         );
+    } catch (error) {
+      logger.error("Error updating question package:", error);
+
+      if (error instanceof CustomError) {
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
+      } else {
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              "Lỗi server khi cập nhật gói câu hỏi",
+              ERROR_CODES.INTERNAL_SERVER_ERROR
+            )
+          );
       }
     }
   }
@@ -174,13 +216,20 @@ export default class QuestionPackageController {
   /**
    * Soft delete question package
    */
-  static async deleteQuestionPackage(req: Request, res: Response): Promise<void> {
+  static async deleteQuestionPackage(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const idParam = req.params.id;
       const id = parseInt(idParam, 10);
-      
+
       if (isNaN(id) || id <= 0) {
-        throw new CustomError("ID phải là số nguyên dương", 400, ERROR_CODES.VALIDATION_ERROR);
+        throw new CustomError(
+          "ID phải là số nguyên dương",
+          400,
+          ERROR_CODES.VALIDATION_ERROR
+        );
       }
 
       // Check if question package exists
@@ -199,23 +248,23 @@ export default class QuestionPackageController {
         questionPackageId: id,
       });
 
-      res.status(200).json(
-        successResponse(null, "Xóa gói câu hỏi thành công")
-      );
+      res.status(200).json(successResponse(null, "Xóa gói câu hỏi thành công"));
     } catch (error) {
       logger.error("Error deleting question package:", error);
-      
+
       if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
       } else {
-        res.status(500).json(
-          errorResponse(
-            "Lỗi server khi xóa gói câu hỏi",
-            ERROR_CODES.INTERNAL_SERVER_ERROR
-          )
-        );
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              "Lỗi server khi xóa gói câu hỏi",
+              ERROR_CODES.INTERNAL_SERVER_ERROR
+            )
+          );
       }
     }
   }
@@ -223,71 +272,104 @@ export default class QuestionPackageController {
   /**
    * Get all question packages with pagination and filtering
    */
-  static async getAllQuestionPackages(req: Request, res: Response): Promise<void> {
+  static async getAllQuestionPackages(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       // Ensure proper validation and defaults
       const queryInput: QuestionPackageQueryInput = {
         page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
         search: req.query.search as string | undefined,
-        isActive: req.query.isActive ? req.query.isActive === "true" : undefined,
-        sortBy: (req.query.sortBy as "name" | "createdAt" | "updatedAt") || "createdAt",
-        sortOrder: (req.query.sortOrder as "asc" | "desc") || "desc"
+        isActive: req.query.isActive
+          ? req.query.isActive === "true"
+          : undefined,
+        sortBy:
+          (req.query.sortBy as "name" | "createdAt" | "updatedAt") ||
+          "createdAt",
+        sortOrder: (req.query.sortOrder as "asc" | "desc") || "desc",
       };
 
-      const result = await QuestionPackageService.getAllQuestionPackages(queryInput);
-
-      res.status(200).json(
-        paginatedResponse(
-          result.questionPackages,
-          result.pagination,
-          "Lấy danh sách gói câu hỏi thành công"
-        )
+      const result = await QuestionPackageService.getAllQuestionPackages(
+        queryInput
       );
+
+      res
+        .status(200)
+        .json(
+          paginatedResponse(
+            result.questionPackages,
+            result.pagination,
+            "Lấy danh sách gói câu hỏi thành công"
+          )
+        );
     } catch (error) {
       logger.error("Error getting all question packages:", error);
-      
-      res.status(500).json(
-        errorResponse(
-          "Lỗi server khi lấy danh sách gói câu hỏi",
-          ERROR_CODES.INTERNAL_SERVER_ERROR
-        )
-      );
+
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            "Lỗi server khi lấy danh sách gói câu hỏi",
+            ERROR_CODES.INTERNAL_SERVER_ERROR
+          )
+        );
     }
   }
   /**
    * Get active question packages for dropdown
    */
-  static async getActiveQuestionPackages(req: Request, res: Response): Promise<void> {
+  static async getActiveQuestionPackages(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
-      const questionPackages = await QuestionPackageService.getActiveQuestionPackages();
+      const questionPackages =
+        await QuestionPackageService.getActiveQuestionPackages();
 
-      res.status(200).json(
-        successResponse(questionPackages, "Lấy danh sách gói câu hỏi hoạt động thành công")
-      );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            questionPackages,
+            "Lấy danh sách gói câu hỏi hoạt động thành công"
+          )
+        );
     } catch (error) {
       logger.error("Error getting active question packages:", error);
-      
-      res.status(500).json(
-        errorResponse(
-          "Lỗi server khi lấy danh sách gói câu hỏi hoạt động",
-          ERROR_CODES.INTERNAL_SERVER_ERROR
-        )
-      );
+
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            "Lỗi server khi lấy danh sách gói câu hỏi hoạt động",
+            ERROR_CODES.INTERNAL_SERVER_ERROR
+          )
+        );
     }
   }
   /**
    * Batch delete question packages
    */
-  static async batchDeleteQuestionPackages(req: Request, res: Response): Promise<void> {
+  static async batchDeleteQuestionPackages(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const data: BatchDeleteQuestionPackagesInput = req.body;
 
-      logger.info(`Attempting to batch delete ${data.ids.length} question packages`);
+      logger.info(
+        `Attempting to batch delete ${data.ids.length} question packages`
+      );
 
-      const result = await QuestionPackageService.batchDeleteQuestionPackages(data);
+      const result = await QuestionPackageService.batchDeleteQuestionPackages(
+        data
+      );
 
-      logger.info(`Batch delete completed: ${result.successful} successful, ${result.failed} failed`);      // Determine appropriate status code and message based on results
+      logger.info(
+        `Batch delete completed: ${result.successful} successful, ${result.failed} failed`
+      ); // Determine appropriate status code and message based on results
       let statusCode: number;
       let message: string;
 
@@ -295,9 +377,7 @@ export default class QuestionPackageController {
         // All items deleted successfully
         statusCode = 200;
         message = `Xóa hàng loạt thành công: ${result.successful}/${result.totalRequested} gói câu hỏi đã được xóa`;
-        res.status(statusCode).json(
-          successResponse(result, message)
-        );
+        res.status(statusCode).json(successResponse(result, message));
       } else if (result.successful === 0) {
         // All items failed
         statusCode = 400;
@@ -312,25 +392,42 @@ export default class QuestionPackageController {
         // Partial success - some succeeded, some failed
         statusCode = 207; // Multi-Status
         message = `Xóa hàng loạt hoàn tất một phần: ${result.successful}/${result.totalRequested} thành công, ${result.failed} thất bại`;
-        res.status(statusCode).json(
-          successResponse(result, message)
-        );
+        res.status(statusCode).json(successResponse(result, message));
       }
     } catch (error) {
       logger.error("Error in batch delete question packages:", error);
-        if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
+      if (error instanceof CustomError) {
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
         return;
       }
 
-      res.status(500).json(
-        errorResponse(
-          "Lỗi server khi xóa hàng loạt gói câu hỏi",
-          ERROR_CODES.INTERNAL_SERVER_ERROR
-        )
-      );
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            "Lỗi server khi xóa hàng loạt gói câu hỏi",
+            ERROR_CODES.INTERNAL_SERVER_ERROR
+          )
+        );
+    }
+  }
+  static async getListQuestionPackage(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const id = req.params.id;
+      const round = await QuestionPackageService.getListQuestionPackage();
+      if (!round) {
+        throw new Error("Không tìm thấy gói câu hỏi");
+      }
+      logger.info(`Lấy thông tin gói câu hỏi thành công`);
+      res.json(successResponse(round, `Lấy danh sách gói câu hỏi thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
 }

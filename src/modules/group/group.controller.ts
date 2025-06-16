@@ -10,19 +10,20 @@ import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
 import GroupService from "./group.service";
-import { Group } from "@prisma/client";
-import { group } from "console";
 export default class GroupController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
+      const slug = req.params.slug;
+      const contest = await prisma.contest.findFirst({ where: { slug: slug } });
+      if (!contest) throw new Error("Không tìm thấy cuộc thi");
       const query: GroupQueryInput = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: (req.query.search as string) || undefined,
-        matchId: parseInt(req.query.contestId as string) || undefined,
-        userId: parseInt(req.query.contestId as string) || undefined,
+        matchId: parseInt(req.query.matchId as string) || undefined,
+        userId: parseInt(req.query.userId as string) || undefined,
       };
-      const data = await GroupService.getAll(query);
+      const data = await GroupService.getAll(query, contest.id);
       if (!data) {
         throw new Error("Không tìm thấy nhóm ");
       }
@@ -125,7 +126,7 @@ export default class GroupController {
       const id = Number(req.params.id);
 
       const group = await GroupService.getBy({ id: id });
-      if (!group) throw new Error(` Không tìm thấy nhóm`);
+      if (!group) throw new Error(`Không tìm thấy nhóm`);
 
       const newUserId = input.userId ?? group.userId;
       const newMatchId = input.matchId ?? group.matchId;
@@ -133,12 +134,14 @@ export default class GroupController {
       const newUser = await prisma.user.findFirst({
         where: { id: newUserId },
       });
-      if (!newUser) throw "Không tìm thấy trọng tài";
+      if (!newUser) throw new Error("Không tìm thấy trọng tài");
 
       const newMatch = await prisma.match.findFirst({
         where: { id: newMatchId },
       });
-      if (!newMatch) throw "Không tìm thấy trận đấu";
+      if (!newMatch) throw new Error("Không tìm thấy trận đấu");
+
+      // Kiểm tra trùng trọng tài trong cùng trận
       const existedGroup = await prisma.group.findFirst({
         where: {
           userId: newUserId,
@@ -153,23 +156,20 @@ export default class GroupController {
         );
       }
 
+      // Kiểm tra trùng thời gian trận khác
       const conflictGroup = await prisma.group.findFirst({
         where: {
           userId: newUserId,
           NOT: {
-            matchId: input.matchId,
+            matchId: newMatchId, // ❗ sửa từ input.matchId thành newMatchId
           },
           match: {
             AND: [
               {
-                startTime: {
-                  lt: newMatch.endTime,
-                },
+                startTime: { lt: newMatch.endTime },
               },
               {
-                endTime: {
-                  gt: newMatch.startTime,
-                },
+                endTime: { gt: newMatch.startTime },
               },
             ],
           },
@@ -179,16 +179,18 @@ export default class GroupController {
         },
       });
 
-      if (conflictGroup)
+      if (conflictGroup) {
         throw new Error(
-          ` Trọng tài này ${newUser.username} đang có trận đấu khác trùng thời gian `
+          `Trọng tài ${newUser.username} đang có nhóm khác ở trận '${conflictGroup.match.name}' trùng thời gian`
         );
-      const Group = await GroupService.create(input);
-      if (!Group) {
-        throw new Error(`Thêm nhóm ${input.name} thành công`);
       }
-      logger.info(`Thêm nhóm ${input.name} thành công`);
-      res.json(successResponse(Group, `Thêm nhóm ${input.name} thành công`));
+
+      const updatedGroup = await GroupService.update(id, input);
+
+      logger.info(`Cập nhật nhóm ${input.name} thành công`);
+      res.json(
+        successResponse(updatedGroup, `Cập nhật nhóm ${input.name} thành công`)
+      );
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

@@ -9,7 +9,10 @@ import {
 import { Group } from "@prisma/client";
 
 export default class GroupService {
-  static async getAll(query: GroupQueryInput): Promise<{
+  static async getAll(
+    query: GroupQueryInput,
+    contestId: number | null
+  ): Promise<{
     groups: GrouType[];
     pagination: {
       page: number;
@@ -25,56 +28,73 @@ export default class GroupService {
 
     const whereClause: any = {};
 
+    // Lọc theo matchId (trận đấu)
     if (matchId !== undefined) {
       whereClause.matchId = matchId;
     }
 
+    // Lọc theo userId (trọng tài)
     if (userId !== undefined) {
       whereClause.userId = userId;
+    }
+    console.log(query, contestId);
+
+    // Lọc theo contestId (cuộc thi)
+    if (contestId !== null) {
+      whereClause.match = {
+        ...(whereClause.match || {}),
+        contestId,
+      };
     }
 
     if (search) {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
         { name: { contains: keyword } },
-        { user: { is: { username: { contains: keyword } } } },
+        {
+          user: {
+            is: { username: { contains: keyword } },
+          },
+        },
         { match: { is: { name: { contains: keyword } } } },
       ]);
     }
 
+    // Truy vấn dữ liệu
     const groupRaw = await prisma.group.findMany({
       where: whereClause,
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
       select: {
+        id: true,
         name: true,
         confirmCurrentQuestion: true,
-        id: true,
-        user: {
-          select: { username: true },
-        },
+        user: { select: { username: true } },
         match: { select: { name: true } },
       },
     });
 
+    // Biến đổi kết quả trả về
     const group = groupRaw.map(key => ({
       id: key.id,
       name: key.name,
       confirmCurrentQuestion: key.confirmCurrentQuestion,
-      userName: key.user?.username,
-      matchName: key.match?.name,
+      userName: key.user?.username ?? "",
+      matchName: key.match?.name ?? "",
     }));
 
+    // Tính tổng số dòng phù hợp
     const total = await prisma.group.count({ where: whereClause });
     const totalPages = Math.ceil(total / limit);
+
     return {
       groups: group,
       pagination: {
-        page: page,
-        limit: limit,
-        total: total,
-        totalPages: totalPages,
+        page,
+        limit,
+        total,
+        totalPages,
         hasNext: page < totalPages,
         hasPrev: page > 1,
       },

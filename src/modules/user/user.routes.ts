@@ -3,7 +3,6 @@ import { authenticate, role } from "@/middlewares/auth";
 import { UserController } from "@/modules/user";
 import {
   CreateUserSchema,
-  UpdateUserSchema,
   UserIdShema,
   UserQuerySchema,
   deleteUsersSchema,
@@ -17,10 +16,10 @@ const userRouter = Router();
 export { userRouter };
 // Prive(schema)
 userRouter.get(
-  "/get-roles",
+  "/get-user",
   authenticate,
   role("Admin"),
-  UserController.getRoles
+  UserController.getListUser
 );
 
 userRouter.get(

@@ -109,6 +109,8 @@ export default class RoundService {
     return prisma.round.create({
       data: {
         ...data,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
       },
     });
   }
@@ -169,6 +171,15 @@ export default class RoundService {
     return prisma.contestant.count({
       where: {
         roundId: id,
+      },
+    });
+  }
+  static async getListRound(contestId: number) {
+    return prisma.round.findMany({
+      where: { isActive: true, contestId: contestId },
+      select: {
+        id: true,
+        name: true,
       },
     });
   }

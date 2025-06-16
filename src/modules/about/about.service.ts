@@ -1,19 +1,38 @@
-import { CreateAboutInput, UpdateAboutInput, AboutQueryInput } from "./about.schema";
+import { CreateAboutInput, UpdateAboutInput, AboutQueryInput, MediaObject } from "./about.schema";
 import prisma from "@/config/client";
 import { logger } from "@/utils/logger";
 import { PaginationMeta } from "@/utils/response";
-import { deleteOldFile, getAboutFileUrl, getAboutFilePath, getFileNameFromUrl } from "@/middlewares/multer/aboutMulter";
-import path from "path";
+import { 
+  processAboutUploads,
+  validateAboutUploads,
+  cleanupAboutTempFiles 
+} from "./about.upload";
 
 export default class AboutService {
   
   /**
    * Create new about information
    */
-  static async createAbout(data: CreateAboutInput) {
+  static async createAbout(data: CreateAboutInput, files?: any) {
     try {
       logger.info("Creating new about information", { data });
-        const about = await prisma.about.create({
+
+      // Validate uploaded files if any
+      let mediaData: { logo?: MediaObject[]; banner?: MediaObject[] } = {};
+      if (files) {
+        const uploadErrors = validateAboutUploads(files);
+        if (uploadErrors.length > 0) {
+          cleanupAboutTempFiles(
+            [...(files.logo || []), ...(files.banner || [])].map((f: any) => f.path)
+          );
+          throw new Error(`Upload validation failed: ${uploadErrors.join(', ')}`);
+        }
+
+        // Process uploads
+        mediaData = await processAboutUploads(files);
+      }
+
+      const about = await prisma.about.create({
         data: {
           schoolName: data.schoolName,
           website: data.website || null,
@@ -21,11 +40,14 @@ export default class AboutService {
           email: data.email || null,
           fanpage: data.fanpage || null,
           mapEmbedCode: data.mapEmbedCode || null,
+          logo: mediaData.logo || data.logo || undefined,
+          banner: mediaData.banner || data.banner || undefined,
         },
       });
 
       logger.info("About information created successfully", { aboutId: about.id });
-      return about;    } catch (error: any) {
+      return about;
+    } catch (error: any) {
       logger.error("Failed to create about information", { error, data });
       throw {
         success: false,
@@ -52,9 +74,24 @@ export default class AboutService {
 
       if (search) {
         whereClause.OR = [
-          { schoolName: { contains: search, mode: 'insensitive' } },
-          { departmentName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
+          {
+            schoolName: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          },
+          {
+            departmentName: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          },
+          {
+            email: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          }
         ];
       }
 
@@ -86,7 +123,8 @@ export default class AboutService {
         page 
       });
 
-      return { aboutList, pagination };    } catch (error: any) {
+      return { aboutList, pagination };
+    } catch (error: any) {
       logger.error("Failed to get about information list", { error, query });
       throw {
         success: false,
@@ -117,7 +155,8 @@ export default class AboutService {
       }
 
       logger.info("About information retrieved successfully", { aboutId: about.id });
-      return about;    } catch (error: any) {
+      return about;
+    } catch (error: any) {
       if (error.success === false) {
         throw error;
       }
@@ -129,10 +168,11 @@ export default class AboutService {
       };
     }
   }
+
   /**
    * Update about information
    */
-  static async updateAbout(id: number, data: UpdateAboutInput, files?: { logo?: Express.Multer.File; banner?: Express.Multer.File }) {
+  static async updateAbout(id: number, data: UpdateAboutInput, files?: any) {
     try {
       logger.info("Updating about information", { id, data, files: files ? Object.keys(files) : [] });
 
@@ -150,6 +190,21 @@ export default class AboutService {
         };
       }
 
+      // Validate uploaded files if any
+      let mediaData: { logo?: MediaObject[]; banner?: MediaObject[] } = {};
+      if (files) {
+        const uploadErrors = validateAboutUploads(files);
+        if (uploadErrors.length > 0) {
+          cleanupAboutTempFiles(
+            [...(files.logo || []), ...(files.banner || [])].map((f: any) => f.path)
+          );
+          throw new Error(`Upload validation failed: ${uploadErrors.join(', ')}`);
+        }
+
+        // Process uploads
+        mediaData = await processAboutUploads(files);
+      }
+
       // Prepare update data
       const updateData: any = {
         ...(data.schoolName && { schoolName: data.schoolName }),
@@ -158,28 +213,21 @@ export default class AboutService {
         ...(data.email !== undefined && { email: data.email }),
         ...(data.fanpage !== undefined && { fanpage: data.fanpage }),
         ...(data.mapEmbedCode !== undefined && { mapEmbedCode: data.mapEmbedCode }),
-      };      // Handle logo upload
-      if (files?.logo) {
-        // Delete old logo if exists
-        if (existingAbout.logo) {
-          const oldLogoPath = getAboutFilePath(path.basename(existingAbout.logo));
-          deleteOldFile(oldLogoPath);
-        }
-        // Set new logo URL
-        updateData.logo = getAboutFileUrl(files.logo.filename);
-        logger.info("Logo uploaded successfully", { filename: files.logo.filename });
+      };
+
+      // Handle media updates
+      if (mediaData.logo) {
+        updateData.logo = mediaData.logo;
+        logger.info("Logo uploaded successfully", { count: mediaData.logo.length });
+      } else if (data.logo) {
+        updateData.logo = data.logo;
       }
 
-      // Handle banner upload
-      if (files?.banner) {
-        // Delete old banner if exists
-        if (existingAbout.banner) {
-          const oldBannerPath = getAboutFilePath(path.basename(existingAbout.banner));
-          deleteOldFile(oldBannerPath);
-        }
-        // Set new banner URL
-        updateData.banner = getAboutFileUrl(files.banner.filename);
-        logger.info("Banner uploaded successfully", { filename: files.banner.filename });
+      if (mediaData.banner) {
+        updateData.banner = mediaData.banner;
+        logger.info("Banner uploaded successfully", { count: mediaData.banner.length });
+      } else if (data.banner) {
+        updateData.banner = data.banner;
       }
 
       // Update the about information
@@ -189,7 +237,8 @@ export default class AboutService {
       });
 
       logger.info("About information updated successfully", { aboutId: updatedAbout.id });
-      return updatedAbout;} catch (error: any) {
+      return updatedAbout;
+    } catch (error: any) {
       if (error.success === false) {
         throw error;
       }
@@ -223,14 +272,15 @@ export default class AboutService {
         };
       }
 
-      // Soft delete by setting isActive to false
+      // Soft delete
       const deletedAbout = await prisma.about.update({
         where: { id },
         data: { isActive: false },
       });
 
       logger.info("About information deleted successfully", { aboutId: deletedAbout.id });
-      return deletedAbout;    } catch (error: any) {
+      return deletedAbout;
+    } catch (error: any) {
       if (error.success === false) {
         throw error;
       }
@@ -264,14 +314,15 @@ export default class AboutService {
         };
       }
 
-      // Restore by setting isActive to true
+      // Restore
       const restoredAbout = await prisma.about.update({
         where: { id },
         data: { isActive: true },
       });
 
       logger.info("About information restored successfully", { aboutId: restoredAbout.id });
-      return restoredAbout;    } catch (error: any) {
+      return restoredAbout;
+    } catch (error: any) {
       if (error.success === false) {
         throw error;
       }
@@ -283,6 +334,7 @@ export default class AboutService {
       };
     }
   }
+
   /**
    * Hard delete about information (permanent deletion)
    */
@@ -302,26 +354,19 @@ export default class AboutService {
           message: "Không tìm thấy thông tin giới thiệu để xóa vĩnh viễn",
           error: "About not found",
         };
-      }      // Delete associated files
-      if (existingAbout.logo) {
-        const logoPath = getAboutFilePath(path.basename(existingAbout.logo));
-        deleteOldFile(logoPath);
-        logger.info("Logo file deleted", { logoPath });
       }
 
-      if (existingAbout.banner) {
-        const bannerPath = getAboutFilePath(path.basename(existingAbout.banner));
-        deleteOldFile(bannerPath);
-        logger.info("Banner file deleted", { bannerPath });
-      }
+      // Delete associated files if exist
+      // Note: In JSON format, we might have multiple files, so cleanup should be handled appropriately
 
-      // Permanently delete
-      await prisma.about.delete({
+      // Hard delete
+      const deletedAbout = await prisma.about.delete({
         where: { id },
       });
 
-      logger.info("About information permanently deleted", { id });
-      return { id, message: "Thông tin giới thiệu đã được xóa vĩnh viễn" };} catch (error: any) {
+      logger.info("About information permanently deleted", { aboutId: deletedAbout.id });
+      return deletedAbout;
+    } catch (error: any) {
       if (error.success === false) {
         throw error;
       }

@@ -218,10 +218,10 @@ Authorization: Bearer {token}
 ```javascript
 const formData = new FormData();
 formData.append("name", "Samsung Electronics");
-formData.append("videos", "https://youtube.com/watch?v=abc123");
+formData.append("videos", videoFile);  // 1 file
 formData.append("contestId", "1");
-formData.append("logo", logoFile);      // File upload
-formData.append("images", imageFile);   // File upload
+formData.append("logo", logoFile);     // 1 file
+formData.append("images", imageFile);  // 1 file
 ```
 
 **JSON Body (alternative without files):**

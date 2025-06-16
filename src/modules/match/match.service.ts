@@ -11,7 +11,10 @@ import { Match } from "@prisma/client";
 import slugify from "slugify";
 
 export default class MatchService {
-  static async getAll(query: MatchQueryInput): Promise<{
+  static async getAll(
+    query: MatchQueryInput,
+    contestId: number
+  ): Promise<{
     matches: MatchType[];
     pagination: {
       page: number;
@@ -22,7 +25,7 @@ export default class MatchService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search, isActive, contestId } = query;
+    const { page, limit, search, isActive, status } = query;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
     if (isActive !== undefined) {
@@ -30,6 +33,10 @@ export default class MatchService {
     }
     if (contestId !== undefined) {
       whereClause.contestId = contestId;
+    }
+
+    if (status !== undefined) {
+      whereClause.status = status;
     }
     if (search) {
       const keywords = search.trim().split(/\s+/);
@@ -68,12 +75,14 @@ export default class MatchService {
       },
     });
     const matches = matchRaw.map(key => ({
+      id: key.id,
       contestId: key.contestId,
       name: key.name,
       startTime: key.startTime,
       endTime: key.endTime,
       currentQuestion: key.currentQuestion,
       questionPackageId: key.questionPackageId,
+      questionPackageName: key.questionPackage.name,
       studentFullName: key.student?.fullName ?? "",
       contestName: key.contest?.name ?? "",
       isActive: key.isActive,
@@ -113,6 +122,7 @@ export default class MatchService {
         isActive: true,
         startTime: true,
         endTime: true,
+        roundId: true,
         status: true,
         currentQuestion: true,
         questionPackageId: true,

@@ -118,7 +118,16 @@ export const updateQuestionSchema = z.object({
   explanation: z.string().optional().nullable(),  questionTopicId: z.preprocess((val) => val === undefined || val === null ? undefined : Number(val), z.number()
     .int("Question Topic ID phải là số nguyên")
     .positive("Question Topic ID phải là số dương")).optional().nullable(),
-  isActive: z.boolean().optional(),
+  isActive: z.preprocess(
+    (val) => {
+      if (val === undefined || val === null) return undefined;
+      if (typeof val === 'string') {
+        return val === 'true' || val === '1';
+      }
+      return Boolean(val);
+    },
+    z.boolean()
+  ).optional(),
   // Delete support fields
   deleteQuestionMedia: z.preprocess(
     (val) => {

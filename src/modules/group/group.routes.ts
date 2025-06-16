@@ -17,10 +17,9 @@ const groupRouter = Router();
 // prive
 
 groupRouter.get(
-  "/",
+  "/contest/:slug",
   authenticate,
   role("Admin"),
-  validateQuery(GroupsQuerySchema),
   GroupController.getAlls
 );
 

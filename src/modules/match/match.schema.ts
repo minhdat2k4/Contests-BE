@@ -195,6 +195,7 @@ export const MatchQuerySchema = z.object({
       "Id cuộc thi phải là số nguyên dương"
     )
     .optional(),
+  status: z.nativeEnum(ContestStatus).optional(),
 });
 
 export const deleteMatchesSchema = z.object({

@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { validateBody, validateParams, validateQuery } from "@/utils/validation";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "@/utils/validation";
 import { authenticate } from "@/middlewares/auth";
 import QuestionPackageController from "./questionPackage.controller";
 import {
@@ -52,6 +56,12 @@ questionPackageRouter.get(
  * @description Get question package by ID
  * @access Private (Admin/Judge)
  */
+
+questionPackageRouter.get(
+  "/get-question-package",
+  QuestionPackageController.getListQuestionPackage
+);
+
 questionPackageRouter.get(
   "/:id",
   validateParams(QuestionPackageIdSchema),

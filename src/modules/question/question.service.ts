@@ -357,23 +357,28 @@ export class QuestionService {
           await this.deleteMediaFiles(oldMediaAnswer);
         }
         mediaAnswer = await this.processMediaFiles(uploadedFiles.mediaAnswer);
-      }
-
-      // Prepare update data
+      }      // Prepare update data
       const updateData: any = {};
 
       if (data.intro !== undefined) updateData.intro = data.intro;
       if (data.defaultTime !== undefined) updateData.defaultTime = data.defaultTime;
-      if (data.questionType !== undefined) updateData.questionType = data.questionType; 
-      if (questionMedia !== null) updateData.questionMedia = questionMedia;
+      if (data.questionType !== undefined) updateData.questionType = data.questionType;
+      if (data.content !== undefined) updateData.content = data.content; // FIX: Missing content field
+      if (data.questionMedia !== undefined) updateData.questionMedia = data.questionMedia;
       if (data.options !== undefined) updateData.options = data.options;
       if (data.correctAnswer !== undefined) updateData.correctAnswer = data.correctAnswer;
-      if (mediaAnswer !== null) updateData.mediaAnswer = mediaAnswer;
+      if (data.mediaAnswer !== undefined) updateData.mediaAnswer = data.mediaAnswer;
       if (data.score !== undefined) updateData.score = data.score;
       if (data.difficulty !== undefined) updateData.difficulty = data.difficulty;
       if (data.explanation !== undefined) updateData.explanation = data.explanation;
       if (data.questionTopicId !== undefined) updateData.questionTopicId = data.questionTopicId;
       if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
+      // Override with processed media if files were uploaded
+      if (questionMedia !== null) updateData.questionMedia = questionMedia;
+      if (mediaAnswer !== null) updateData.mediaAnswer = mediaAnswer;
+
+      logger.info(`Updating question ${id} with fields:`, Object.keys(updateData));
 
       const updatedQuestion = await this.prisma.question.update({
         where: { id },

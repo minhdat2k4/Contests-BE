@@ -115,11 +115,37 @@ export const updateQuestionSchema = z.object({
     .min(1, "Điểm tối thiểu là 1")
     .max(100, "Điểm tối đa là 100")).optional().nullable(),
   difficulty: DifficultyEnum.optional(),
-  explanation: z.string().optional().nullable(),
-  questionTopicId: z.preprocess((val) => val === undefined || val === null ? undefined : Number(val), z.number()
+  explanation: z.string().optional().nullable(),  questionTopicId: z.preprocess((val) => val === undefined || val === null ? undefined : Number(val), z.number()
     .int("Question Topic ID phải là số nguyên")
     .positive("Question Topic ID phải là số dương")).optional().nullable(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
+  // Delete support fields
+  deleteQuestionMedia: z.preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return [val];
+        }
+      }
+      return val;
+    },
+    z.array(z.string())
+  ).optional(),
+  deleteMediaAnswer: z.preprocess(
+    (val) => {
+      if (typeof val === "string") {
+        try {
+          return JSON.parse(val);
+        } catch {
+          return [val];
+        }
+      }
+      return val;
+    },
+    z.array(z.string())
+  ).optional()
 }).refine(
   (data) => Object.keys(data).length > 0,
   {

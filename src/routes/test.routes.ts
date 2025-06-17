@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { sponsorMediaUpload } from "../modules/sponsor/sponsor.upload";
+import { sponsorUploadMiddleware } from "../modules/sponsor/sponsor.upload";
 
 const testRouter = Router();
 
 // Simple test endpoint for file upload without auth
 testRouter.post("/test-upload", (req, res, next) => {
-  sponsorMediaUpload(req, res, (err) => {
+  sponsorUploadMiddleware.fields()(req, res, (err: any) => {
     if (err) {
       res.status(400).json({
         success: false,

@@ -1,9 +1,12 @@
 // Register module aliases for production
 import "module-alias/register";
+import http from "http";
+import { Server } from "socket.io";
 
 import app from "./app";
 import { connectDatabase, disconnectDatabase } from "./config/database";
 import { logger } from "./utils/logger";
+import { initializeSocketIO } from "./socket";
 
 const PORT = process.env.PORT || 3000;
 
@@ -24,8 +27,19 @@ const startServer = async (): Promise<void> => {
     // Connect to database
     await connectDatabase();
 
-    // Start HTTP server
-    const server = app.listen(PORT, () => {
+    // Tạo server HTTP từ app Express
+    const httpServer = http.createServer(app);
+
+    // Khởi tạo Socket.IO và gắn vào server
+    initializeSocketIO(new Server(httpServer, {
+      cors: {
+        origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+        methods: ["GET", "POST"],
+        credentials: true,
+      },
+    }));
+
+    httpServer.listen(PORT, () => {
       logger.info(`🚀 Server is running on port ${PORT}`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
       logger.info(`📖 API Documentation: http://localhost:${PORT}/api/v1`);

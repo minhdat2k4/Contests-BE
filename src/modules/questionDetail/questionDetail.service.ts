@@ -566,6 +566,7 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
+            explanation: true,
             content: true,
             questionType: true,
             difficulty: true,
@@ -1140,5 +1141,175 @@ export default class QuestionDetailService {
         },
       },
     });
+  }
+
+  /**
+   * Get questions not in a specific package with pagination and filtering
+   */
+  static async getQuestionsNotInPackage(
+    questionPackageId: number,
+    queryInput: {
+      page: number;
+      limit: number;
+      search?: string;
+      questionType?: string;
+      difficulty?: string;
+      isActive?: boolean;
+      sortBy?: "id" | "createdAt" | "updatedAt" | "difficulty" | "questionType";
+      sortOrder?: "asc" | "desc";
+    }
+  ): Promise<{
+    packageInfo: {
+      id: number;
+      name: string;
+    } | null;
+    questions: Array<{
+      id: number;
+      content: string;
+      questionType: string;
+      difficulty: string;
+      defaultTime: number;
+      score: number;
+      isActive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+    filters: {
+      totalQuestions: number;
+      filteredQuestions: number;
+      appliedFilters: {
+        questionType?: string;
+        difficulty?: string;
+        isActive?: boolean;
+        search?: string;
+      };
+    };
+  }> {
+    const {
+      page,
+      limit,
+      search,
+      questionType,
+      difficulty,
+      isActive = true,
+      sortBy = "id",
+      sortOrder = "asc",
+    } = queryInput;
+    const skip = (page - 1) * limit;
+
+    // Get package info
+    const packageInfo = await prisma.questionPackage.findFirst({
+      where: { id: questionPackageId },
+      select: { id: true, name: true },
+    });
+
+    if (!packageInfo) {
+      throw new Error("Không tìm thấy gói câu hỏi");
+    }
+
+    // Get IDs of questions already in the package
+    const existingQuestionIds = await prisma.questionDetail.findMany({
+      where: {
+        questionPackageId,
+        isActive: true,
+      },
+      select: {
+        questionId: true,
+      },
+    });
+
+    const existingIds = existingQuestionIds.map(item => item.questionId);
+
+    // Build where clause for questions not in the package
+    const whereClause: any = {
+      id: {
+        notIn: existingIds.length > 0 ? existingIds : [-1], // If no questions in package, use dummy value to avoid empty array
+      },
+      isActive,
+    };
+
+    // Add filters
+    if (questionType) {
+      whereClause.questionType = questionType;
+    }
+
+    if (difficulty) {
+      whereClause.difficulty = difficulty;
+    }
+
+    if (search) {
+      whereClause.content = {
+        contains: search,
+      };
+    }
+
+    // Get total count of all available questions not in package
+    const totalQuestions = await prisma.question.count({
+      where: {
+        id: {
+          notIn: existingIds.length > 0 ? existingIds : [-1],
+        },
+        isActive: true,
+      },
+    });
+
+    // Count filtered records
+    const filteredTotal = await prisma.question.count({
+      where: whereClause,
+    });
+
+    // Get paginated results with proper sorting
+    const questions = await prisma.question.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      select: {
+        id: true,
+        content: true,
+        questionType: true,
+        difficulty: true,
+        defaultTime: true,
+        score: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const totalPages = Math.ceil(filteredTotal / limit);
+
+    return {
+      packageInfo,
+      questions,
+      pagination: {
+        page,
+        limit,
+        total: filteredTotal,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+      filters: {
+        totalQuestions,
+        filteredQuestions: filteredTotal,
+        appliedFilters: {
+          ...(questionType && { questionType }),
+          ...(difficulty && { difficulty }),
+          ...(isActive !== undefined && { isActive }),
+          ...(search && { search }),
+        },
+      },
+    };
   }
 }

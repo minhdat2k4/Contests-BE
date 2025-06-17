@@ -18,9 +18,8 @@ import {
   getFilePath 
 } from "@/middlewares/imageUpload";
 import { 
-  processSponsorUploads, 
-  validateSponsorMedia, 
-  cleanupTempFiles 
+  processSponsorFiles, 
+  cleanupUploadedFiles 
 } from "./sponsor.upload";
 
 export class SponsorController {
@@ -98,30 +97,22 @@ export class SponsorController {
       }
     }
   }
-
   /**
    * Create new sponsor
-   */  async createSponsor(req: Request, res: Response): Promise<void> {
+   */
+  async createSponsor(req: Request, res: Response): Promise<void> {
     try {
-      // Validate uploaded files
-      const files = req.files as any;
-      const uploadErrors = validateSponsorMedia(files);
+      const data: CreateSponsorData = req.body;
       
-      if (uploadErrors.length > 0) {
-        cleanupTempFiles(files);
-        res.status(400).json(errorResponse(
-          `Upload validation failed: ${uploadErrors.join(', ')}`, 
-          ERROR_CODES.VALIDATION_ERROR
-        ));
-        return;
+      // Process uploaded files if any
+      let uploadedFiles = {};
+      if (req.files) {
+        uploadedFiles = processSponsorFiles(req.files);
       }
-
-      // Process uploads
-      const uploadedFiles = processSponsorUploads(files);
       
       // Merge uploaded files with request data
       const sponsorData = {
-        ...req.body,
+        ...data,
         ...uploadedFiles
       };
 
@@ -133,8 +124,9 @@ export class SponsorController {
       logger.error("Error in createSponsor controller:", error);
       
       // Cleanup uploaded files on error
-      const files = req.files as any;
-      cleanupTempFiles(files);
+      if (req.files) {
+        cleanupUploadedFiles(req.files);
+      }
       
       if (error instanceof CustomError) {
         res.status(error.statusCode).json(errorResponse(error.message, error.code));
@@ -142,33 +134,23 @@ export class SponsorController {
         res.status(500).json(errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR));
       }
     }
-  }
-  /**
+  }  /**
    * Create sponsor by contest slug
    */
   async createSponsorByContestSlug(req: Request, res: Response): Promise<void> {
     try {
       const { slug } = req.params;
+      const data: CreateSponsorData = req.body;
       
-      // Validate uploaded files
-      const files = req.files as any;
-      const uploadErrors = validateSponsorMedia(files);
-      
-      if (uploadErrors.length > 0) {
-        cleanupTempFiles(files);
-        res.status(400).json(errorResponse(
-          `Upload validation failed: ${uploadErrors.join(', ')}`, 
-          ERROR_CODES.VALIDATION_ERROR
-        ));
-        return;
+      // Process uploaded files if any
+      let uploadedFiles = {};
+      if (req.files) {
+        uploadedFiles = processSponsorFiles(req.files);
       }
-
-      // Process uploads
-      const uploadedFiles = processSponsorUploads(files);
       
       // Merge uploaded files with request data
       const sponsorData = {
-        ...req.body,
+        ...data,
         ...uploadedFiles
       };
 
@@ -180,8 +162,9 @@ export class SponsorController {
       logger.error("Error in createSponsorByContestSlug controller:", error);
       
       // Cleanup uploaded files on error
-      const files = req.files as any;
-      cleanupTempFiles(files);
+      if (req.files) {
+        cleanupUploadedFiles(req.files);
+      }
       
       if (error instanceof CustomError) {
         res.status(error.statusCode).json(errorResponse(error.message, error.code));
@@ -193,30 +176,21 @@ export class SponsorController {
 
   /**
    * Update sponsor (PATCH method)
-   */  async updateSponsor(req: Request, res: Response): Promise<void> {
+   */
+  async updateSponsor(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const bodyData = req.body;
+      const data: UpdateSponsorData = req.body;
       
-      // Validate uploaded files
-      const files = req.files as any;
-      const uploadErrors = validateSponsorMedia(files);
-      
-      if (uploadErrors.length > 0) {
-        cleanupTempFiles(files);
-        res.status(400).json(errorResponse(
-          `Upload validation failed: ${uploadErrors.join(', ')}`, 
-          ERROR_CODES.VALIDATION_ERROR
-        ));
-        return;
+      // Process uploaded files if any
+      let uploadedFiles = {};
+      if (req.files) {
+        uploadedFiles = processSponsorFiles(req.files);
       }
-
-      // Process uploads
-      const uploadedFiles = processSponsorUploads(files);
       
       // Merge uploaded files with request data
       const updateData = {
-        ...bodyData,
+        ...data,
         ...uploadedFiles
       };
       
@@ -226,8 +200,7 @@ export class SponsorController {
         return;
       }
 
-      // Get existing sponsor for cleanup
-      const existingSponsor = await this.sponsorService.getSponsorById(Number(id));      const sponsor = await this.sponsorService.updateSponsor(Number(id), updateData);
+      const sponsor = await this.sponsorService.updateSponsor(Number(id), updateData);
 
       logger.info(`Sponsor updated successfully: ${sponsor.id}`);
       res.json(successResponse(sponsor, "Cập nhật nhà tài trợ thành công"));
@@ -235,8 +208,9 @@ export class SponsorController {
       logger.error("Error in updateSponsor controller:", error);
       
       // Cleanup uploaded files on error
-      const files = req.files as any;
-      cleanupTempFiles(files);
+      if (req.files) {
+        cleanupUploadedFiles(req.files);
+      }
       
       if (error instanceof CustomError) {
         res.status(error.statusCode).json(errorResponse(error.message, error.code));

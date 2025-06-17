@@ -3,7 +3,7 @@ import { SponsorController } from "./sponsor.controller";
 import { authenticate, role } from "@/middlewares/auth";
 import { validateBody, validateParams, validateQuery } from "@/utils/validation";
 import { handleUploadError } from "@/middlewares/multer/uploadErrorHandler";
-import { sponsorMediaUpload } from "./sponsor.upload";
+import { sponsorUploadMiddleware } from "./sponsor.upload";
 import {
   createSponsorSchema,
   updateSponsorSchema,
@@ -18,8 +18,19 @@ import {
 const router = Router();
 const sponsorController = new SponsorController();
 
-// Configure multer for sponsor uploads
-const uploadSponsorFiles = sponsorMediaUpload;
+// Configure upload middleware with error handling
+const handleMediaUpload = (uploadMiddleware: any) => {
+  return [
+    (req: any, res: any, next: any) => {
+      uploadMiddleware(req, res, (error: any) => {
+        if (error) {
+          return handleUploadError(error, req, res, next);
+        }
+        next();
+      });
+    }
+  ];
+};
 
 /**
  * @route GET /api/sponsors/statistics
@@ -66,10 +77,9 @@ router.post(
   "/contest/:slug",
   authenticate,
   role("Admin"),
-  uploadSponsorFiles,
-  handleUploadError,
+  ...handleMediaUpload(sponsorUploadMiddleware.fields()),
   validateParams(contestSlugSchema),
-  // Note: Body validation will be done in controller due to file uploads
+  validateBody(createSponsorSchema),
   sponsorController.createSponsorByContestSlug.bind(sponsorController)
 );
 
@@ -93,9 +103,8 @@ router.post(
   "/",
   authenticate,
   role("Admin"),
-  uploadSponsorFiles,
-  handleUploadError,
-  // Note: Body validation will be done in controller due to file uploads
+  ...handleMediaUpload(sponsorUploadMiddleware.fields()),
+  validateBody(createSponsorSchema),
   sponsorController.createSponsor.bind(sponsorController)
 );
 
@@ -119,10 +128,9 @@ router.patch(
   "/:id",
   authenticate,
   role("Admin"),
-  uploadSponsorFiles,
-  handleUploadError,
+  ...handleMediaUpload(sponsorUploadMiddleware.fields()),
   validateParams(getSponsorByIdSchema),
-  // Note: Body validation will be done in controller due to file uploads
+  validateBody(updateSponsorSchema),
   sponsorController.updateSponsor.bind(sponsorController)
 );
 
@@ -137,21 +145,6 @@ router.delete(
   role("Admin"),
   validateParams(deleteSponsorSchema),
   sponsorController.deleteSponsor.bind(sponsorController)
-);
-
-/**
- * @route POST /api/sponsors/:id/upload
- * @desc Upload media files for sponsor
- * @access Private (Admin only)
- */
-router.post(
-  "/:id/upload",
-  authenticate,
-  role("Admin"),
-  uploadSponsorFiles,
-  handleUploadError,
-  validateParams(getSponsorByIdSchema),
-  sponsorController.uploadSponsorMedia.bind(sponsorController)
 );
 
 export { router as sponsorRouter };

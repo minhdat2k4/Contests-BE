@@ -6,6 +6,7 @@ import {
   UpdateStudentInput,
   Students,
 } from "@/modules/student";
+import { table } from "console";
 export default class StudentService {
   static async updateStudent(
     id: number,
@@ -184,6 +185,7 @@ export default class StudentService {
         },
       },
     });
+
     const students = studentRaw.map(k => ({
       id: k.id,
       fullName: k.fullName,
@@ -191,7 +193,13 @@ export default class StudentService {
       isActive: k.isActive,
       className: k.class?.name ?? null,
     }));
-    const total = await prisma.student.count({ where: whereClause });
+    const total = await prisma.student.count({
+      where: {
+        ...whereClause,
+        contestants: { none: { contestId: contestId } },
+      },
+    });
+
     const totalPages = Math.ceil(total / limit);
     return {
       students: students,

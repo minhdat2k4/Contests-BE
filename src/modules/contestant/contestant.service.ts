@@ -43,7 +43,7 @@ export default class ContestantService {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
         { contest: { is: { name: { contains: keyword } } } },
-        { student: { is: { name: { contains: keyword } } } },
+        { student: { is: { fullName: { contains: keyword } } } },
         { round: { is: { name: { contains: keyword } } } },
       ]);
     }

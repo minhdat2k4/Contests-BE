@@ -232,6 +232,56 @@ export const QuestionPackagesQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
 });
 
+// Schema for querying questions not in a package
+export const QuestionsNotInPackageQuerySchema = z.object({
+  page: z
+    .string()
+    .optional()
+    .default("1")
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "Trang phải là số nguyên dương",
+    }),
+  limit: z
+    .string()
+    .optional()
+    .default("10")
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val > 0 && val <= 100, {
+      message: "Giới hạn phải là số nguyên dương và không quá 100",
+    }),
+  search: z.string().optional(),
+  questionType: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true;
+      const validTypes = ["multiple_choice", "essay"];
+      return validTypes.includes(val);
+    }, {
+      message: "Loại câu hỏi không hợp lệ. Chỉ chấp nhận: multiple_choice, essay",
+    }),
+  difficulty: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true;
+      const validDifficulties = ["Alpha", "Beta", "Rc", "Gold"];
+      return validDifficulties.includes(val);
+    }, {
+      message: "Độ khó không hợp lệ. Chỉ chấp nhận: Alpha, Beta, Rc, Gold",
+    }),
+  isActive: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === undefined) return undefined;
+      return val === "true";
+    }),
+  sortBy: z.enum(["id", "createdAt", "updatedAt", "difficulty", "questionType"]).optional().default("id"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
+});
+
 // TypeScript types
 export type CreateQuestionDetailInput = z.infer<typeof CreateQuestionDetailSchema>;
 export type UpdateQuestionDetailInput = z.infer<typeof UpdateQuestionDetailSchema>;
@@ -242,6 +292,7 @@ export type ReorderQuestionsInput = z.infer<typeof ReorderQuestionsSchema>;
 export type BatchDeleteQuestionDetailsInput = z.infer<typeof BatchDeleteQuestionDetailsSchema>;
 export type PackageQuestionsQueryInput = z.infer<typeof PackageQuestionsQuerySchema>;
 export type QuestionPackagesQueryInput = z.infer<typeof QuestionPackagesQuerySchema>;
+export type QuestionsNotInPackageQueryInput = z.infer<typeof QuestionsNotInPackageQuerySchema>;
 
 // Response types
 export interface QuestionDetailResponse {

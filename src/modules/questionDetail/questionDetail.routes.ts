@@ -12,6 +12,7 @@ import {
   BatchDeleteQuestionDetailsSchema,
   PackageQuestionsQuerySchema,
   QuestionPackagesQuerySchema,
+  QuestionsNotInPackageQuerySchema,
 } from "./questionDetail.schema";
 
 const questionDetailRouter = Router();
@@ -175,6 +176,17 @@ questionDetailRouter.delete(
 questionDetailRouter.put(
   "/package/:packageId/normalize-orders",
   QuestionDetailController.normalizeQuestionOrders
+);
+
+/**
+ * @route GET /api/question-details/package/:packageId/available-questions
+ * @description Get questions not in a specific package with pagination and filtering
+ * @access Private (Admin/Judge)
+ */
+questionDetailRouter.get(
+  "/package/:packageId/available-questions",
+  validateQuery(QuestionsNotInPackageQuerySchema),
+  QuestionDetailController.getQuestionsNotInPackage
 );
 
 export { questionDetailRouter };

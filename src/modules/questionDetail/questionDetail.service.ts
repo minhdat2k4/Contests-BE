@@ -82,7 +82,7 @@ export default class QuestionDetailService {
     questionPackageId: number,
     data: UpdateQuestionDetailInput
   ): Promise<QuestionDetail | null> {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
       const updateData: any = {};
 
       // Handle question order update with automatic reordering
@@ -181,7 +181,7 @@ export default class QuestionDetailService {
     questionId: number,
     questionPackageId: number
   ): Promise<QuestionDetail | null> {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
       // Get the question detail to know its order before deleting
       const questionDetail = await tx.questionDetail.findFirst({
         where: {
@@ -232,7 +232,7 @@ export default class QuestionDetailService {
     questionId: number,
     questionPackageId: number
   ): Promise<QuestionDetail | null> {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
       // Get the question detail to know its order before soft deleting
       const questionDetail = await tx.questionDetail.findFirst({
         where: {
@@ -334,7 +334,16 @@ export default class QuestionDetailService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, questionPackageId, questionId, search, isActive, sortBy, sortOrder } = queryInput;
+    const {
+      page,
+      limit,
+      questionPackageId,
+      questionId,
+      search,
+      isActive,
+      sortBy,
+      sortOrder,
+    } = queryInput;
     const skip = (page - 1) * limit;
 
     // Build where clause
@@ -350,7 +359,8 @@ export default class QuestionDetailService {
 
     if (isActive !== undefined) {
       whereClause.isActive = isActive;
-    }    if (search) {
+    }
+    if (search) {
       whereClause.OR = [
         {
           question: {
@@ -381,7 +391,8 @@ export default class QuestionDetailService {
       take: limit,
       orderBy: {
         [sortBy]: sortOrder,
-      },      include: {
+      },
+      include: {
         question: {
           select: {
             id: true,
@@ -402,7 +413,7 @@ export default class QuestionDetailService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      questionDetails: questionDetails.map((detail) => ({
+      questionDetails: questionDetails.map(detail => ({
         questionId: detail.questionId,
         questionPackageId: detail.questionPackageId,
         questionOrder: detail.questionOrder,
@@ -421,7 +432,8 @@ export default class QuestionDetailService {
         hasPrev: page > 1,
       },
     };
-  }  /**
+  }
+  /**
    * Get questions by package ID with ordering and pagination
    */
   static async getQuestionsByPackageId(
@@ -434,7 +446,12 @@ export default class QuestionDetailService {
       questionType?: string;
       difficulty?: string;
       isActive?: boolean;
-      sortBy?: "questionOrder" | "createdAt" | "updatedAt" | "difficulty" | "questionType";
+      sortBy?:
+        | "questionOrder"
+        | "createdAt"
+        | "updatedAt"
+        | "difficulty"
+        | "questionType";
       sortOrder?: "asc" | "desc";
     }
   ): Promise<{
@@ -462,16 +479,16 @@ export default class QuestionDetailService {
       };
     };
   }> {
-    const { 
-      page, 
-      limit, 
-      includeInactive = false, 
-      search, 
+    const {
+      page,
+      limit,
+      includeInactive = false,
+      search,
       questionType,
       difficulty,
       isActive,
-      sortBy = "questionOrder", 
-      sortOrder = "asc" 
+      sortBy = "questionOrder",
+      sortOrder = "asc",
     } = queryInput;
     const skip = (page - 1) * limit;
 
@@ -483,7 +500,7 @@ export default class QuestionDetailService {
 
     // Build where clause for question details
     const whereClause: any = { questionPackageId };
-    
+
     // Handle includeInactive vs isActive filters
     if (isActive !== undefined) {
       whereClause.isActive = isActive;
@@ -493,14 +510,15 @@ export default class QuestionDetailService {
 
     // Build question filters
     const questionFilters: any = {};
-    
+
     if (questionType) {
       questionFilters.questionType = questionType;
     }
-    
+
     if (difficulty) {
       questionFilters.difficulty = difficulty;
-    }    if (search) {
+    }
+    if (search) {
       questionFilters.content = {
         contains: search,
       };
@@ -513,7 +531,7 @@ export default class QuestionDetailService {
 
     // Get total count for the package (without filters)
     const totalQuestions = await prisma.questionDetail.count({
-      where: { 
+      where: {
         questionPackageId,
         isActive: !includeInactive ? true : undefined,
       },
@@ -522,9 +540,9 @@ export default class QuestionDetailService {
     // Count filtered records
     const filteredTotal = await prisma.questionDetail.count({
       where: whereClause,
-    });    // Get paginated results with proper sorting
+    }); // Get paginated results with proper sorting
     let orderByClause: any = {};
-    
+
     if (sortBy === "questionType" || sortBy === "difficulty") {
       // Sort by question properties
       orderByClause = {
@@ -548,6 +566,7 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
+            content: true,
             questionType: true,
             difficulty: true,
           },
@@ -565,7 +584,7 @@ export default class QuestionDetailService {
 
     return {
       packageInfo,
-      questions: questionDetails.map((detail) => ({
+      questions: questionDetails.map(detail => ({
         questionId: detail.questionId,
         questionPackageId: detail.questionPackageId,
         questionOrder: detail.questionOrder,
@@ -624,22 +643,29 @@ export default class QuestionDetailService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, includeInactive = false, search, sortBy = "questionOrder", sortOrder = "asc" } = queryInput;
+    const {
+      page,
+      limit,
+      includeInactive = false,
+      search,
+      sortBy = "questionOrder",
+      sortOrder = "asc",
+    } = queryInput;
     const skip = (page - 1) * limit;
 
     // Get question info
     const questionInfo = await prisma.question.findFirst({
       where: { id: questionId },
-      select: { 
-        id: true, 
-        questionType: true, 
-        difficulty: true 
+      select: {
+        id: true,
+        questionType: true,
+        difficulty: true,
       },
     });
 
     // Build where clause
     const whereClause: any = { questionId };
-    
+
     if (!includeInactive) {
       whereClause.isActive = true;
     }
@@ -685,7 +711,7 @@ export default class QuestionDetailService {
 
     return {
       questionInfo,
-      packages: questionDetails.map((detail) => ({
+      packages: questionDetails.map(detail => ({
         questionId: detail.questionId,
         questionPackageId: detail.questionPackageId,
         questionOrder: detail.questionOrder,
@@ -714,7 +740,7 @@ export default class QuestionDetailService {
   ): Promise<QuestionDetail[]> {
     const { questionPackageId, questions } = data;
 
-    const questionDetailsData = questions.map((q) => ({
+    const questionDetailsData = questions.map(q => ({
       questionId: q.questionId,
       questionPackageId,
       questionOrder: q.questionOrder,
@@ -722,7 +748,7 @@ export default class QuestionDetailService {
     }));
 
     return prisma.$transaction(
-      questionDetailsData.map((detail) =>
+      questionDetailsData.map(detail =>
         prisma.questionDetail.create({ data: detail })
       )
     );
@@ -753,7 +779,9 @@ export default class QuestionDetailService {
   /**
    * Get next available question order for a package
    */
-  static async getNextQuestionOrder(questionPackageId: number): Promise<number> {
+  static async getNextQuestionOrder(
+    questionPackageId: number
+  ): Promise<number> {
     const maxOrder = await prisma.questionDetail.findFirst({
       where: { questionPackageId, isActive: true },
       orderBy: { questionOrder: "desc" },
@@ -785,8 +813,11 @@ export default class QuestionDetailService {
     questionPackageId: number,
     questionId1: number,
     questionId2: number
-  ): Promise<{ updatedQuestion1: QuestionDetail; updatedQuestion2: QuestionDetail }> {
-    return prisma.$transaction(async (tx) => {
+  ): Promise<{
+    updatedQuestion1: QuestionDetail;
+    updatedQuestion2: QuestionDetail;
+  }> {
+    return prisma.$transaction(async tx => {
       // Get both question details
       const question1Detail = await tx.questionDetail.findFirst({
         where: {
@@ -839,24 +870,26 @@ export default class QuestionDetailService {
    * Get question detail statistics
    */
   static async getQuestionDetailStats(): Promise<QuestionDetailStatsResponse> {
-    const [totalCount, activeCount, uniqueQuestions, uniquePackages] = await Promise.all([
-      prisma.questionDetail.count(),
-      prisma.questionDetail.count({ where: { isActive: true } }),
-      prisma.questionDetail.groupBy({
-        by: ["questionId"],
-        where: { isActive: true },
-      }),
-      prisma.questionDetail.groupBy({
-        by: ["questionPackageId"],
-        where: { isActive: true },
-      }),
-    ]);
+    const [totalCount, activeCount, uniqueQuestions, uniquePackages] =
+      await Promise.all([
+        prisma.questionDetail.count(),
+        prisma.questionDetail.count({ where: { isActive: true } }),
+        prisma.questionDetail.groupBy({
+          by: ["questionId"],
+          where: { isActive: true },
+        }),
+        prisma.questionDetail.groupBy({
+          by: ["questionPackageId"],
+          where: { isActive: true },
+        }),
+      ]);
 
     const uniqueQuestionCount = uniqueQuestions.length;
     const uniquePackageCount = uniquePackages.length;
-    const averageQuestionsPerPackage = uniquePackageCount > 0 
-      ? Math.round((activeCount / uniquePackageCount) * 100) / 100
-      : 0;
+    const averageQuestionsPerPackage =
+      uniquePackageCount > 0
+        ? Math.round((activeCount / uniquePackageCount) * 100) / 100
+        : 0;
 
     return {
       totalQuestionDetails: totalCount,
@@ -891,7 +924,9 @@ export default class QuestionDetailService {
   /**
    * Check if question package exists in the system
    */
-  static async questionPackageExists(questionPackageId: number): Promise<boolean> {
+  static async questionPackageExists(
+    questionPackageId: number
+  ): Promise<boolean> {
     const questionPackage = await prisma.questionPackage.findFirst({
       where: { id: questionPackageId },
     });
@@ -961,7 +996,8 @@ export default class QuestionDetailService {
           result.failedItems.push({
             questionId: item.questionId,
             questionPackageId: item.questionPackageId,
-            reason: "Không thể xóa chi tiết câu hỏi đang được sử dụng trong trận đấu đang hoạt động",
+            reason:
+              "Không thể xóa chi tiết câu hỏi đang được sử dụng trong trận đấu đang hoạt động",
           });
           continue;
         }
@@ -989,7 +1025,9 @@ export default class QuestionDetailService {
         result.failedItems.push({
           questionId: item.questionId,
           questionPackageId: item.questionPackageId,
-          reason: `Lỗi khi xóa: ${error instanceof Error ? error.message : "Lỗi không xác định"}`,
+          reason: `Lỗi khi xóa: ${
+            error instanceof Error ? error.message : "Lỗi không xác định"
+          }`,
         });
       }
     }
@@ -1000,7 +1038,10 @@ export default class QuestionDetailService {
         await this.normalizeQuestionOrders(packageId);
       } catch (error) {
         // Log error but don't fail the whole operation
-        console.error(`Failed to normalize orders for package ${packageId}:`, error);
+        console.error(
+          `Failed to normalize orders for package ${packageId}:`,
+          error
+        );
       }
     }
 
@@ -1011,7 +1052,9 @@ export default class QuestionDetailService {
    * Reorder question orders in a package to fill gaps (normalize)
    * This method ensures sequential order starting from 1
    */
-  static async normalizeQuestionOrders(questionPackageId: number): Promise<void> {
+  static async normalizeQuestionOrders(
+    questionPackageId: number
+  ): Promise<void> {
     // Get all active question details for the package, ordered by current questionOrder
     const questionDetails = await prisma.questionDetail.findMany({
       where: {
@@ -1019,7 +1062,7 @@ export default class QuestionDetailService {
         isActive: true,
       },
       orderBy: {
-        questionOrder: 'asc',
+        questionOrder: "asc",
       },
       select: {
         questionId: true,
@@ -1030,7 +1073,7 @@ export default class QuestionDetailService {
     // Update each question detail with normalized order (1, 2, 3, ...)
     const updatePromises = questionDetails.map((detail, index) => {
       const newOrder = index + 1;
-      
+
       // Only update if the order is different
       if (detail.questionOrder !== newOrder) {
         return prisma.questionDetail.update({
@@ -1056,7 +1099,7 @@ export default class QuestionDetailService {
    * Shift question orders up after a deletion at specific position
    */
   static async shiftQuestionOrdersUp(
-    questionPackageId: number, 
+    questionPackageId: number,
     deletedOrder: number
   ): Promise<void> {
     await prisma.questionDetail.updateMany({

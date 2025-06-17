@@ -179,7 +179,7 @@ export const MatchQuerySchema = z.object({
       "Id cuộc thi phải là số nguyên dương"
     )
     .optional(),
-  roundId: z
+  questionPackageId: z
     .string()
     .transform(val => parseInt(val))
     .refine(
@@ -187,7 +187,7 @@ export const MatchQuerySchema = z.object({
       "Id cuộc thi phải là số nguyên dương"
     )
     .optional(),
-  questionPackageId: z
+  roundId: z
     .string()
     .transform(val => parseInt(val))
     .refine(

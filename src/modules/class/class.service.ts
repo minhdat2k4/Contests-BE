@@ -140,4 +140,14 @@ export default class ClassService {
       },
     });
   }
+
+  static async getClassBySchoolId(schoolId: number) {
+    return prisma.class.findMany({
+      where: { schoolId: schoolId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
 }

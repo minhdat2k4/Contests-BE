@@ -25,6 +25,14 @@ classRouter.get(
 );
 
 classRouter.get(
+  "/school/:id",
+  authenticate,
+  role("Admin"),
+  validateQuery(ClassQuerySchema),
+  ClassController.getClassBySchoolId
+);
+
+classRouter.get(
   "/:id",
   authenticate,
   role("Admin"),

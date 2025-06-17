@@ -8,6 +8,7 @@ import {
 import { ClassService } from "@/modules/class";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
+import { prisma } from "@/config/database";
 export default class StudentController {
   static async toggleActive(req: Request, res: Response): Promise<void> {
     try {
@@ -222,6 +223,42 @@ export default class StudentController {
         success: true,
         messages,
       });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getStudentNotContestId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const contest = await prisma.contest.findFirst({ where: { slug: slug } });
+      if (!contest) throw new Error("Không tìm thấy cuộc thi ");
+      const query: StudentQueryInput = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: (req.query.search as string) || undefined,
+        classId: parseInt(req.query.classId as string) || undefined,
+        isActive:
+          req.query.isActive !== undefined
+            ? req.query.isActive === "true"
+            : undefined,
+      };
+      const students = await StudentService.getStudentNotContestId(
+        query,
+        contest.id
+      );
+
+      if (!students) {
+        throw new Error("Không tìm thấy sinh viên ");
+      }
+      logger.info(`Lấy danh sách sinh viên thành công`);
+      res.json(
+        successResponse(students, `Lấy danh sách sinh viên  thành công`)
+      );
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

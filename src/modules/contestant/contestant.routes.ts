@@ -7,10 +7,10 @@ import {
 import { ContestantController } from "@/modules/contestant";
 import {
   ContestantIdShame,
-  ContestantQuerySchema,
   deleteContestantesSchema,
   CreateContestantSchema,
   UpdateContestantSchema,
+  CreatesContestShema,
 } from "./contestant.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const contestantRouter = Router();
@@ -20,8 +20,14 @@ contestantRouter.get(
   "/contest/:slug",
   authenticate,
   role("Admin"),
-  validateQuery(ContestantQuerySchema),
   ContestantController.getAlls
+);
+
+contestantRouter.get(
+  "/not-contest/:slug",
+  authenticate,
+  role("Admin"),
+  ContestantController.getAllNotConstest
 );
 
 contestantRouter.get(
@@ -38,6 +44,14 @@ contestantRouter.post(
   role("Admin"),
   validateBody(CreateContestantSchema),
   ContestantController.create
+);
+
+contestantRouter.post(
+  "/bulk/contest/:slug",
+  authenticate,
+  role("Admin"),
+  validateBody(CreatesContestShema),
+  ContestantController.creates
 );
 
 contestantRouter.patch(

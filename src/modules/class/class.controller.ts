@@ -8,6 +8,7 @@ import {
 import { SchoolService } from "@/modules/school";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
+import { prisma } from "@/config/database";
 export default class ClassController {
   static async toggleActive(req: Request, res: Response): Promise<void> {
     try {
@@ -219,6 +220,26 @@ export default class ClassController {
         success: true,
         messages,
       });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getClassBySchoolId(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+
+      const school = await prisma.school.findFirst({
+        where: { id: Number(id) },
+      });
+
+      if (!school) throw new Error("Không tìm thấy trường");
+
+      const classes = await ClassService.getClassBySchoolId(school.id);
+
+      logger.info(`Lấy danh sách thành công`);
+      res.json(successResponse(classes, `Lấy danh sách lớp thành công`));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

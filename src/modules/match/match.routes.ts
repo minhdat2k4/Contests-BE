@@ -52,7 +52,6 @@ matchRouter.patch(
   "/:id",
   authenticate,
   role("Admin"),
-  validateBody(UpdateMatchSchema),
   validateParams(MatchIdShame),
   MatchController.update
 );

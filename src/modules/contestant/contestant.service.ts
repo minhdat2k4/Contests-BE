@@ -23,7 +23,7 @@ export default class ContestantService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search, roundId } = query;
+    const { page, limit, search, roundId, status } = query;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
 
@@ -34,6 +34,11 @@ export default class ContestantService {
     if (roundId !== undefined) {
       whereClause.roundId = roundId;
     }
+
+    if (status !== undefined) {
+      whereClause.status = status;
+    }
+
     if (search) {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
@@ -44,7 +49,7 @@ export default class ContestantService {
     }
 
     const ContestantRaw = await prisma.contestant.findMany({
-      where: {},
+      where: whereClause,
       skip: skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -111,6 +116,25 @@ export default class ContestantService {
     });
   }
 
+  static async createMany(
+    data: Omit<CreateContestantInput, "ids"> & { ids: number[] }
+  ): Promise<Contestant[]> {
+    const created: Contestant[] = [];
+
+    for (const studentId of data.ids) {
+      const contestant = await prisma.contestant.create({
+        data: {
+          studentId,
+          roundId: data.roundId,
+          contestId: data.contestId,
+        },
+      });
+      created.push(contestant);
+    }
+
+    return created;
+  }
+
   static async update(
     id: number,
     data: UpdateContestantInput
@@ -132,11 +156,86 @@ export default class ContestantService {
       },
     });
   }
+
   static async deleteContestant(id: number): Promise<Contestant> {
     return prisma.contestant.delete({
       where: {
         id: id,
       },
     });
+  }
+
+  static async getAllNotConstest(
+    query: ContestantQueryInput,
+    contestId: number
+  ): Promise<{
+    contestantes: ContestantType[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search, roundId, status } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+
+    if (roundId !== undefined) {
+      whereClause.roundId = roundId;
+    }
+
+    if (status !== undefined) {
+      whereClause.status = status;
+    }
+
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { contest: { is: { name: { contains: keyword } } } },
+        { student: { is: { name: { contains: keyword } } } },
+        { round: { is: { name: { contains: keyword } } } },
+      ]);
+    }
+
+    const ContestantRaw = await prisma.contestant.findMany({
+      where: { ...whereClause, contestId: { not: contestId } },
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        student: { select: { fullName: true } },
+        round: { select: { name: true } },
+        contest: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+    const Contestantes = ContestantRaw.map(key => ({
+      id: key.id,
+      fullName: key.student.fullName,
+      roundName: key.round.name,
+      status: key.status,
+    }));
+
+    const total = await prisma.contestant.count({ where: whereClause });
+    const totalPages = Math.ceil(total / limit);
+    return {
+      contestantes: Contestantes,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 }

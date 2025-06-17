@@ -74,6 +74,7 @@ export const ContestantQuerySchema = z.object({
       "Id cuộc thi phải là số nguyên dương"
     )
     .optional(),
+  status: z.nativeEnum(ContestantStatus).optional(),
 });
 
 export const ContestantIdShame = z.object({
@@ -93,6 +94,16 @@ export const deleteContestantesSchema = z.object({
     .min(1, "Phải chọn ít nhất 1 ID để xoá"),
 });
 
+export const CreatesContestShema = z.object({
+  ids: z
+    .array(z.number().int().positive("ID phải là số nguyên dương"))
+    .min(1, "Phải chọn ít nhất 1 ID để xoá"),
+  roundId: z.number({
+    invalid_type_error: "Id trận đấu là ký tự số",
+    required_error: "Vui lòng nhập id trận đấu",
+  }),
+});
+
 export type ContestantById = {
   id: number;
   roundId: number;
@@ -107,3 +118,4 @@ export type ContestantIdParams = z.infer<typeof ContestantIdShame>;
 export type UpdateContestantInput = z.infer<typeof UpdateContestantSchema>;
 export type ContestantQueryInput = z.infer<typeof ContestantQuerySchema>;
 export type ContestantType = z.infer<typeof ContestantSchema>;
+export type CreatesContestInput = z.infer<typeof CreatesContestShema>;

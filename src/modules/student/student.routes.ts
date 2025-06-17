@@ -25,6 +25,14 @@ studentRouter.get(
 );
 
 studentRouter.get(
+  "/not-contest/:slug",
+  authenticate,
+  role("Admin"),
+  validateQuery(StudentQuerySchema),
+  StudentController.getStudentNotContestId
+);
+
+studentRouter.get(
   "/:id",
   authenticate,
   role("Admin"),

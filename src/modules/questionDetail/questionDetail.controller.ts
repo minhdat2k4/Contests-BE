@@ -14,9 +14,37 @@ import {
   PackageQuestionsQueryInput,
   QuestionPackagesQueryInput,
   QuestionsNotInPackageQueryInput,
+  SyncQuestionsInPackageInput,
 } from "./questionDetail.schema";
+import { successResponse, errorResponse, paginatedResponse } from "@/utils/response";
 
 export default class QuestionDetailController {
+  /**
+   * Đồng bộ hóa danh sách câu hỏi trong một gói
+   * @param req 
+   * @param res 
+   */
+   static async syncQuestions(req: Request, res: Response): Promise<void> {
+    try {
+      const packageId = parseInt(req.params.packageId, 10);
+      const data: SyncQuestionsInPackageInput = req.body;
+
+      const result = await QuestionDetailService.syncQuestionsInPackage(packageId, data.questions);
+
+      logger.info(`Successfully synchronized questions for package ${packageId}`, result);
+
+      res.status(200).json(
+        successResponse(
+          result, 
+          "Đồng bộ hóa danh sách câu hỏi trong gói thành công"
+        )
+      );
+    } catch (error) {
+      // Sử dụng handleErrorResponse đã có để xử lý lỗi nhất quán
+      QuestionDetailController.handleErrorResponse(res, error);
+    }
+  }
+
   /**
    * Handle error response
    */

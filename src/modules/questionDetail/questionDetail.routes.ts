@@ -13,12 +13,24 @@ import {
   PackageQuestionsQuerySchema,
   QuestionPackagesQuerySchema,
   QuestionsNotInPackageQuerySchema,
+  SyncQuestionsInPackageSchema
 } from "./questionDetail.schema";
 
 const questionDetailRouter = Router();
 
 // Apply authentication middleware to all routes
 questionDetailRouter.use(authenticate);
+
+/**
+ * @route PUT /api/question-details/package/:packageId/sync
+ * @description Synchronize all questions (add, update, remove) in a package.
+ * @access Private (Admin/Judge)
+ */
+questionDetailRouter.put(
+  "/package/:packageId/sync",
+  validateBody(SyncQuestionsInPackageSchema),
+  QuestionDetailController.syncQuestions
+);
 
 /**
  * @route POST /api/question-details

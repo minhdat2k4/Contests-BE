@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+
+// phần đồng bộ câu hỏi trong gói câu hỏi (MAINLY FOR ADMIN)
+export const SyncQuestionsInPackageSchema = z.object({
+  questions: z.array(
+    z.object({
+      questionId: z.number().int().positive("ID câu hỏi phải là số nguyên dương"),
+      questionOrder: z.number().int().positive("Thứ tự câu hỏi phải là số nguyên dương"),
+    })
+  ).max(100, "Không thể đồng bộ quá 100 câu hỏi cùng lúc"), // Giới hạn để đảm bảo hiệu năng
+});
+
 // Create Question Detail Schema
 export const CreateQuestionDetailSchema = z.object({
   questionId: z
@@ -283,6 +294,7 @@ export const QuestionsNotInPackageQuerySchema = z.object({
 });
 
 // TypeScript types
+export type SyncQuestionsInPackageInput = z.infer<typeof SyncQuestionsInPackageSchema>;
 export type CreateQuestionDetailInput = z.infer<typeof CreateQuestionDetailSchema>;
 export type UpdateQuestionDetailInput = z.infer<typeof UpdateQuestionDetailSchema>;
 export type QuestionDetailIdInput = z.infer<typeof QuestionDetailIdSchema>;

@@ -10,6 +10,8 @@ import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
 import { ContestStatus } from "@prisma/client";
+import { match } from "assert";
+import { type } from "os";
 
 export default class MatchController {
   static async getAlls(req: Request, res: Response): Promise<void> {
@@ -77,9 +79,13 @@ export default class MatchController {
       input.slug = slug;
       input.contestId = contest.id;
       const Match = await MatchService.create(input);
+
       if (!Match) {
         throw new Error(`Thêm trận đấu${input.name} thành công`);
       }
+
+      await prisma.screenControl.create({ data: { matchId: Match.id } });
+
       logger.info(`Thêm trận đấu${input.name} thành công`);
       res.json(successResponse(Match, `Thêm trận đấu${input.name} thành công`));
     } catch (error) {
@@ -347,6 +353,175 @@ export default class MatchController {
       }
       logger.info(`Lấy thông tin trận đấu thành công`);
       res.json(successResponse(match, `Lấy thông tin trận đấu thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async matchInfo(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const match = await MatchService.MatchControl(slug);
+
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+
+      res.json(successResponse(match, `Lấy thông tin trận đấu thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async ListQuestion(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const match = await MatchService.MatchControl(slug);
+
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+
+      const ListQuestion = await MatchService.ListQuestion(
+        match.questionPackageId
+      );
+
+      res.json(
+        successResponse(ListQuestion, `Lấy thông tin trận đấu thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async bgContest(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const match = await MatchService.MatchControl(slug);
+
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+
+      const bgContest = await MatchService.bgContest(match.contestId);
+
+      res.json(successResponse(bgContest, `Lấy thông tin trận đấu thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async ScreenControl(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+
+      const match = await MatchService.MatchControl(slug);
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu");
+      }
+
+      const bgContest = await MatchService.bgContest(match.contestId);
+
+      let screenControl = await MatchService.ScreenControl(match.id);
+
+      if (screenControl?.controlKey === "background") {
+        screenControl = await prisma.screenControl.update({
+          where: { id: screenControl.id },
+          data: {
+            media: bgContest?.url,
+          },
+        });
+      }
+
+      res.json(
+        successResponse(
+          screenControl,
+          "Lấy thông tin điều khiển màn hình thành công"
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async CurrentQuestion(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const match = await MatchService.MatchControl(slug);
+
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+
+      const CurrentQuestion = await MatchService.CurrentQuestion(
+        match.currentQuestion
+      );
+
+      res.json(
+        successResponse(CurrentQuestion, `Lấy thông tin trận đấu thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async ListRescues(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const match = await MatchService.MatchControl(slug);
+
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+
+      const ListRescues = await MatchService.ListRescues(match.id);
+
+      res.json(
+        successResponse(ListRescues, `Lấy thông tin trận đấu thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async ListContestant(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const match = await MatchService.MatchControl(slug);
+
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+
+      const ListContestant = await MatchService.ListContestant(match.id);
+
+      res.json(
+        successResponse(ListContestant, `Lấy thông tin trận đấu thành công`)
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async countContestant(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const match = await MatchService.MatchControl(slug);
+
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+
+      const countIn_progress = await MatchService.countIn_progress(match.id);
+
+      const countEliminated = await MatchService.countEliminated(match.id);
+
+      const total = await MatchService.Total(match.id);
+
+      res.json(
+        successResponse(
+          {
+            countIn_progress: countIn_progress,
+            countEliminated: countEliminated,
+            total: total,
+          },
+          `Lấy thông tin trận đấu thành công`
+        )
+      );
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

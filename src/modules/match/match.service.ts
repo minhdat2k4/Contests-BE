@@ -7,8 +7,11 @@ import {
   MatchType,
   MatchQueryInput,
 } from "@/modules/match";
-import { Match } from "@prisma/client";
+import { Match, Student, Contest, Difficulty } from "@prisma/client";
 import slugify from "slugify";
+import { MatchController } from "@/modules/match";
+import { match } from "assert";
+import { type } from "os";
 
 export default class MatchService {
   static async getAll(
@@ -229,6 +232,7 @@ export default class MatchService {
       select: {
         id: true,
         name: true,
+        slug: true,
       },
     });
   }
@@ -255,5 +259,142 @@ export default class MatchService {
     }
 
     return slug;
+  }
+
+  static async MatchControl(slug: string) {
+    const matchRaw = await prisma.match.findFirst({
+      where: { slug: slug ?? undefined },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        currentQuestion: true,
+        remainingTime: true,
+        status: true,
+        questionPackageId: true,
+        contestId: true,
+        round: {
+          select: {
+            name: true,
+          },
+        },
+        student: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    if (!matchRaw) return null;
+
+    const match = {
+      id: matchRaw.id,
+      slug: matchRaw.slug,
+      name: matchRaw.name,
+      contestId: matchRaw.contestId,
+      currentQuestion: matchRaw.currentQuestion,
+      remainingTime: matchRaw.remainingTime,
+      status: matchRaw.status,
+      questionPackageId: matchRaw.questionPackageId,
+      roundName: matchRaw.round?.name ?? null,
+      student: matchRaw.student?.id ?? null,
+      studentName: matchRaw.student?.fullName ?? null,
+    };
+    return match;
+  }
+
+  static async bgContest(contestId: number) {
+    const contest = await prisma.contest.findFirst({
+      where: { id: contestId },
+      select: {
+        mediaFiles: {
+          where: { type: "background" },
+          select: {
+            url: true,
+          },
+          take: 1,
+        },
+      },
+    });
+    return contest?.mediaFiles[0] ?? null;
+  }
+
+  static async ListQuestion(questionPackageId: number) {
+    const raw = await prisma.questionDetail.findMany({
+      where: { questionPackageId },
+      select: {
+        questionOrder: true,
+        question: {
+          select: {
+            id: true,
+            content: true,
+            difficulty: true,
+            questionType: true,
+          },
+        },
+      },
+    });
+
+    const listQuestion = raw.map(item => ({
+      questionOrder: item.questionOrder,
+      id: item.question.id,
+      content: item.question.content,
+      difficulty: item.question.difficulty,
+      questionType: item.question.questionType,
+    }));
+
+    return listQuestion;
+  }
+
+  static async CurrentQuestion(currentQuestion: number) {
+    const questionId = await prisma.questionDetail.findFirst({
+      where: { questionOrder: currentQuestion },
+      select: { questionId: true },
+    });
+    return prisma.question.findUnique({
+      where: { id: questionId?.questionId },
+    });
+  }
+
+  static async ListRescues(matchId: number) {
+    return prisma.rescue.findMany({
+      where: { matchId: matchId },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+  }
+
+  static async ListContestant(matchId: number) {
+    return prisma.contestantMatch.findMany({
+      where: { matchId: matchId },
+    });
+  }
+
+  static async countIn_progress(matchId: number) {
+    return prisma.contestantMatch.count({
+      where: { matchId: matchId, status: "in_progress" },
+    });
+  }
+
+  static async countEliminated(matchId: number) {
+    return prisma.contestantMatch.count({
+      where: { matchId: matchId, status: "eliminated" },
+    });
+  }
+
+  static async Total(matchId: number) {
+    return prisma.contestantMatch.count({
+      where: { matchId: matchId },
+    });
+  }
+
+  static async ScreenControl(matchId: number) {
+    return prisma.screenControl.findFirst({
+      where: { matchId: matchId },
+    });
   }
 }

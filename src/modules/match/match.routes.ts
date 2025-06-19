@@ -25,6 +25,62 @@ matchRouter.get(
 );
 
 matchRouter.get(
+  "/:slug/matchInfo",
+  authenticate,
+  role("Admin"),
+  MatchController.matchInfo
+);
+
+matchRouter.get(
+  "/:slug/bgContest",
+  authenticate,
+  role("Admin"),
+  MatchController.bgContest
+);
+
+matchRouter.get(
+  "/:slug/CurrentQuestion",
+  authenticate,
+  role("Admin"),
+  MatchController.CurrentQuestion
+);
+
+matchRouter.get(
+  "/:slug/ListRescues",
+  authenticate,
+  role("Admin"),
+  MatchController.ListRescues
+);
+
+matchRouter.get(
+  "/:slug/ListContestant",
+  authenticate,
+  role("Admin"),
+  MatchController.ListContestant
+);
+
+matchRouter.get(
+  "/:slug/countContestant",
+  authenticate,
+  role("Admin"),
+  MatchController.countContestant
+);
+
+matchRouter.get(
+  "/:slug/ListQuestion",
+  authenticate,
+  role("Admin"),
+  MatchController.ListQuestion
+);
+
+matchRouter.get(
+  "/:slug/ScreenControl",
+  authenticate,
+  role("Admin"),
+  MatchController.ScreenControl
+);
+
+matchRouter.get(
   "/contest/:slug/all",
   authenticate,
   role("Admin"),
@@ -44,7 +100,7 @@ matchRouter.post(
   "/contest/:slug",
   authenticate,
   role("Admin"),
-  validateBody(CreateMatchSchema),
+  // validateBody(CreateMatchSchema),
   MatchController.create
 );
 

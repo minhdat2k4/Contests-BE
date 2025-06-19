@@ -3,43 +3,47 @@ import { Server } from "socket.io";
 import { logger } from "@/utils/logger";
 
 class SocketService {
-    private static instance: SocketService;
-    private _io: Server | null = null;
+  private static instance: SocketService;
+  private _io: Server | null = null;
 
-    private constructor() {}
+  private constructor() {}
 
-    public static getInstance(): SocketService {
-        if (!SocketService.instance) {
-            SocketService.instance = new SocketService();
-        }
-        return SocketService.instance;
+  public static getInstance(): SocketService {
+    if (!SocketService.instance) {
+      SocketService.instance = new SocketService();
     }
+    return SocketService.instance;
+  }
 
-    public setIO(io: Server): void {
-        if (this._io) {
-            logger.warn("Socket.IO server instance is already set.");
-            return;
-        }
-        this._io = io;
+  public setIO(io: Server): void {
+    logger.info("✅ [SocketService] setIO called");
+    if (this._io) {
+      logger.warn(
+        "⚠️ [SocketService] Socket.IO server instance is already set."
+      );
+      return;
     }
+    this._io = io;
+    logger.info("🎉 [SocketService] Socket.IO initialized successfully.");
+  }
 
-    public getIO(): Server {
-        if (!this._io) {
-            throw new Error("Socket.IO server has not been initialized. Call setIO() first.");
-        }
-        return this._io;
+  public getIO(): Server {
+    logger.info("🔍 [SocketService] getIO called");
+    if (!this._io) {
+      logger.error("❌ [SocketService] getIO called before setIO");
+      throw new Error(
+        "Socket.IO server has not been initialized. Call setIO() first."
+      );
     }
+    return this._io;
+  }
 
-    /**
-     * Gửi sự kiện đến một room cụ thể.
-     * @param room - Tên của room.
-     * @param event - Tên của sự kiện.
-     * @param data - Dữ liệu cần gửi.
-     */
-    public emitToRoom(room: string, event: string, data: any): void {
-        logger.info(`Emitting event '${event}' to room '${room}'`, { data });
-        this.getIO().to(room).emit(event, data);
-    }
+  public emitToRoom(room: string, event: string, data: any): void {
+    logger.info(`📤 [SocketService] Emitting '${event}' to room '${room}'`, {
+      data,
+    });
+    this.getIO().to(room).emit(event, data);
+  }
 }
 
 export const socketService = SocketService.getInstance();

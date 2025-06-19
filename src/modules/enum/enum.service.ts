@@ -46,6 +46,9 @@ export default class EnumService {
     QuestionType: {
       multiple_choice: "Trắc nghiệm",
       essay: "Tự luận",
+      image: "Hình ảnh",
+      audio: "Âm thanh",
+      video: "Video",
     },
     Difficulty: {
       Alpha: "Alpha",

@@ -548,25 +548,30 @@ export class QuestionService {
         // Chuẩn hóa tên file trước khi xử lý
         const normalizedFilenames = data.deleteQuestionMedia.flatMap(filename => 
           this.normalizeFilename(filename)
-        );
+        ).filter(filename => filename && filename.trim() !== ''); // Filter ra filename rỗng
         console.log('Normalized filenames for deletion:', normalizedFilenames);
         
-        const filesToDelete = normalizedFilenames.map(filename => ({
-          filename,
-          type: detectMediaType(filename),
-          url: getQuestionMediaUrl(filename),
-          size: 0,
-          mimeType: ''
-        }));
-        await this.deleteMediaFiles(filesToDelete);
-        
-        // Cập nhật questionMedia bằng cách loại bỏ các file đã xóa
-        if (existingQuestion.questionMedia) {
-          const existingMedia = existingQuestion.questionMedia as MediaFile[];
-          questionMedia = existingMedia.filter(media => 
-            !normalizedFilenames.includes(media.filename)
-          );
+        if (normalizedFilenames.length > 0) {
+          const filesToDelete = normalizedFilenames.map(filename => ({
+            filename,
+            type: detectMediaType(filename),
+            url: getQuestionMediaUrl(filename),
+            size: 0,
+            mimeType: ''
+          }));
+          await this.deleteMediaFiles(filesToDelete);
+          
+          // Cập nhật questionMedia bằng cách loại bỏ các file đã xóa
+          if (existingQuestion.questionMedia) {
+            const existingMedia = existingQuestion.questionMedia as MediaFile[];
+            questionMedia = existingMedia.filter(media => 
+              !normalizedFilenames.includes(media.filename)
+            );
+          }
         }
+      } else {
+        // Nếu không có deleteQuestionMedia, giữ nguyên questionMedia hiện có
+        questionMedia = existingQuestion.questionMedia as MediaFile[] || [];
       }
 
       if (data.deleteMediaAnswer && Array.isArray(data.deleteMediaAnswer)) {
@@ -575,29 +580,52 @@ export class QuestionService {
         // Chuẩn hóa tên file trước khi xử lý
         const normalizedFilenames = data.deleteMediaAnswer.flatMap(filename => 
           this.normalizeFilename(filename)
-        );
+        ).filter(filename => filename && filename.trim() !== ''); // Filter ra filename rỗng
         console.log('Normalized filenames for deletion:', normalizedFilenames);
         
-        const filesToDelete = normalizedFilenames.map(filename => ({
-          filename,
-          type: detectMediaType(filename),
-          url: getQuestionMediaUrl(filename),
-          size: 0,
-          mimeType: ''
-        }));
-        await this.deleteMediaFiles(filesToDelete);
-        
-        // Cập nhật mediaAnswer bằng cách loại bỏ các file đã xóa
-        if (existingQuestion.mediaAnswer) {
-          const existingMedia = existingQuestion.mediaAnswer as MediaFile[];
-          mediaAnswer = existingMedia.filter(media => 
-            !normalizedFilenames.includes(media.filename)
-          );
+        if (normalizedFilenames.length > 0) {
+          const filesToDelete = normalizedFilenames.map(filename => ({
+            filename,
+            type: detectMediaType(filename),
+            url: getQuestionMediaUrl(filename),
+            size: 0,
+            mimeType: ''
+          }));
+          await this.deleteMediaFiles(filesToDelete);
+          
+          // Cập nhật mediaAnswer bằng cách loại bỏ các file đã xóa
+          if (existingQuestion.mediaAnswer) {
+            const existingMedia = existingQuestion.mediaAnswer as MediaFile[];
+            mediaAnswer = existingMedia.filter(media => 
+              !normalizedFilenames.includes(media.filename)
+            );
+          }
         }
+      } else {
+        // Nếu không có deleteMediaAnswer, giữ nguyên mediaAnswer hiện có
+        mediaAnswer = existingQuestion.mediaAnswer as MediaFile[] || [];
       }
 
-      // Xử lý xóa media khi data.questionMedia hoặc data.mediaAnswer được set thành null hoặc mảng rỗng
-      if (data.questionMedia === null || (Array.isArray(data.questionMedia) && data.questionMedia.length === 0)) {
+      // Xử lý merge questionMedia từ frontend với questionMedia hiện có (sau khi xóa)
+      if (data.questionMedia && Array.isArray(data.questionMedia)) {
+        console.log('Merging questionMedia from frontend:', data.questionMedia.length);
+        // Merge questionMedia hiện có với questionMedia từ frontend
+        const frontendMedia = data.questionMedia as MediaFile[];
+        questionMedia = [...(questionMedia || []), ...frontendMedia];
+        console.log('Total questionMedia after merge:', questionMedia.length);
+      }
+
+      // Xử lý merge mediaAnswer từ frontend với mediaAnswer hiện có (sau khi xóa)
+      if (data.mediaAnswer && Array.isArray(data.mediaAnswer)) {
+        console.log('Merging mediaAnswer from frontend:', data.mediaAnswer.length);
+        // Merge mediaAnswer hiện có với mediaAnswer từ frontend
+        const frontendMediaAnswer = data.mediaAnswer as MediaFile[];
+        mediaAnswer = [...(mediaAnswer || []), ...frontendMediaAnswer];
+        console.log('Total mediaAnswer after merge:', mediaAnswer.length);
+      }
+
+      // Xử lý xóa media khi data.questionMedia hoặc data.mediaAnswer được set thành null
+      if (data.questionMedia === null) {
         if (existingQuestion.questionMedia) {
           const oldQuestionMedia = existingQuestion.questionMedia as MediaFile[];
           console.log('Deleting all questionMedia files:', oldQuestionMedia.length);
@@ -606,7 +634,7 @@ export class QuestionService {
         questionMedia = null;
       }
 
-      if (data.mediaAnswer === null || (Array.isArray(data.mediaAnswer) && data.mediaAnswer.length === 0)) {
+      if (data.mediaAnswer === null) {
         if (existingQuestion.mediaAnswer) {
           const oldMediaAnswer = existingQuestion.mediaAnswer as MediaFile[];
           console.log('Deleting all mediaAnswer files:', oldMediaAnswer.length);
@@ -619,14 +647,20 @@ export class QuestionService {
       if (uploadedFiles) {
         if (uploadedFiles.questionMedia) {
           console.log('Processing questionMedia files...');
-          questionMedia = await this.processMediaFiles(uploadedFiles.questionMedia);
-          console.log('New questionMedia files processed:', questionMedia.length);
+          const newQuestionMedia = await this.processMediaFiles(uploadedFiles.questionMedia);
+          console.log('New questionMedia files processed:', newQuestionMedia.length);
+          // Merge với questionMedia hiện có
+          questionMedia = [...(questionMedia || []), ...newQuestionMedia];
+          console.log('Total questionMedia after adding new files:', questionMedia.length);
         }
 
         if (uploadedFiles.mediaAnswer) {
           console.log('Processing mediaAnswer files...');
-          mediaAnswer = await this.processMediaFiles(uploadedFiles.mediaAnswer);
-          console.log('New mediaAnswer files processed:', mediaAnswer.length);
+          const newMediaAnswer = await this.processMediaFiles(uploadedFiles.mediaAnswer);
+          console.log('New mediaAnswer files processed:', newMediaAnswer.length);
+          // Merge với mediaAnswer hiện có
+          mediaAnswer = [...(mediaAnswer || []), ...newMediaAnswer];
+          console.log('Total mediaAnswer after adding new files:', mediaAnswer.length);
         }
       }
 
@@ -638,17 +672,15 @@ export class QuestionService {
       if (data.defaultTime !== undefined) updateData.defaultTime = data.defaultTime;
       if (data.questionType !== undefined) updateData.questionType = data.questionType;
       if (data.content !== undefined) updateData.content = data.content;
-      if (data.questionMedia !== undefined) updateData.questionMedia = data.questionMedia;
       if (data.options !== undefined) updateData.options = data.options;
       if (data.correctAnswer !== undefined) updateData.correctAnswer = data.correctAnswer;
-      if (data.mediaAnswer !== undefined) updateData.mediaAnswer = data.mediaAnswer;
       if (data.score !== undefined) updateData.score = data.score;
       if (data.difficulty !== undefined) updateData.difficulty = data.difficulty;
       if (data.explanation !== undefined) updateData.explanation = data.explanation;
       if (data.questionTopicId !== undefined) updateData.questionTopicId = data.questionTopicId;
       if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-      // Override with processed media if files were uploaded
+      // Luôn cập nhật questionMedia và mediaAnswer nếu đã được xử lý
       if (questionMedia !== null) updateData.questionMedia = questionMedia;
       if (mediaAnswer !== null) updateData.mediaAnswer = mediaAnswer;
 

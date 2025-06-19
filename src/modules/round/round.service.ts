@@ -138,11 +138,11 @@ export default class RoundService {
     }
 
     if (data.endTime !== undefined) {
-      updateData.endTime = data.endTime;
+      updateData.startTime = new Date(data.endTime);
     }
 
     if (data.startTime !== undefined) {
-      updateData.startTime = data.startTime;
+      updateData.startTime = new Date(data.startTime);
     }
 
     return prisma.round.update({

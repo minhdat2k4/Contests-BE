@@ -24,6 +24,9 @@ enum Role {
 enum QuestionType {
   multiple_choice
   essay
+  image
+  audio
+  video
 }
 
 enum Difficulty {
@@ -480,7 +483,7 @@ model ClassVideo {
 model ScreenControl {
   id           Int          @id @default(autoincrement())
   controlKey   ControlKey   @default(background)
-  controlValue ControlValue @default(start)
+  controlValue ControlValue?
   matchId      Int          @unique     
   match        Match        @relation(fields: [matchId], references: [id],onDelete:Restrict,onUpdate:Restrict)
   media        String?       @db.VarChar(255)

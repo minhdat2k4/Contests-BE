@@ -16,7 +16,7 @@ import UserService from "../user/user.service";
 import { validateData } from "@/middlewares/validation";
 import { sendOtp } from "@/utils/email";
 import bcrypt from "bcrypt";
-import { role } from "@/middlewares/auth";
+
 import { prisma } from "@/config/database";
 
 export default class AuthController {

@@ -10,7 +10,7 @@ export const CreateScreenSchema = z.object({
 
 export const ScreenSchema = z.object({
   controlKey: z.nativeEnum(ControlKey),
-  controlValue: z.nativeEnum(ControlValue),
+  controlValue: z.nativeEnum(ControlValue).nullable(),
   matchId: z.number(),
   media: z.string().nullable(),
   matchName: z.string(),

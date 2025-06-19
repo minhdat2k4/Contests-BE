@@ -106,7 +106,7 @@ export default class ScreenService {
     const screens = screenRaw.map(k => ({
       id: k.id,
       controlKey: k.controlKey,
-      controlValue: k.controlValue,
+      controlValue: k.controlValue ?? null,
       matchId: k.matchId,
       matchName: k.match?.name ?? null,
       media: k.media ?? null,

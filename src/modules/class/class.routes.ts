@@ -20,7 +20,8 @@ classRouter.get(
   "/",
   authenticate,
   role("Admin"),
-  validateQuery(ClassQuerySchema),
+  // validateQuery(ClassQuerySchema),
+
   ClassController.getAlls
 );
 

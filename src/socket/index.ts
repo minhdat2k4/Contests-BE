@@ -5,6 +5,7 @@ import { registerMatchControlEvents } from "./namespaces/matchControl.namespace"
 import { ExtendedError } from "socket.io/dist/namespace";
 import { socketService } from "./SocketService";
 import cookie from "cookie";
+import { registerTestEvents } from "./events/test.events";
 
 /**
  * Middleware xác thực kết nối Socket.IO bằng JWT trongc ookie httpOnly
@@ -63,6 +64,7 @@ export const initializeSocketIO = (io: Server) => {
 
     // Đăng ký các sự kiện riêng cho namespace này
     registerMatchControlEvents(io, socket);
+    registerTestEvents(io, socket);
 
     socket.on("disconnect", reason => {
       logger.info(

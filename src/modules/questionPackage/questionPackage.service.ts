@@ -308,9 +308,8 @@ export default class QuestionPackageService {
       } catch (error) {
         failedIds.push({
           id,
-          reason: `Lỗi hệ thống khi xóa gói câu hỏi: ${
-            error instanceof Error ? error.message : "Lỗi không xác định"
-          }`,
+          reason: `Lỗi hệ thống khi xóa gói câu hỏi: ${error instanceof Error ? error.message : "Lỗi không xác định"
+            }`,
         });
       }
     }

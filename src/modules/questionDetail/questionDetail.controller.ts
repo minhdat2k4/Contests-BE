@@ -13,9 +13,38 @@ import {
   BatchDeleteQuestionDetailsInput,
   PackageQuestionsQueryInput,
   QuestionPackagesQueryInput,
+  QuestionsNotInPackageQueryInput,
+  SyncQuestionsInPackageInput,
 } from "./questionDetail.schema";
+import { successResponse, errorResponse, paginatedResponse } from "@/utils/response";
 
 export default class QuestionDetailController {
+  /**
+   * Đồng bộ hóa danh sách câu hỏi trong một gói
+   * @param req 
+   * @param res 
+   */
+   static async syncQuestions(req: Request, res: Response): Promise<void> {
+    try {
+      const packageId = parseInt(req.params.packageId, 10);
+      const data: SyncQuestionsInPackageInput = req.body;
+
+      const result = await QuestionDetailService.syncQuestionsInPackage(packageId, data.questions);
+
+      logger.info(`Successfully synchronized questions for package ${packageId}`, result);
+
+      res.status(200).json(
+        successResponse(
+          result, 
+          "Đồng bộ hóa danh sách câu hỏi trong gói thành công"
+        )
+      );
+    } catch (error) {
+      // Sử dụng handleErrorResponse đã có để xử lý lỗi nhất quán
+      QuestionDetailController.handleErrorResponse(res, error);
+    }
+  }
+
   /**
    * Handle error response
    */
@@ -1048,6 +1077,73 @@ export default class QuestionDetailController {
     } catch (error) {
       logger.error("Error normalizing question orders:", error);
       
+      if (error instanceof CustomError) {
+        res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+          error: {
+            code: error.code,
+            details: error.message,
+          },
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: "Lỗi server nội bộ",
+          error: {
+            code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            details: "Đã xảy ra lỗi không mong muốn",
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  /**
+   * Get questions not in a specific package
+   */
+  static async getQuestionsNotInPackage(req: Request, res: Response): Promise<void> {
+    try {
+      const packageIdParam = req.params.packageId;
+      const packageId = parseInt(packageIdParam, 10);
+
+      if (isNaN(packageId) || packageId <= 0) {
+        throw new CustomError("ID gói câu hỏi phải là số nguyên dương", 400, ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      // Check if package exists
+      const packageExists = await QuestionDetailService.questionPackageExists(packageId);
+      if (!packageExists) {
+        throw new CustomError(
+          "Không tìm thấy gói câu hỏi",
+          404,
+          ERROR_CODES.RECORD_NOT_FOUND
+        );
+      }
+
+      // Use validated query parameters from middleware
+      const queryInput: QuestionsNotInPackageQueryInput = (req as any).validatedQuery || req.query;
+
+      const result = await QuestionDetailService.getQuestionsNotInPackage(
+        packageId,
+        queryInput
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Lấy danh sách câu hỏi chưa có trong gói thành công",
+        data: {
+          packageInfo: result.packageInfo,
+          questions: result.questions,
+        },
+        pagination: result.pagination,
+        filters: result.filters,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.error("Error getting questions not in package:", error);
       if (error instanceof CustomError) {
         res.status(error.statusCode).json({
           success: false,

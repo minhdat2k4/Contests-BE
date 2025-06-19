@@ -1,4 +1,6 @@
-export { questionDetailRouter } from "./questionDetail.routes";
-export { default as QuestionDetailController } from "./questionDetail.controller";
-export { default as QuestionDetailService } from "./questionDetail.service";
+import QuestionDetailController from "./questionDetail.controller";
+import QuestionDetailService from "./questionDetail.service";
+import { questionDetailRouter } from "./questionDetail.routes";
+
+export { QuestionDetailController, QuestionDetailService, questionDetailRouter };
 export * from "./questionDetail.schema";

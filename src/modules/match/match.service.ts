@@ -204,7 +204,7 @@ export default class MatchService {
     if (data.slug !== undefined) {
       updateData.slug = data.slug;
     }
-
+    // console.log(data);
     return prisma.match.update({
       where: { id: id },
       data: {
@@ -350,9 +350,15 @@ export default class MatchService {
     return listQuestion;
   }
 
-  static async CurrentQuestion(currentQuestion: number) {
+  static async CurrentQuestion(
+    currentQuestion: number,
+    questionPackageId: number
+  ) {
     const questionId = await prisma.questionDetail.findFirst({
-      where: { questionOrder: currentQuestion },
+      where: {
+        questionOrder: currentQuestion,
+        questionPackageId: questionPackageId,
+      },
       select: { questionId: true },
     });
     const question = await prisma.question.findUnique({

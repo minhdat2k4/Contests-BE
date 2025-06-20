@@ -75,6 +75,14 @@ export default class MatchController {
         where: { id: input.roundId },
       });
       if (!round) throw Error("Không tìm thấy vòng đấu");
+
+      const question = await MatchService.CurrentQuestion(
+        input.currentQuestion,
+        QuestionPackage.id
+      );
+
+      if (!question) throw new Error(`Tạo trận đấu thất bại`);
+      input.remainingTime = question.defaultTime;
       const slug = await MatchService.generateUniqueSlug(input.name);
       input.slug = slug;
       input.contestId = contest.id;
@@ -447,11 +455,11 @@ export default class MatchController {
     try {
       const slug = req.params.slug;
       const match = await MatchService.MatchControl(slug);
-
       if (!match) throw new Error("Không tìm thấy trận đấu");
 
       const CurrentQuestion = await MatchService.CurrentQuestion(
-        match.currentQuestion
+        match.currentQuestion,
+        match.questionPackageId
       );
 
       res.json(

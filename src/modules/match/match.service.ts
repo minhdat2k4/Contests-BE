@@ -7,11 +7,8 @@ import {
   MatchType,
   MatchQueryInput,
 } from "@/modules/match";
-import { Match, Student, Contest, Difficulty } from "@prisma/client";
+import { Match } from "@prisma/client";
 import slugify from "slugify";
-import { MatchController } from "@/modules/match";
-import { match } from "assert";
-import { type } from "os";
 
 export default class MatchService {
   static async getAll(
@@ -146,6 +143,8 @@ export default class MatchService {
     return prisma.match.create({
       data: {
         ...data,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
       },
     });
   }
@@ -171,11 +170,11 @@ export default class MatchService {
     }
 
     if (data.endTime !== undefined) {
-      updateData.endTime = data.endTime;
+      updateData.endTime = new Date(data.endTime);
     }
 
     if (data.startTime !== undefined) {
-      updateData.startTime = data.startTime;
+      updateData.startTime = new Date(data.startTime);
     }
 
     if (data.remainingTime !== undefined) {
@@ -205,7 +204,7 @@ export default class MatchService {
     if (data.slug !== undefined) {
       updateData.slug = data.slug;
     }
-
+    // console.log(data);
     return prisma.match.update({
       where: { id: id },
       data: {
@@ -324,6 +323,9 @@ export default class MatchService {
   static async ListQuestion(questionPackageId: number) {
     const raw = await prisma.questionDetail.findMany({
       where: { questionPackageId },
+      orderBy: {
+        questionOrder: "asc",
+      },
       select: {
         questionOrder: true,
         question: {
@@ -348,14 +350,50 @@ export default class MatchService {
     return listQuestion;
   }
 
-  static async CurrentQuestion(currentQuestion: number) {
+  static async CurrentQuestion(
+    currentQuestion: number,
+    questionPackageId: number
+  ) {
     const questionId = await prisma.questionDetail.findFirst({
-      where: { questionOrder: currentQuestion },
+      where: {
+        questionOrder: currentQuestion,
+        questionPackageId: questionPackageId,
+      },
       select: { questionId: true },
     });
-    return prisma.question.findUnique({
+    const question = await prisma.question.findUnique({
       where: { id: questionId?.questionId },
+      select: {
+        id: true,
+        isActive: true,
+        options: true,
+        createdAt: true,
+        updatedAt: true,
+        intro: true,
+        defaultTime: true,
+        questionType: true,
+        content: true,
+        questionMedia: true,
+        correctAnswer: true,
+        mediaAnswer: true,
+        score: true,
+        difficulty: true,
+        explanation: true,
+        questionTopic: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
+
+    // Làm phẳng dữ liệu (flatten)
+    const flatQuestion = {
+      ...question,
+      questionTopicName: question?.questionTopic?.name || null,
+      questionOrder: currentQuestion,
+    };
+    return flatQuestion;
   }
 
   static async ListRescues(matchId: number) {

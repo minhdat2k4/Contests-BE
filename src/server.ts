@@ -31,13 +31,15 @@ const startServer = async (): Promise<void> => {
     const httpServer = http.createServer(app);
 
     // Khởi tạo Socket.IO và gắn vào server
-    initializeSocketIO(new Server(httpServer, {
-      cors: {
-        origin: process.env.CORS_ORIGIN || "http://localhost:3000",
-        methods: ["GET", "POST"],
-        credentials: true,
-      },
-    }));
+    initializeSocketIO(
+      new Server(httpServer, {
+        cors: {
+          origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+          methods: ["GET", "POST"],
+          credentials: true,
+        },
+      })
+    );
 
     httpServer.listen(PORT, () => {
       logger.info(`🚀 Server is running on port ${PORT}`);

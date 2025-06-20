@@ -12,11 +12,12 @@ export const createAwardSchema = z.object({
     .int("Contest ID phải là số nguyên")
     .positive("Contest ID phải là số dương"),
   contestantId: z
-    .number()
-    .int("Contestant ID phải là số nguyên")
-    .positive("Contestant ID phải là số dương")
-    .optional()
-    .nullable(),
+    .union([
+      z.number().int("Contestant ID phải là số nguyên").positive("Contestant ID phải là số dương"),
+      z.null()
+    ])
+    .nullable()
+    .optional(),
   type: z.nativeEnum(AwardType, {
     errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" }),
   }),
@@ -36,11 +37,12 @@ export const updateAwardSchema = z
       .positive("Contest ID phải là số dương")
       .optional(),
     contestantId: z
-      .number()
-      .int("Contestant ID phải là số nguyên")
-      .positive("Contestant ID phải là số dương")
-      .optional()
-      .nullable(),
+      .union([
+        z.number().int("Contestant ID phải là số nguyên").positive("Contestant ID phải là số dương"),
+        z.null()
+      ])
+      .nullable()
+      .optional(),
     type: z
       .nativeEnum(AwardType, {
         errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" }),
@@ -128,11 +130,12 @@ export const createAwardByContestSlugSchema = z.object({
       "Slug chỉ được chứa chữ thường, số và dấu gạch ngang"
     ),
   contestantId: z
-    .number()
-    .int("Contestant ID phải là số nguyên")
-    .positive("Contestant ID phải là số dương")
-    .optional()
-    .nullable(),
+    .union([
+      z.number().int("Contestant ID phải là số nguyên").positive("Contestant ID phải là số dương"),
+      z.null()
+    ])
+    .nullable()
+    .optional(),
   type: z.nativeEnum(AwardType, {
     errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" }),
   }),

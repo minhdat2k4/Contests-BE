@@ -48,7 +48,10 @@
       ],
       "@/seeders/*": [
         "src/prisma/seeders/*"
-      ]
+      ],
+      "@socket/*": [
+        "src/socket/*"
+      ],
     },
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,

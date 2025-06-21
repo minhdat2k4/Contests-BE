@@ -27,7 +27,10 @@ export const updateSponsorSchema = z.object({
     .int("Contest ID phải là số nguyên")
     .positive("Contest ID phải là số dương")
     .optional()
-    .nullable() // Allow null to remove contest association
+    .nullable(), // Allow null to remove contest association  // Flags to indicate file removal (as strings from FormData)
+  removeLogo: z.string().transform(val => val === "true").optional(),
+  removeImages: z.string().transform(val => val === "true").optional(),
+  removeVideos: z.string().transform(val => val === "true").optional(),
 }).refine(
   (data) => Object.keys(data).length > 0,
   {

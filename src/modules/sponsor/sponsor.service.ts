@@ -2,6 +2,9 @@ import { PrismaClient } from "@prisma/client";
 import { logger } from "@/utils/logger";
 import { CustomError } from "@/middlewares/errorHandler";
 import { ERROR_CODES } from "@/constants/errorCodes";
+import fs from "fs";
+import path from "path";
+import { CONFIG } from "@/config/environment";
 import {
   CreateSponsorData,
   UpdateSponsorData,
@@ -270,15 +273,37 @@ export class SponsorService {
         if (!contest) {
           throw new CustomError("Contest không tồn tại", 404, ERROR_CODES.CONTEST_NOT_FOUND);
         }
-      }
+      }      // Store old file URLs for cleanup
+      const oldFiles = {
+        logo: existingSponsor.logo,
+        images: existingSponsor.images,
+        videos: existingSponsor.videos
+      };
 
       // Update sponsor
       const updatePayload: any = {};
       
       if (data.name !== undefined) updatePayload.name = data.name;
-      if (data.logo !== undefined) updatePayload.logo = data.logo || null;
-      if (data.images !== undefined) updatePayload.images = data.images || null;
-      if (data.videos !== undefined) updatePayload.videos = data.videos;
+      if (data.logo !== undefined) {
+        updatePayload.logo = data.logo || null;
+        // If setting to null and had previous file, mark for cleanup
+        if (!data.logo && oldFiles.logo) {
+          this.cleanupFileUrl(oldFiles.logo);
+        }
+      }
+      if (data.images !== undefined) {
+        updatePayload.images = data.images || null;
+        // If setting to null and had previous file, mark for cleanup
+        if (!data.images && oldFiles.images) {
+          this.cleanupFileUrl(oldFiles.images);
+        }
+      }      if (data.videos !== undefined) {
+        updatePayload.videos = data.videos || null;
+        // If setting to null and had previous file, mark for cleanup
+        if (!data.videos && oldFiles.videos) {
+          this.cleanupFileUrl(oldFiles.videos);
+        }
+      }
       if (data.contestId !== undefined) updatePayload.contestId = data.contestId;
 
       const sponsor = await this.prisma.sponsor.update({
@@ -475,6 +500,30 @@ export class SponsorService {
     } catch (error) {
       logger.error("Error getting sponsors statistics:", error);
       throw new CustomError("Lỗi khi lấy thống kê nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+    }  }
+  /**
+   * Cleanup file from URL
+   */
+  private cleanupFileUrl(fileUrl: string): void {
+    try {
+      if (!fileUrl) return;
+      
+      // Extract file path from URL
+      // Assuming URL format: http://localhost:3000/uploads/sponsors/filename.ext
+      const urlParts = fileUrl.split('/');
+      const filename = urlParts[urlParts.length - 1];
+      const directory = urlParts[urlParts.length - 2];
+      
+      if (filename && directory === 'sponsors') {
+        const filePath = path.join(CONFIG.UPLOAD_DIR, 'sponsors', filename);
+        
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          logger.info(`Cleaned up file: ${filePath}`);
+        }
+      }
+    } catch (error) {
+      logger.error("Error cleaning up file:", error);
     }
   }
 }

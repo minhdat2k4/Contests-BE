@@ -1,9 +1,72 @@
 import { Request } from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import { logger } from "@/utils/logger";
-import { createImageUploader, UPLOAD_CONFIGS, getFileUrl } from "@/middlewares/imageUpload";
+import { createImageUploader, UPLOAD_CONFIGS, getFileUrl, UploadConfig } from "@/middlewares/imageUpload";
+import { CONFIG } from "@/config/environment";
 
-// Sponsor uploader sử dụng config có sẵn
-export const sponsorImageUpload = createImageUploader(UPLOAD_CONFIGS.SPONSOR);
+// Tạo config riêng cho sponsor với hỗ trợ cả ảnh và video
+const SPONSOR_MULTIMEDIA_CONFIG: UploadConfig = {
+  uploadDir: "sponsors",
+  filePrefix: "sponsor",
+  maxFileSize: 50 * 1024 * 1024, // 50MB cho video
+  allowedTypes: /jpeg|jpg|png|gif|webp|svg|mp4|avi|mov|wmv|webm/,
+  allowedMimeTypes: /^(image\/(jpeg|jpg|png|gif|webp|svg\+xml)|video\/(mp4|avi|quicktime|x-ms-wmv|webm))$/,
+};
+
+// Tạo storage cho multimedia
+const multimediaStorage = multer.diskStorage({
+  destination: (req: Request, file: Express.Multer.File, cb) => {
+    const uploadPath = path.join(CONFIG.UPLOAD_DIR, SPONSOR_MULTIMEDIA_CONFIG.uploadDir);
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+      logger.info(`Created upload directory: ${uploadPath}`);
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req: Request, file: Express.Multer.File, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1E9);
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    const fileName = `${SPONSOR_MULTIMEDIA_CONFIG.filePrefix}-${uniqueSuffix}${fileExtension}`;
+    cb(null, fileName);
+  }
+});
+
+// File filter cho multimedia
+const multimediaFileFilter: multer.Options["fileFilter"] = (req, file, cb) => {
+  const isValidType = SPONSOR_MULTIMEDIA_CONFIG.allowedTypes!.test(path.extname(file.originalname).toLowerCase().slice(1));
+  const isValidMimeType = SPONSOR_MULTIMEDIA_CONFIG.allowedMimeTypes!.test(file.mimetype);
+  
+  if (isValidType && isValidMimeType) {
+    cb(null, true);
+  } else {
+    const isImage = /^image\//.test(file.mimetype);
+    const isVideo = /^video\//.test(file.mimetype);
+    
+    if (!isImage && !isVideo) {
+      cb(new Error("Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif, webp, svg) hoặc video (mp4, avi, mov, wmv, webm)"));
+    } else if (isImage && !SPONSOR_MULTIMEDIA_CONFIG.allowedMimeTypes!.test(file.mimetype)) {
+      cb(new Error("Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif, webp, svg)"));
+    } else if (isVideo && !SPONSOR_MULTIMEDIA_CONFIG.allowedMimeTypes!.test(file.mimetype)) {
+      cb(new Error("Chỉ chấp nhận file video (mp4, avi, mov, wmv, webm)"));
+    } else {
+      cb(new Error("Định dạng file không được hỗ trợ"));
+    }
+  }
+};
+
+// Tạo uploader cho multimedia
+const sponsorMultimediaUpload = multer({
+  storage: multimediaStorage,
+  limits: {
+    fileSize: SPONSOR_MULTIMEDIA_CONFIG.maxFileSize,
+  },
+  fileFilter: multimediaFileFilter,
+});
+
+// Sponsor uploader sử dụng config multimedia mới
+export const sponsorImageUpload = sponsorMultimediaUpload;
 
 // Export middleware upload đơn giản
 export const sponsorUploadMiddleware = {

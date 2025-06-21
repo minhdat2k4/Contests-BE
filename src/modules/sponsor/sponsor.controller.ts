@@ -173,26 +173,55 @@ export class SponsorController {
       }
     }
   }
-
   /**
    * Update sponsor (PATCH method)
    */
-  async updateSponsor(req: Request, res: Response): Promise<void> {
-    try {
+  async updateSponsor(req: Request, res: Response): Promise<void> {    try {
       const { id } = req.params;
       const data: UpdateSponsorData = req.body;
+      
+      // Debug log
+      logger.info(`Update sponsor ${id} - Request data:`, {
+        body: req.body,
+        files: req.files ? Object.keys(req.files) : 'no files'
+      });
       
       // Process uploaded files if any
       let uploadedFiles = {};
       if (req.files) {
         uploadedFiles = processSponsorFiles(req.files);
       }
+        // Handle file removal flags
+      const processedData = { ...data };
       
-      // Merge uploaded files with request data
+      // If removeLogo is true, set logo to null
+      if (data.removeLogo === true) {
+        logger.info(`Removing logo for sponsor ${id}`);
+        (processedData as any).logo = null;
+        delete processedData.removeLogo;
+      }
+      
+      // If removeImages is true, set images to null
+      if (data.removeImages === true) {
+        logger.info(`Removing images for sponsor ${id}`);
+        (processedData as any).images = null;
+        delete processedData.removeImages;
+      }
+      
+      // If removeVideos is true, set videos to null
+      if (data.removeVideos === true) {
+        logger.info(`Removing videos for sponsor ${id}`);
+        (processedData as any).videos = null;
+        delete processedData.removeVideos;
+      }
+      
+      // Merge uploaded files with processed data
       const updateData = {
-        ...data,
+        ...processedData,
         ...uploadedFiles
       };
+      
+      logger.info(`Update sponsor ${id} - Final update data:`, updateData);
       
       // Check if at least one field is provided
       if (Object.keys(updateData).length === 0) {

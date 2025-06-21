@@ -17,7 +17,6 @@ import UserService from "../user/user.service";
 import { validateData } from "@/middlewares/validation";
 import { sendOtp } from "@/utils/email";
 import bcrypt from "bcrypt";
-import StudentService from "../student/student.service";
 
 import { prisma } from "@/config/database";
 
@@ -57,94 +56,36 @@ export default class AuthController {
     try {
       const input: StudentRegisterInput = req.body;
       
-      // Kiểm tra username đã tồn tại chưa
-      const existingUserName = await UserService.existingUserName(input.username);
-      if (existingUserName) {
-        logger.error(`Tên tài khoản ${input.username} đã tồn tại`);
-        res
-          .status(400)
-          .json(validateData("username", "Tên tài khoản đã tồn tại"));
-        return;
-      }
-
-      // Kiểm tra email đã tồn tại chưa
-      const existingEmail = await UserService.existingEmail(input.email);
-      if (existingEmail) {
-        logger.error(`Email ${input.email} đã tồn tại`);
-        res.status(400).json(validateData("email", "Email đã tồn tại"));
-        return;
-      }
-
-      // Kiểm tra mã sinh viên đã tồn tại chưa (nếu có)
-      if (input.studentCode) {
-        const existingStudentCode = await StudentService.getStudentBy({
-          studentCode: input.studentCode,
-        });
-        if (existingStudentCode) {
-          logger.error(`Mã sinh viên ${input.studentCode} đã tồn tại`);
-          res
-            .status(400)
-            .json(validateData("studentCode", "Mã sinh viên đã tồn tại"));
-          return;
-        }
-      }
-
-      // Kiểm tra lớp có tồn tại không
-      const existingClass = await prisma.class.findFirst({
-        where: { id: input.classId, isActive: true },
-      });
-      if (!existingClass) {
-        logger.error(`Lớp với ID ${input.classId} không tồn tại`);
-        res.status(400).json(validateData("classId", "Lớp không tồn tại"));
-        return;
-      }
-
-      // Mã hóa mật khẩu
-      const { confirmPassword, fullName, classId, studentCode, ...userInput } = input;
-      const hashedPassword = await bcrypt.hash(userInput.password, 10);
-
-      // Tạo transaction để đảm bảo tính nhất quán dữ liệu
-      const result = await prisma.$transaction(async (tx) => {
-        // Tạo User với role Student
-        const user = await tx.user.create({
-          data: {
-            ...userInput,
-            password: hashedPassword,
-            role: "Student",
-          },
-        });
-
-        // Tạo Student
-        const student = await tx.student.create({
-          data: {
-            fullName,
-            classId,
-            studentCode: studentCode || null,
-            isActive: true,
-          },
-        });
-
-        return { user, student };
-      });
+      const result = await AuthService.registerStudent(input);
 
       res.json(
-        successResponse(
-          {
-            user: {
-              id: result.user.id,
-              username: result.user.username,
-              email: result.user.email,
-              role: result.user.role,
-            },
-            student: result.student,
-          },
-          "Đăng ký tài khoản sinh viên thành công"
-        )
+        successResponse(result, "Đăng ký tài khoản sinh viên thành công")
       );
       logger.info(`Đăng ký tài khoản sinh viên thành công cho ${input.username}`);
     } catch (error) {
-      logger.error((error as Error).message);
-      res.status(400).json(errorResponse((error as Error).message));
+      const errorMessage = (error as Error).message;
+      
+      // Xử lý các lỗi cụ thể
+      switch (errorMessage) {
+        case "USERNAME_EXISTS":
+          logger.error(`Tên tài khoản ${req.body.username} đã tồn tại`);
+          res
+            .status(400)
+            .json(validateData("username", "Tên tài khoản đã tồn tại"));
+          break;
+        case "EMAIL_EXISTS":
+          logger.error(`Email ${req.body.email} đã tồn tại`);
+          res.status(400).json(validateData("email", "Email đã tồn tại"));
+          break;
+        case "CLASS_NOT_EXISTS":
+          logger.error(`Lớp với ID ${req.body.classId} không tồn tại`);
+          res.status(400).json(validateData("classId", "Lớp không tồn tại"));
+          break;
+        default:
+          logger.error((error as Error).message);
+          res.status(400).json(errorResponse((error as Error).message));
+          break;
+      }
     }
   }
 

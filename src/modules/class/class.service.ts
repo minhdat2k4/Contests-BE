@@ -150,4 +150,39 @@ export default class ClassService {
       },
     });
   }
+
+  static async listClassesWithSchool(search?: string) {
+    const whereClause: any = {
+      isActive: true,
+      school: {
+        isActive: true,
+      },
+    };
+
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { name: { contains: keyword } },
+        { school: { name: { contains: keyword } } },
+      ]);
+    }
+
+    return prisma.class.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        isActive: true,
+        school: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: [
+        { school: { name: 'asc' } },
+        { name: 'asc' },
+      ],
+    });
+  }
 }

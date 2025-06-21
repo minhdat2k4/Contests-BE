@@ -8,6 +8,7 @@ import {
   otpShema,
   ResetPasswordShema,
   RegisterSchema,
+  StudentRegisterSchema,
   ChangePassWordShema,
   ChangeInfoShema,
 } from "./auth.schema";
@@ -35,6 +36,11 @@ authRouter.post(
   "/register",
   validateBody(RegisterSchema),
   AuthController.register
+);
+authRouter.post(
+  "/register-student",
+  validateBody(StudentRegisterSchema),
+  AuthController.registerStudent
 );
 // private
 authRouter.post("/logout", authenticate, AuthController.logout);

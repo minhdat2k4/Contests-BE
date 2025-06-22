@@ -156,6 +156,166 @@ export default class AuthController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async studentLogin(req: Request, res: Response): Promise<void> {
+    try {
+      const input: LoginInput = req.body;
+      const user = await AuthService.findUserByIdentifier(input.identifier);
+      
+      if (!user) {
+        logger.error(`Tài khoản ${input.identifier} không tồn tại`);
+        res
+          .status(400)
+          .json(validateData("identifier", "Tài khoản không tồn tại"));
+        return;
+      }
+
+      // Verify this is a Student role
+      if (user.role !== "Student") {
+        logger.error(`Tài khoản ${input.identifier} không phải là thí sinh`);
+        res
+          .status(400)
+          .json(validateData("identifier", "Tài khoản không phải là thí sinh"));
+        return;
+      }
+
+      const isPassword = await AuthService.isPassword(
+        input.password,
+        user.password
+      );
+      if (!isPassword) {
+        logger.error(`Thí sinh ${input.identifier} nhập sai mật khẩu`);
+        res.status(400).json(validateData("password", "Sai mật khẩu"));
+        return;
+      }
+
+      // Get contestant information
+      const contestant = await prisma.contestant.findFirst({
+        where: {
+          student: {
+            id: user.id
+          }
+        },
+        include: {
+          contest: {
+            select: { 
+              id: true, 
+              name: true, 
+              slug: true, 
+              status: true 
+            }
+          },
+          student: {
+            select: { 
+              id: true, 
+              fullName: true, 
+              studentCode: true 
+            }
+          },
+          round: {
+            select: { 
+              id: true, 
+              name: true 
+            }
+          }
+        }
+      });
+
+      if (!contestant) {
+        logger.error(`Không tìm thấy thông tin thí sinh cho user ${user.id}`);
+        res
+          .status(400)
+          .json(validateData("identifier", "Không tìm thấy thông tin thí sinh"));
+        return;
+      }
+
+      // Find active matches for this contestant
+      const activeMatches = await prisma.match.findMany({
+        where: {
+          round: {
+            contestId: contestant.contestId
+          }
+        },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          currentQuestion: true,
+          remainingTime: true
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      const tokenData = {
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      };
+      
+      const accessToken = await AuthService.accessToken(tokenData);
+      const refreshToken = await AuthService.refreshToken(tokenData);
+      
+      // Update user token
+      await UserService.UpdateUser(user.id, { token: accessToken });
+      
+      // Delete old refresh tokens
+      await prisma.refreshToken.deleteMany({
+        where: { userId: user.id }
+      });
+      
+      // Create new refresh token
+      await AuthService.CreateRefreshToken({
+        userId: user.id,
+        refreshToken: refreshToken,
+      });
+
+      // Set cookies
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 1000 * 60 * 60, // 1 hour
+      });
+      
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 30 * 60 * 60 * 1000 * 24, // 30 days
+      });
+
+      const responseData = {
+        role: user.role,
+        accessToken,
+        contestantInfo: {
+          id: contestant.id,
+          status: contestant.status,
+          student: contestant.student,
+          contest: contestant.contest,
+          round: contestant.round,
+          activeMatches: activeMatches
+        },
+        socketInfo: {
+          namespace: "/match-control",
+          instructions: "Use this token to connect to Socket.IO"
+        }
+      };
+
+      res.json(
+        successResponse(
+          responseData,
+          "Đăng nhập thí sinh thành công"
+        )
+      );
+      
+      logger.info(`Thí sinh ${input.identifier} đăng nhập thành công | Contestant ID: ${contestant.id}`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(500).json(errorResponse((error as Error).message));
+    }
+  }
+
   static async logout(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {

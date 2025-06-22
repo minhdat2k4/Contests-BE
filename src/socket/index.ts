@@ -6,11 +6,22 @@ import { ExtendedError } from "socket.io/dist/namespace";
 import { socketService } from "./SocketService";
 import cookie from "cookie";
 import { registerTestEvents } from "./events/test.events";
+import { registerStudentEvents } from "./events/student.events";
+import { registerMatchEvents } from "./events/match.events";
+import { timerService } from "./services/timer.service";
+import { prisma } from "@/config/database";
+
+// Extend Socket interface to include user and contestant info
+interface AuthenticatedSocket extends Socket {
+  user: JwtPayload;
+  contestantId?: number;
+  matchId?: number;
+}
 
 /**
- * Middleware xác thực kết nối Socket.IO bằng JWT trongc ookie httpOnly
+ * Middleware xác thực kết nối Socket.IO bằng JWT trong cookie httpOnly
  */
-const authMiddleware = (
+const authMiddleware = async (
   socket: Socket,
   next: (err?: ExtendedError) => void
 ) => {
@@ -31,8 +42,70 @@ const authMiddleware = (
     }
 
     const payload = verifyToken(token) as JwtPayload;
-    (socket as any).user = payload;
+    
+    // Validate user exists and is active
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, role: true, isActive: true }
+    });
 
+    if (!user || !user.isActive) {
+      logger.warn(`❌ User not found or inactive: ${payload.userId}`);
+      return next(new Error("Authentication error: User not found or inactive"));
+    }
+
+    // For Student role, validate contestant exists
+    if (payload.role === "Student") {
+      const contestant = await prisma.contestant.findFirst({
+        where: {
+          student: {
+            id: payload.userId
+          }
+        },
+        include: {
+          contest: {
+            include: {
+              round: {
+                include: {
+                  matches: {
+                    select: { id: true, name: true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!contestant) {
+        logger.warn(`❌ Contestant not found for student: ${payload.userId}`);
+        return next(new Error("Authentication error: Contestant not found"));
+      }
+
+      // Attach contestant info to socket
+      (socket as AuthenticatedSocket).contestantId = contestant.id;
+      
+      // Find active match for this contestant
+      const activeMatch = await prisma.match.findFirst({
+        where: {
+          round: {
+            contestId: contestant.contestId
+          },
+          // Add more conditions here based on your match logic
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (activeMatch) {
+        (socket as AuthenticatedSocket).matchId = activeMatch.id;
+      }
+
+      logger.info(
+        `✅ Student authenticated: ${socket.id} | Contestant: ${contestant.id} | Match: ${activeMatch?.id || 'none'}`
+      );
+    }
+
+    (socket as AuthenticatedSocket).user = payload;
     next();
   } catch (err) {
     logger.error(`❌ Token verification failed: ${(err as Error).message}`);
@@ -48,23 +121,33 @@ export const initializeSocketIO = (io: Server) => {
 
   // Gán instance để dùng toàn cục
   socketService.setIO(io);
+  
+  // Initialize timer service
+  timerService.setIO(io);
 
   // Namespace điều khiển trận đấu
   const matchControlNamespace = io.of("/match-control");
 
-  // ⚠️ Gắn middleware auth vào namespace
-  // matchControlNamespace.use(authMiddleware);
+  // Enable authentication middleware
+  matchControlNamespace.use(authMiddleware);
 
   matchControlNamespace.on("connection", (socket: Socket) => {
-    // const user = (socket as any).user as JwtPayload;
+    const authSocket = socket as AuthenticatedSocket;
+    const user = authSocket.user;
 
-    // logger.info(
-    //   `✅ Connected to /match-control: ${socket.id} | User: ${user.username} (${user.userId})`
-    // );
+    logger.info(
+      `✅ Connected to /match-control: ${socket.id} | User: ${user.username} (${user.userId}) | Role: ${user.role}`
+    );
 
     // Đăng ký các sự kiện riêng cho namespace này
-    registerMatchControlEvents(io, socket);
-    registerTestEvents(io, socket);
+    registerMatchControlEvents(io, authSocket);
+    registerTestEvents(io, authSocket);
+    
+    // Register student-specific events
+    registerStudentEvents(io, authSocket);
+    
+    // Register match control events
+    registerMatchEvents(io, authSocket);
 
     socket.on("disconnect", reason => {
       logger.info(

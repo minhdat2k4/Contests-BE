@@ -35,6 +35,13 @@ contestRoute.get(
   ContestController.getById
 );
 
+contestRoute.get(
+  "/not-conest/:slug",
+  authenticate,
+  role("Admin"),
+  ContestController.ListContestNotSlug
+);
+
 contestRoute.post(
   "/",
   authenticate,

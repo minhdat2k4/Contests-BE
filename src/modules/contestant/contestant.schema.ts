@@ -77,6 +77,47 @@ export const ContestantQuerySchema = z.object({
   status: z.nativeEnum(ContestantStatus).optional(),
 });
 
+export const ContestantByContestQuerySchema = z.object({
+  page: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
+    .optional()
+    .default("10"),
+  search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
+  contestId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id cuộc thi phải là số nguyên dương"
+    )
+    .optional(),
+  roundId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id cuộc thi phải là số nguyên dương"
+    )
+    .optional(),
+  studentId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id cuộc thi phải là số nguyên dương"
+    )
+    .optional(),
+  status: z.nativeEnum(ContestantStatus).optional(),
+});
+
 export const ContestantIdShame = z.object({
   id: z
     .string()

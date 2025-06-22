@@ -153,4 +153,14 @@ export default class ContestService {
       },
     });
   }
+
+  static async ListContest(slug: string) {
+    return prisma.contest.findMany({
+      where: { slug: { not: slug }, isActive: true },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
 }

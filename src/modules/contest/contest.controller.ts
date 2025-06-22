@@ -293,4 +293,19 @@ export default class ContestController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async ListContestNotSlug(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const Contest = await Contestervice.ListContest(slug);
+      if (!Contest) {
+        throw new Error("Không tìm thấy cuộc thi");
+      }
+      logger.info(`Lấy thông tin cuộc thi thành công`);
+      res.json(successResponse(Contest, `Lấy danh sách cuộc thi thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

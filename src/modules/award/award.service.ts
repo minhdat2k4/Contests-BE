@@ -34,10 +34,8 @@ export default class AwardService {
           404,
           ERROR_CODES.CONTEST_NOT_FOUND
         );
-      }
-
-      // Check if contestant exists (if provided)
-      if (data.contestantId) {
+      }      // Check if contestant exists (if provided)
+      if (data.contestantId !== null && data.contestantId !== undefined) {
         const contestant = await this.prisma.contestant.findUnique({
           where: { id: data.contestantId },
         });
@@ -50,26 +48,11 @@ export default class AwardService {
         }
       }
 
-      // Check if award type already exists for this contest
-      const existingAward = await this.prisma.award.findFirst({
-        where: {
-          contestId: data.contestId,
-          type: data.type,
-        },
-      });
-      if (existingAward) {
-        throw new CustomError(
-          "Loại giải thưởng này đã tồn tại cho cuộc thi",
-          409,
-          ERROR_CODES.AWARD_TYPE_EXISTS
-        );
-      }
-
       const award = await this.prisma.award.create({
         data: {
           name: data.name,
           contestId: data.contestId,
-          contestantId: data.contestantId || null,
+          contestantId: data.contestantId,
           type: data.type,
         },
         include: {
@@ -128,10 +111,8 @@ export default class AwardService {
           404,
           ERROR_CODES.CONTEST_NOT_FOUND
         );
-      }
-
-      // Check if contestant exists (if provided)
-      if (data.contestantId) {
+      }      // Check if contestant exists (if provided)
+      if (data.contestantId !== null && data.contestantId !== undefined) {
         const contestant = await this.prisma.contestant.findUnique({
           where: { id: data.contestantId },
         });
@@ -144,26 +125,11 @@ export default class AwardService {
         }
       }
 
-      // Check if award type already exists for this contest
-      const existingAward = await this.prisma.award.findFirst({
-        where: {
-          contestId: contest.id,
-          type: data.type,
-        },
-      });
-      if (existingAward) {
-        throw new CustomError(
-          "Loại giải thưởng này đã tồn tại cho cuộc thi",
-          409,
-          ERROR_CODES.AWARD_TYPE_EXISTS
-        );
-      }
-
       const award = await this.prisma.award.create({
         data: {
           name: data.name,
           contestId: contest.id,
-          contestantId: data.contestantId || null,
+          contestantId: data.contestantId,
           type: data.type,
         },
         include: {
@@ -448,10 +414,8 @@ export default class AwardService {
             ERROR_CODES.CONTEST_NOT_FOUND
           );
         }
-      }
-
-      // Check if contestant exists (if provided)
-      if (data.contestantId) {
+      }      // Check if contestant exists (if provided)
+      if (data.contestantId !== null && data.contestantId !== undefined) {
         const contestant = await this.prisma.contestant.findUnique({
           where: { id: data.contestantId },
         });
@@ -464,41 +428,6 @@ export default class AwardService {
         }
       }
 
-      // Check if award type already exists for this contest (if type is being updated or contestId is changing)
-      if (data.type && data.type !== existingAward.type) {
-        const existingAwardWithType = await this.prisma.award.findFirst({
-          where: {
-            contestId: targetContestId,
-            type: data.type,
-            id: { not: id },
-          },
-        });
-        if (existingAwardWithType) {
-          throw new CustomError(
-            "Loại giải thưởng này đã tồn tại cho cuộc thi",
-            409,
-            ERROR_CODES.AWARD_TYPE_EXISTS
-          );
-        }
-      }
-
-      // Check if changing contestId would create duplicate award type
-      if (data.contestId && data.contestId !== existingAward.contestId) {
-        const existingAwardWithType = await this.prisma.award.findFirst({
-          where: {
-            contestId: data.contestId,
-            type: existingAward.type,
-            id: { not: id },
-          },
-        });
-        if (existingAwardWithType) {
-          throw new CustomError(
-            "Loại giải thưởng này đã tồn tại cho cuộc thi đích",
-            409,
-            ERROR_CODES.AWARD_TYPE_EXISTS
-          );
-        }
-      }
       const updatedAward = await this.prisma.award.update({
         where: { id },
         data: {

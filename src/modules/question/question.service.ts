@@ -487,13 +487,34 @@ export class QuestionService {
           404,
           ERROR_CODES.QUESTION_TOPIC_NOT_FOUND
         );
-      } // Validate options for multiple choice questions
-      if (data.questionType === QuestionType.multiple_choice && !data.options) {
-        throw new CustomError(
-          "Câu hỏi trắc nghiệm phải có options",
-          400,
-          ERROR_CODES.VALIDATION_ERROR
-        );
+      } // Validate options cho từng loại câu hỏi
+      if (data.questionType === QuestionType.multiple_choice) {
+        // Câu hỏi trắc nghiệm PHẢI có options
+        if (!data.options || !Array.isArray(data.options) || data.options.length === 0) {
+          throw new CustomError(
+            "Câu hỏi trắc nghiệm phải có ít nhất 2 lựa chọn",
+            400,
+            ERROR_CODES.VALIDATION_ERROR
+          );
+        }
+        
+        // Kiểm tra correctAnswer có nằm trong options không
+        if (!data.options.includes(data.correctAnswer)) {
+          throw new CustomError(
+            "Đáp án đúng phải nằm trong danh sách các lựa chọn",
+            400,
+            ERROR_CODES.VALIDATION_ERROR
+          );
+        }
+      } else if (data.questionType === QuestionType.essay) {
+        // Câu hỏi tự luận KHÔNG được có options
+        if (data.options && data.options !== null) {
+          throw new CustomError(
+            "Câu hỏi tự luận không được có các lựa chọn (options)",
+            400,
+            ERROR_CODES.VALIDATION_ERROR
+          );
+        }
       }
 
       // Process uploaded media files

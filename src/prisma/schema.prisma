@@ -441,7 +441,7 @@ model Award {
   contest      Contest    @relation(fields: [contestId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   contestantId Int?       @map("contestant_id")
   contestant   Contestant? @relation(fields: [contestantId], references: [id],onDelete :Restrict , onUpdate :Restrict)
-  type         AwardType  @unique
+  type         AwardType  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

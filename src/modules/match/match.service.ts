@@ -451,4 +451,24 @@ export default class MatchService {
       },
     });
   }
+
+  static async UpdateMatchBySlug(
+    slug: string,
+    timeRemaining: number
+  ): Promise<Match | null> {
+    const match = await prisma.match.findFirst({
+      where: { slug: slug },
+      select: {
+        id: true,
+      },
+    });
+    if (!match) {
+      return null;
+    }
+
+    return prisma.match.update({
+      where: { id: match.id },
+      data: { remainingTime: timeRemaining },
+    });
+  }
 }

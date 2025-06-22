@@ -3,6 +3,7 @@ import { Server, Socket } from "socket.io";
 import { logger } from "@/utils/logger";
 import { registerQuestionEvents } from "../events/question.events";
 import { registerScreenEvents } from "../events/screen.events";
+import { registerTimerEvents } from "../events/timer.event";
 // Import các handlers sự kiện khác nếu có
 // import { registerScoreEvents } from "../events/score.events";
 
@@ -40,6 +41,6 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   // Đăng ký các sự kiện con cho namespace này
   registerQuestionEvents(io, socket);
   registerScreenEvents(io, socket);
-  // registerScoreEvents(io, socket);
+  registerTimerEvents(io, socket);
   // ...
 };

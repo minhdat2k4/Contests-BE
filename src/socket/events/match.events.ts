@@ -17,23 +17,65 @@ interface AuthenticatedSocket extends Socket {
   matchId?: number;
 }
 
-// Validation schemas
+// Helper function to resolve match from either ID or slug
+const resolveMatch = async (matchIdentifier: number | string) => {
+  if (typeof matchIdentifier === 'number') {
+    // matchIdentifier is a number (matchId)
+    return await prisma.match.findUnique({
+      where: { id: matchIdentifier },
+      include: {
+        round: {
+          include: {
+            contest: {
+              select: { name: true, status: true }
+            }
+          }
+        },
+        questionPackage: {
+          select: { name: true }
+        }
+      }
+    });
+  } else {
+    // matchIdentifier is a string (slug)
+    return await prisma.match.findFirst({
+      where: { slug: matchIdentifier },
+      include: {
+        round: {
+          include: {
+            contest: {
+              select: { name: true, status: true }
+            }
+          }
+        },
+        questionPackage: {
+          select: { name: true }
+        }
+      }
+    });
+  }
+};
+
+// Validation schemas - now support both number and string
 const StartMatchSchema = z.object({
-  matchId: z.number().int().positive()
+  matchId: z.union([z.number().int().positive(), z.string().min(1)])
 });
 
 const NextQuestionSchema = z.object({
-  matchId: z.number().int().positive(),
-  questionOrder: z.number().int().positive()
+  matchId: z.union([z.number().int().positive(), z.string().min(1)])
+});
+
+const TimerControlSchema = z.object({
+  matchId: z.union([z.number().int().positive(), z.string().min(1)])
 });
 
 const UpdateTimerSchema = z.object({
-  matchId: z.number().int().positive(),
+  matchId: z.union([z.number().int().positive(), z.string().min(1)]),
   remainingTime: z.number().int().min(0)
 });
 
 const EndMatchSchema = z.object({
-  matchId: z.number().int().positive()
+  matchId: z.union([z.number().int().positive(), z.string().min(1)])
 });
 
 export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => {
@@ -49,34 +91,25 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
   socket.on("match:start", async (data, callback) => {
     try {
       const validatedData = StartMatchSchema.parse(data);
-      const { matchId } = validatedData;
+      const { matchId: matchIdentifier } = validatedData;
 
-      // Get match information
-      const match = await prisma.match.findUnique({
-        where: { id: matchId },
-        include: {
-          round: {
-            include: {
-              contest: {
-                select: { name: true, status: true }
-              }
-            }
-          },
-          questionPackage: {
-            select: { name: true }
-          }
-        }
-      });
+      console.log('🔍 [DEBUG] match:start received:', { matchIdentifier, type: typeof matchIdentifier });
+
+      // Get match information using helper function
+      const match = await resolveMatch(matchIdentifier);
 
       if (!match) {
         const error = "Match not found";
-        logger.warn(`❌ ${error}: ${matchId}`);
+        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
+        logger.warn(`❌ ${error}: ${matchIdentifier}`);
         return callback?.({ success: false, message: error });
       }
 
+      console.log('🔍 [DEBUG] Match found:', { id: match.id, slug: match.slug, name: match.name });
+
       // Update match status to active
       const updatedMatch = await prisma.match.update({
-        where: { id: matchId },
+        where: { id: match.id },
         data: { 
           status: "ongoing",
           currentQuestion: 0,
@@ -84,11 +117,13 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         }
       });
 
-      const roomName = `match-${matchId}`;
+      const roomName = `match-${match.id}`;
+      console.log('🔍 [DEBUG] About to emit match:started to room:', roomName);
 
       // Broadcast to all clients in the match room
       io.of("/match-control").to(roomName).emit("match:started", {
-        matchId: matchId,
+        matchId: match.id,
+        matchSlug: match.slug,
         matchName: match.name,
         contestName: match.round.contest.name,
         status: "ongoing",
@@ -96,21 +131,25 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         startedAt: new Date().toISOString()
       });
 
+      console.log('🔍 [DEBUG] Event emitted successfully');
+
       logger.info(
-        `✅ Match started: ${matchId} by ${socket.user.username} (${socket.user.role})`
+        `✅ Match started: ${match.id} (${match.slug}) by ${socket.user.username} (${socket.user.role})`
       );
 
       callback?.({
         success: true,
         message: "Match started successfully",
         data: {
-          matchId: matchId,
+          matchId: match.id,
+          matchSlug: match.slug,
           status: "ongoing"
         }
       });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.log('🔍 [DEBUG] Error in match:start:', errorMessage);
       logger.error(`❌ Error in match:start: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to start match" });
     }
@@ -122,25 +161,39 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
    */
   socket.on("match:nextQuestion", async (data, callback) => {
     try {
+      console.log('🔍 [DEBUG] match:nextQuestion received data:', data);
+      
       const validatedData = NextQuestionSchema.parse(data);
-      const { matchId, questionOrder } = validatedData;
+      const { matchId: matchIdentifier } = validatedData;
 
-      // Get match information
-      const match = await prisma.match.findUnique({
-        where: { id: matchId }
-      });
+      console.log('🔍 [DEBUG] Match identifier:', { matchIdentifier, type: typeof matchIdentifier });
+
+      // Get match information using helper function
+      const match = await resolveMatch(matchIdentifier);
 
       if (!match) {
         const error = "Match not found";
-        logger.warn(`❌ ${error}: ${matchId}`);
+        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
+        logger.warn(`❌ ${error}: ${matchIdentifier}`);
         return callback?.({ success: false, message: error });
       }
+
+      console.log('🔍 [DEBUG] Match found:', { id: match.id, slug: match.slug, name: match.name });
+      console.log('🔍 [DEBUG] Current match state:', {
+        currentQuestion: match.currentQuestion,
+        status: match.status,
+        remainingTime: match.remainingTime
+      });
+
+      // Calculate next question order automatically
+      const nextQuestionOrder = match.currentQuestion + 1;
+      console.log('🔍 [DEBUG] Calculated next question order:', nextQuestionOrder);
 
       // Get question details
       const questionDetail = await prisma.questionDetail.findFirst({
         where: {
           questionPackageId: match.questionPackageId,
-          questionOrder: questionOrder
+          questionOrder: nextQuestionOrder
         },
         include: {
           question: true
@@ -149,58 +202,93 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
       if (!questionDetail) {
         const error = "Question not found";
-        logger.warn(`❌ ${error}: Order ${questionOrder} in package ${match.questionPackageId}`);
+        console.log('🔍 [DEBUG] Question not found:', { 
+          questionOrder: nextQuestionOrder, 
+          packageId: match.questionPackageId 
+        });
+        logger.warn(`❌ ${error}: Order ${nextQuestionOrder} in package ${match.questionPackageId}`);
         return callback?.({ success: false, message: error });
       }
 
+      console.log('🔍 [DEBUG] Found question detail:', {
+        id: questionDetail.question.id,
+        defaultTime: questionDetail.question.defaultTime
+      });
+
       // Update match with current question and reset timer
       const updatedMatch = await prisma.match.update({
-        where: { id: matchId },
+        where: { id: match.id },
         data: {
-          currentQuestion: questionOrder,
+          currentQuestion: nextQuestionOrder,
           remainingTime: questionDetail.question.defaultTime
         }
       });
 
-      // Start timer using timer service
-      timerService.startTimer(matchId, questionDetail.question.defaultTime);
+      console.log('🔍 [DEBUG] Match updated successfully:', {
+        id: updatedMatch.id,
+        currentQuestion: updatedMatch.currentQuestion,
+        remainingTime: updatedMatch.remainingTime
+      });
 
-      const roomName = `match-${matchId}`;
+      // Start timer using timer service
+      timerService.startTimer(match.id, questionDetail.question.defaultTime);
+
+      const roomName = `match-${match.id}`;
+
+      console.log('🔍 [DEBUG] About to emit match:questionChanged to room:', roomName);
+      console.log('🔍 [DEBUG] Event data:', {
+        matchId: match.id,
+        currentQuestion: nextQuestionOrder,
+        remainingTime: questionDetail.question.defaultTime
+      });
 
       // Broadcast question change to all clients
       io.of("/match-control").to(roomName).emit("match:questionChanged", {
-        matchId: matchId,
-        questionOrder: questionOrder,
+        matchId: match.id,
+        matchSlug: match.slug,
+        currentQuestion: nextQuestionOrder,
         remainingTime: questionDetail.question.defaultTime,
-        question: {
-          id: questionDetail.question.id,
-          intro: questionDetail.question.intro,
-          content: questionDetail.question.content,
-          questionType: questionDetail.question.questionType,
-          difficulty: questionDetail.question.difficulty,
-          defaultTime: questionDetail.question.defaultTime,
-          score: questionDetail.question.score
+        currentQuestionData: {
+          order: nextQuestionOrder,
+          question: {
+            id: questionDetail.question.id,
+            intro: questionDetail.question.intro,
+            content: questionDetail.question.content,
+            questionType: questionDetail.question.questionType,
+            difficulty: questionDetail.question.difficulty,
+            defaultTime: questionDetail.question.defaultTime,
+            score: questionDetail.question.score
+          }
         },
         changedBy: socket.user.username,
         changedAt: new Date().toISOString()
       });
 
+      console.log('🔍 [DEBUG] Event emitted successfully');
+
       logger.info(
-        `✅ Question changed: Match ${matchId} | Question ${questionOrder} | By ${socket.user.username}`
+        `✅ Question changed: Match ${match.id} (${match.slug}) | Question ${nextQuestionOrder} | By ${socket.user.username}`
       );
 
+      console.log('🔍 [DEBUG] Success response ready');
       callback?.({
         success: true,
         message: "Question changed successfully",
         data: {
-          matchId: matchId,
-          questionOrder: questionOrder,
-          remainingTime: questionDetail.question.defaultTime
+          matchId: match.id,
+          matchSlug: match.slug,
+          currentQuestion: nextQuestionOrder,
+          remainingTime: questionDetail.question.defaultTime,
+          totalQuestions: await prisma.questionDetail.count({
+            where: { questionPackageId: match.questionPackageId }
+          })
         }
       });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.log('🔍 [DEBUG] Error caught:', errorMessage);
+      console.log('🔍 [DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack');
       logger.error(`❌ Error in match:nextQuestion: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to change question" });
     }
@@ -212,21 +300,35 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
    */
   socket.on("match:pauseTimer", async (data, callback) => {
     try {
-      const { matchId } = data;
+      const validatedData = TimerControlSchema.parse(data);
+      const { matchId: matchIdentifier } = validatedData;
+
+      console.log('🔍 [DEBUG] match:pauseTimer received:', { matchIdentifier, type: typeof matchIdentifier });
+
+      // Get match information using helper function
+      const match = await resolveMatch(matchIdentifier);
+
+      if (!match) {
+        const error = "Match not found";
+        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
+        logger.warn(`❌ ${error}: ${matchIdentifier}`);
+        return callback?.({ success: false, message: error });
+      }
 
       // Pause timer
-      timerService.pauseTimer(matchId);
+      timerService.pauseTimer(match.id);
 
-      const roomName = `match-${matchId}`;
+      const roomName = `match-${match.id}`;
 
       // Broadcast timer pause to all clients
       io.of("/match-control").to(roomName).emit("match:timerPaused", {
-        matchId: matchId,
+        matchId: match.id,
+        matchSlug: match.slug,
         pausedBy: socket.user.username,
         pausedAt: new Date().toISOString()
       });
 
-      logger.info(`⏸️ Timer paused for match ${matchId} by ${socket.user.username}`);
+      logger.info(`⏸️ Timer paused for match ${match.id} (${match.slug}) by ${socket.user.username}`);
 
       callback?.({
         success: true,
@@ -235,6 +337,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.log('🔍 [DEBUG] Error in match:pauseTimer:', errorMessage);
       logger.error(`❌ Error in match:pauseTimer: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to pause timer" });
     }
@@ -246,21 +349,35 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
    */
   socket.on("match:resumeTimer", async (data, callback) => {
     try {
-      const { matchId } = data;
+      const validatedData = TimerControlSchema.parse(data);
+      const { matchId: matchIdentifier } = validatedData;
+
+      console.log('🔍 [DEBUG] match:resumeTimer received:', { matchIdentifier, type: typeof matchIdentifier });
+
+      // Get match information using helper function
+      const match = await resolveMatch(matchIdentifier);
+
+      if (!match) {
+        const error = "Match not found";
+        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
+        logger.warn(`❌ ${error}: ${matchIdentifier}`);
+        return callback?.({ success: false, message: error });
+      }
 
       // Resume timer
-      timerService.resumeTimer(matchId);
+      timerService.resumeTimer(match.id);
 
-      const roomName = `match-${matchId}`;
+      const roomName = `match-${match.id}`;
 
       // Broadcast timer resume to all clients
       io.of("/match-control").to(roomName).emit("match:timerResumed", {
-        matchId: matchId,
+        matchId: match.id,
+        matchSlug: match.slug,
         resumedBy: socket.user.username,
         resumedAt: new Date().toISOString()
       });
 
-      logger.info(`▶️ Timer resumed for match ${matchId} by ${socket.user.username}`);
+      logger.info(`▶️ Timer resumed for match ${match.id} (${match.slug}) by ${socket.user.username}`);
 
       callback?.({
         success: true,
@@ -269,6 +386,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.log('🔍 [DEBUG] Error in match:resumeTimer:', errorMessage);
       logger.error(`❌ Error in match:resumeTimer: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to resume timer" });
     }
@@ -281,19 +399,32 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
   socket.on("match:updateTimer", async (data, callback) => {
     try {
       const validatedData = UpdateTimerSchema.parse(data);
-      const { matchId, remainingTime } = validatedData;
+      const { matchId: matchIdentifier, remainingTime } = validatedData;
+
+      console.log('🔍 [DEBUG] match:updateTimer received:', { matchIdentifier, remainingTime, type: typeof matchIdentifier });
+
+      // Get match information using helper function
+      const match = await resolveMatch(matchIdentifier);
+
+      if (!match) {
+        const error = "Match not found";
+        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
+        logger.warn(`❌ ${error}: ${matchIdentifier}`);
+        return callback?.({ success: false, message: error });
+      }
 
       // Update match timer
       const updatedMatch = await prisma.match.update({
-        where: { id: matchId },
+        where: { id: match.id },
         data: { remainingTime: remainingTime }
       });
 
-      const roomName = `match-${matchId}`;
+      const roomName = `match-${match.id}`;
 
       // Broadcast timer update to all clients
       io.of("/match-control").to(roomName).emit("match:timerUpdated", {
-        matchId: matchId,
+        matchId: match.id,
+        matchSlug: match.slug,
         remainingTime: remainingTime,
         updatedAt: new Date().toISOString()
       });
@@ -301,7 +432,8 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
       // If time is up, emit time up event
       if (remainingTime <= 0) {
         io.of("/match-control").to(roomName).emit("match:timeUp", {
-          matchId: matchId,
+          matchId: match.id,
+          matchSlug: match.slug,
           questionOrder: updatedMatch.currentQuestion,
           timeUpAt: new Date().toISOString()
         });
@@ -311,13 +443,15 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         success: true,
         message: "Timer updated successfully",
         data: {
-          matchId: matchId,
+          matchId: match.id,
+          matchSlug: match.slug,
           remainingTime: remainingTime
         }
       });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.log('🔍 [DEBUG] Error in match:updateTimer:', errorMessage);
       logger.error(`❌ Error in match:updateTimer: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to update timer" });
     }
@@ -330,14 +464,26 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
   socket.on("match:end", async (data, callback) => {
     try {
       const validatedData = EndMatchSchema.parse(data);
-      const { matchId } = validatedData;
+      const { matchId: matchIdentifier } = validatedData;
+
+      console.log('🔍 [DEBUG] match:end received:', { matchIdentifier, type: typeof matchIdentifier });
+
+      // Get match information using helper function
+      const match = await resolveMatch(matchIdentifier);
+
+      if (!match) {
+        const error = "Match not found";
+        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
+        logger.warn(`❌ ${error}: ${matchIdentifier}`);
+        return callback?.({ success: false, message: error });
+      }
 
       // Stop timer
-      timerService.stopTimer(matchId);
+      timerService.stopTimer(match.id);
 
       // Update match status to completed
       const updatedMatch = await prisma.match.update({
-        where: { id: matchId },
+        where: { id: match.id },
         data: { 
           status: "finished",
           remainingTime: 0
@@ -346,7 +492,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
       // Get match results summary
       const results = await prisma.result.findMany({
-        where: { matchId: matchId },
+        where: { matchId: match.id },
         include: {
           contestant: {
             include: {
@@ -390,11 +536,12 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         return acc;
       }, {} as any);
 
-      const roomName = `match-${matchId}`;
+      const roomName = `match-${match.id}`;
 
       // Broadcast match end to all clients
       io.of("/match-control").to(roomName).emit("match:ended", {
-        matchId: matchId,
+        matchId: match.id,
+        matchSlug: match.slug,
         status: "finished",
         endedBy: socket.user.username,
         endedAt: new Date().toISOString(),
@@ -406,14 +553,15 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
       });
 
       logger.info(
-        `✅ Match ended: ${matchId} by ${socket.user.username} (${socket.user.role})`
+        `✅ Match ended: ${match.id} (${match.slug}) by ${socket.user.username} (${socket.user.role})`
       );
 
       callback?.({
         success: true,
         message: "Match ended successfully",
         data: {
-          matchId: matchId,
+          matchId: match.id,
+          matchSlug: match.slug,
           status: "finished",
           summary: {
             totalQuestions: totalQuestions,
@@ -424,6 +572,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.log('🔍 [DEBUG] Error in match:end:', errorMessage);
       logger.error(`❌ Error in match:end: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to end match" });
     }
@@ -435,27 +584,20 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
    */
   socket.on("match:getStatus", async (data, callback) => {
     try {
-      const { matchId } = data;
+      const { matchId: matchIdentifier } = data;
 
-      const match = await prisma.match.findUnique({
-        where: { id: matchId },
-        include: {
-          round: {
-            include: {
-              contest: {
-                select: { name: true, status: true }
-              }
-            }
-          },
-          questionPackage: {
-            select: { name: true }
-          }
-        }
-      });
+      console.log('🔍 [DEBUG] match:getStatus received:', { matchIdentifier, type: typeof matchIdentifier });
+
+      // Get match information using helper function
+      const match = await resolveMatch(matchIdentifier);
 
       if (!match) {
-        return callback?.({ success: false, message: "Match not found" });
+        const error = "Match not found";
+        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
+        return callback?.({ success: false, message: error });
       }
+
+      console.log('🔍 [DEBUG] Match found for getStatus:', { id: match.id, slug: match.slug, name: match.name });
 
       // Get current question if any
       let currentQuestionDetail = null;
@@ -489,13 +631,14 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
       });
 
       // Get connected students count
-      const connectedStudents = io.of("/match-control").adapter.rooms.get(`match-${matchId}`)?.size || 0;
+      const connectedStudents = io.of("/match-control").adapter.rooms.get(`match-${match.id}`)?.size || 0;
 
       callback?.({
         success: true,
         data: {
           match: {
             id: match.id,
+            slug: match.slug,
             name: match.name,
             status: match.status,
             currentQuestion: match.currentQuestion,
@@ -516,6 +659,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.log('🔍 [DEBUG] Error in match:getStatus:', errorMessage);
       logger.error(`❌ Error in match:getStatus: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to get match status" });
     }

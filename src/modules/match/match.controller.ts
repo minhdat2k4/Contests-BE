@@ -535,4 +535,29 @@ export default class MatchController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async getListMatchByJudgeId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const judgeId = req.user?.userId;
+
+      if (!judgeId) {
+        throw new Error("ID giám khảo không hợp lệ");
+      }
+
+      const id: number = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        throw new Error("ID không hợp lệ");
+      }
+
+      const match = await MatchService.getListMatchByJudgeId(judgeId, id);
+
+      res.json(successResponse(match, "Lấy danh sách trận đấu thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

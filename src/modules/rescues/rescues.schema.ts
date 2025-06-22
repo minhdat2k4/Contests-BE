@@ -1,4 +1,4 @@
-import z, { number } from "zod";
+import z from "zod";
 import { RescueType, RescueStatus, Match } from "@prisma/client";
 
 export const RescuesShema = z.object({

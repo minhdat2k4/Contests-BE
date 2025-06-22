@@ -66,6 +66,50 @@ export const getResultsByMatchSchema = z.object({
     .transform(Number)
 });
 
+// Get Results by Contest Slug Schema
+export const getResultsByContestSlugSchema = z.object({
+  slug: z.string()
+    .min(1, "Contest slug không được để trống")
+    .max(255, "Contest slug không được quá 255 ký tự")
+});
+
+// Get Results by Contest Slug Query Schema
+export const getResultsByContestSlugQuerySchema = z.object({
+  page: z.string()
+    .regex(/^\d+$/, "Page phải là số")
+    .transform(Number)
+    .refine(val => val > 0, "Page phải lớn hơn 0")
+    .default("1"),
+  limit: z.string()
+    .regex(/^\d+$/, "Limit phải là số")
+    .transform(Number)
+    .refine(val => val > 0 && val <= 100, "Limit phải từ 1-100")
+    .default("10"),
+  search: z.string()
+    .min(1, "Từ khóa tìm kiếm không được để trống")
+    .describe("Tìm kiếm theo tên thí sinh hoặc mã thí sinh")
+    .optional(),
+  matchId: z.string()
+    .regex(/^\d+$/, "Match ID phải là số")
+    .transform(Number)
+    .optional(),
+  roundId: z.string()
+    .regex(/^\d+$/, "Round ID phải là số")
+    .transform(Number)
+    .optional(),
+  isCorrect: z.string()
+    .transform(val => val === "true")
+    .optional(),
+  questionOrder: z.string()
+    .regex(/^\d+$/, "Question order phải là số")
+    .transform(Number)
+    .optional(),
+  sortBy: z.enum(["createdAt", "updatedAt", "name", "questionOrder", "contestant"])
+    .default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"])
+    .default("desc")
+});
+
 // Delete Result Schema
 export const deleteResultSchema = z.object({
   id: z.string()
@@ -85,7 +129,10 @@ export const getResultsQuerySchema = z.object({
     .transform(Number)
     .refine(val => val > 0 && val <= 100, "Limit phải từ 1-100")
     .default("10"),
-  search: z.string().optional(),
+  search: z.string()
+    .min(1, "Từ khóa tìm kiếm không được để trống")
+    .describe("Tìm kiếm theo tên kết quả, tên thí sinh hoặc mã thí sinh")
+    .optional(),
   contestantId: z.string()
     .regex(/^\d+$/, "Contestant ID phải là số")
     .transform(Number)
@@ -120,6 +167,8 @@ export type UpdateResultData = z.infer<typeof updateResultSchema>;
 export type GetResultByIdParams = z.infer<typeof getResultByIdSchema>;
 export type GetResultsByContestantParams = z.infer<typeof getResultsByContestantSchema>;
 export type GetResultsByMatchParams = z.infer<typeof getResultsByMatchSchema>;
+export type GetResultsByContestSlugParams = z.infer<typeof getResultsByContestSlugSchema>;
+export type GetResultsByContestSlugQuery = z.infer<typeof getResultsByContestSlugQuerySchema>;
 export type DeleteResultParams = z.infer<typeof deleteResultSchema>;
 export type GetResultsQuery = z.infer<typeof getResultsQuerySchema>;
 export type BatchDeleteResultsData = z.infer<typeof batchDeleteResultsSchema>;

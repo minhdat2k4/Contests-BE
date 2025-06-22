@@ -92,7 +92,7 @@ GET /api/results?page=1&limit=10&contestantId=1&isCorrect=true
 |-----------|------|---------|-------------|
 | `page` | number | 1 | Page number |
 | `limit` | number | 10 | Items per page (max 100) |
-| `search` | string | - | Search in result name |
+| `search` | string | - | Tìm kiếm theo tên kết quả, tên thí sinh hoặc mã thí sinh |
 | `contestantId` | number | - | Filter by contestant |
 | `matchId` | number | - | Filter by match |
 | `isCorrect` | boolean | - | Filter by correctness |
@@ -141,6 +141,97 @@ GET /api/results/match/1
 ### **9. GET /api/results/contestant/:contestantId/statistics - Get Statistics**
 ```
 GET /api/results/contestant/1/statistics
+```
+
+### **10. GET /api/results/contest/:slug - Get Results by Contest Slug**
+```
+GET /api/results/contest/olympic-toan-2024?page=1&limit=10
+```
+
+**Query Parameters:**
+- `page` (optional): Số trang (default: 1)
+- `limit` (optional): Số lượng mỗi trang (default: 10, max: 100)
+- `search` (optional): Từ khóa tìm kiếm theo tên thí sinh hoặc mã thí sinh
+- `matchId` (optional): ID trận đấu
+- `roundId` (optional): ID vòng thi
+- `isCorrect` (optional): true/false - lọc theo đúng/sai
+- `questionOrder` (optional): Thứ tự câu hỏi
+- `sortBy` (optional): Sắp xếp theo (createdAt, updatedAt, name, questionOrder, contestant)
+- `sortOrder` (optional): Thứ tự sắp xếp (asc, desc)
+
+**Request Example:**
+```javascript
+// Lấy tất cả kết quả của cuộc thi:
+// GET /api/results/contest/olympic-toan-2024?page=1&limit=10
+
+// Tìm kiếm theo tên thí sinh trong cuộc thi:
+// GET /api/results/contest/olympic-toan-2024?search=Nguyễn Văn A&page=1&limit=10
+
+// Lọc theo vòng thi:
+// GET /api/results/contest/olympic-toan-2024?roundId=1&page=1&limit=10
+
+// Lọc theo trận đấu:
+// GET /api/results/contest/olympic-toan-2024?matchId=1&page=1&limit=10
+
+// Sắp xếp theo tên thí sinh:
+// GET /api/results/contest/olympic-toan-2024?sortBy=contestant&sortOrder=asc
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Lấy danh sách kết quả theo cuộc thi thành công",
+  "data": {
+    "results": [
+      {
+        "id": 1,
+        "name": "Result Name",
+        "contestantId": 1,
+        "matchId": 1,
+        "isCorrect": true,
+        "questionOrder": 1,
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z",
+        "contestant": {
+          "id": 1,
+          "studentId": 1,
+          "student": {
+            "id": 1,
+            "fullName": "Nguyễn Văn A",
+            "studentCode": "SV001"
+          }
+        },
+        "match": {
+          "id": 1,
+          "name": "Match Name",
+          "roundId": 1,
+          "round": {
+            "id": 1,
+            "name": "Round Name"
+          }
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 50,
+      "totalPages": 5,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "Cuộc thi không tồn tại",
+  "code": "CONTEST_NOT_FOUND"
+}
 ```
 
 ---
@@ -207,6 +298,10 @@ GET /api/results/contestant/1/statistics
 **Request:**
 ```javascript
 // GET /api/results?page=1&limit=5&contestantId=5&sortBy=questionOrder&sortOrder=asc
+// Hoặc tìm kiếm theo tên thí sinh:
+// GET /api/results?search=Nguyễn Văn A&page=1&limit=10
+// Hoặc tìm kiếm theo mã thí sinh:
+// GET /api/results?search=SV001&page=1&limit=10
 ```
 
 **Response:**

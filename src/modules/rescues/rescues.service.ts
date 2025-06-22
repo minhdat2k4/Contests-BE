@@ -8,7 +8,10 @@ import {
 } from "@/modules/rescues";
 import { Rescue } from "@prisma/client";
 export default class RescueService {
-  static async getAll(query: RescuesQueryInput): Promise<{
+  static async getAll(
+    query: RescuesQueryInput,
+    contestId: number
+  ): Promise<{
     rescues: Rescues[];
     pagination: {
       page: number;
@@ -45,7 +48,12 @@ export default class RescueService {
     }
 
     const RescueRaw = await prisma.rescue.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        match: {
+          contestId: contestId,
+        },
+      },
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },

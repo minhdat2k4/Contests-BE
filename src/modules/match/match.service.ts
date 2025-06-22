@@ -435,4 +435,20 @@ export default class MatchService {
       where: { matchId: matchId },
     });
   }
+
+  static async getListMatchByJudgeId(contestId: number, JudgeId: number) {
+    return prisma.match.findMany({
+      where: {
+        contestId: contestId,
+        groups: {
+          some: { userId: JudgeId },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    });
+  }
 }

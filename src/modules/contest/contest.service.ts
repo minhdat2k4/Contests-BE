@@ -7,6 +7,7 @@ import {
 import { Contest } from "@prisma/client";
 import slugify from "slugify";
 import { htmlToPlainText } from "@/utils/html";
+import { group } from "console";
 export default class ContestService {
   static async getAll(query: ContestQueryInput): Promise<{
     Contest: Contest[];
@@ -160,6 +161,23 @@ export default class ContestService {
       select: {
         id: true,
         name: true,
+      },
+    });
+  }
+
+  static async getListContestByJudgeId(judgeId: number) {
+    return prisma.contest.findMany({
+      where: {
+        matches: {
+          some: {
+            groups: { some: { userId: judgeId } },
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
       },
     });
   }

@@ -7,7 +7,7 @@ import {
 } from "@/modules/contest";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { ContestStatus, Contest } from "@prisma/client";
+import { ContestStatus, User } from "@prisma/client";
 import { prisma } from "@/config/database";
 import { htmlToPlainText } from "@/utils/html";
 
@@ -303,6 +303,28 @@ export default class ContestController {
       }
       logger.info(`Lấy thông tin cuộc thi thành công`);
       res.json(successResponse(Contest, `Lấy danh sách cuộc thi thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getListContestByJudgeId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const judgeId = req.user?.userId;
+
+      if (!judgeId) {
+        throw new Error("ID giám khảo không hợp lệ");
+      }
+      const contests = await Contestervice.getListContestByJudgeId(judgeId);
+      if (!contests) {
+        throw new Error("Không tìm thấy cuộc thi cho giám khảo này");
+      }
+      logger.info(`Lấy danh sách cuộc thi cho giám khảo thành công`);
+      res.json(successResponse(contests, "Lấy danh sách cuộc thi thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

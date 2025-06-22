@@ -4,11 +4,7 @@ import {
   validateParams,
   validateQuery,
 } from "@/utils/validation";
-import {
-  MediaIdShame,
-  deleteMediaesSchema,
-  UpdeateMediahema,
-} from "./media.schema";
+import { MediaIdShame, deleteMediaesSchema } from "./media.schema";
 import { MediaController } from "@/modules/media";
 import { authenticate, role } from "@/middlewares/auth";
 import multer from "multer";

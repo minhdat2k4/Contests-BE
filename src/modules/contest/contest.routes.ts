@@ -15,9 +15,7 @@ import {
 import { authenticate, role } from "@/middlewares/auth";
 const contestRoute = Router();
 
-import { uploadContestFiles } from "@/middlewares/uploadContestFiles";
-
-// // // prive
+// // // private
 
 contestRoute.get(
   "/",
@@ -81,6 +79,15 @@ contestRoute.post(
   role("Admin"),
   validateBody(deleteContestsesSchema),
   ContestController.deleteMany
+);
+
+// Judge ;
+
+contestRoute.get(
+  "/list-contest/judge",
+  authenticate,
+  role("Judge"),
+  ContestController.getListContestByJudgeId
 );
 
 export { contestRoute };

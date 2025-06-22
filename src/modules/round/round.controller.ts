@@ -286,4 +286,37 @@ export default class RoundController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async getRoundByContestId(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      let round: any;
+
+      if (isNaN(Number(id))) {
+        round = await prisma.round.findMany({
+          select: {
+            id: true,
+            name: true,
+          },
+        });
+
+        logger.info("Lấy danh sách tất cả lớp thành công");
+        res.json(successResponse(round, "Lấy danh sách tất cả lớp thành công"));
+        return;
+      }
+      const contest = await prisma.contest.findFirst({
+        where: { id: Number(id) },
+      });
+
+      if (!contest) throw new Error("Không tìm thấy thuộc thi");
+
+      round = await RoundService.getListRound(contest.id);
+
+      logger.info("Lấy danh sách vòng đấu thành công");
+      res.json(successResponse(round, "Lấy danh sách vòng đấu  thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

@@ -134,4 +134,13 @@ matchRouter.post(
   MatchController.deletes
 );
 
+//  Judge routes
+
+matchRouter.get(
+  "/judge/:id",
+  authenticate,
+  role("Judge"),
+  MatchController.getListMatchByJudgeId
+);
+
 export { matchRouter };

@@ -1,5 +1,4 @@
 import { prisma } from "@/config/database";
-import { Round } from "@prisma/client";
 import { Media } from "@prisma/client";
 import { CreateMediaInput, UpdateMediaInput } from "./media.schema";
 export default class MediaService {
@@ -7,6 +6,7 @@ export default class MediaService {
     return prisma.media.findMany({
       where: {
         contestId: contestId,
+        type: "images",
       },
     });
   }

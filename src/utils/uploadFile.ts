@@ -58,3 +58,12 @@ export async function deleteTempFile(tempPath: string | null): Promise<void> {
     console.warn(`Không thể xóa file tạm (có thể không tồn tại): ${tempPath}`);
   }
 }
+
+export async function ensureFolderExists(folderPath: string): Promise<void> {
+  try {
+    await fs.access(folderPath); // Kiểm tra tồn tại
+  } catch (error) {
+    // Nếu lỗi nghĩa là không tồn tại => tạo thư mục
+    await fs.mkdir(folderPath, { recursive: true });
+  }
+}

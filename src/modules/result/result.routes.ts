@@ -10,7 +10,9 @@ import {
   getResultsByMatchSchema,
   deleteResultSchema,
   getResultsQuerySchema,
-  batchDeleteResultsSchema
+  batchDeleteResultsSchema,
+  getResultsByContestSlugSchema,
+  getResultsByContestSlugQuerySchema
 } from "./result.schema";
 
 const router = Router();
@@ -132,6 +134,20 @@ router.delete(
   role("Admin"),
   validateParams(deleteResultSchema),
   resultController.deleteResult.bind(resultController)
+);
+
+/**
+ * @route GET /api/results/contest/:slug
+ * @desc Get results by contest slug with pagination and filtering
+ * @access Private (Admin/Judge)
+ */
+router.get(
+  "/contest/:slug",
+  authenticate,
+  role("Admin", "Judge"),
+  validateParams(getResultsByContestSlugSchema),
+  validateQuery(getResultsByContestSlugQuerySchema),
+  resultController.getResultsByContestSlug.bind(resultController)
 );
 
 export { router as resultRouter };

@@ -9,6 +9,7 @@ import {
   ResultResponse,
   ResultListResponse,
   BatchDeleteResult,
+  GetResultsByContestSlugQuery,
 } from "./result.schema";
 
 export class ResultService {
@@ -40,10 +41,31 @@ export class ResultService {
 
       // Apply filters
       if (search) {
-        where.name = {
-          contains: search,
-          mode: "insensitive",
-        };
+        where.OR = [
+          {
+            name: {
+              contains: search,
+            },
+          },
+          {
+            contestant: {
+              student: {
+                fullName: {
+                  contains: search,
+                },
+              },
+            },
+          },
+          {
+            contestant: {
+              student: {
+                studentCode: {
+                  contains: search,
+                },
+              },
+            },
+          },
+        ];
       }
 
       if (contestantId) {
@@ -610,6 +632,184 @@ export class ResultService {
       logger.error("Error getting contestant statistics:", error);
       throw new CustomError(
         "Lỗi khi lấy thống kê contestant",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Get results by contest slug with pagination and filtering
+   */
+  async getResultsByContestSlug(
+    slug: string, 
+    query: GetResultsByContestSlugQuery
+  ): Promise<ResultListResponse> {
+    try {
+      const {
+        page,
+        limit,
+        search,
+        matchId,
+        roundId,
+        isCorrect,
+        questionOrder,
+        sortBy,
+        sortOrder,
+      } = query;
+
+      const skip = (page - 1) * limit;
+
+      // Tìm contest theo slug
+      const contest = await this.prisma.contest.findUnique({
+        where: { slug },
+        select: { id: true, name: true }
+      });
+
+      if (!contest) {
+        throw new CustomError(
+          "Cuộc thi không tồn tại",
+          404,
+          ERROR_CODES.CONTEST_NOT_FOUND
+        );
+      }
+
+      // Xây dựng điều kiện where
+      const where: any = {
+        contestant: {
+          contestId: contest.id
+        }
+      };
+
+      // Apply filters
+      if (search) {
+        where.OR = [
+          {
+            contestant: {
+              student: {
+                fullName: {
+                  contains: search,
+                },
+              },
+            },
+          },
+          {
+            contestant: {
+              student: {
+                studentCode: {
+                  contains: search,
+                },
+              },
+            },
+          },
+        ];
+      }
+
+      if (matchId) {
+        where.matchId = matchId;
+      }
+
+      if (roundId) {
+        where.match = {
+          roundId: roundId
+        };
+      }
+
+      if (isCorrect !== undefined) {
+        where.isCorrect = isCorrect;
+      }
+
+      if (questionOrder) {
+        where.questionOrder = questionOrder;
+      }
+
+      // Get total count
+      const total = await this.prisma.result.count({ where });
+
+      // Build orderBy
+      let orderBy: any = {};
+      switch (sortBy) {
+        case "contestant":
+          orderBy = {
+            contestant: {
+              student: {
+                fullName: sortOrder
+              }
+            }
+          };
+          break;
+        case "questionOrder":
+          orderBy = { questionOrder: sortOrder };
+          break;
+        case "name":
+          orderBy = { name: sortOrder };
+          break;
+        case "createdAt":
+          orderBy = { createdAt: sortOrder };
+          break;
+        case "updatedAt":
+          orderBy = { updatedAt: sortOrder };
+          break;
+        default:
+          orderBy = { createdAt: sortOrder };
+      }
+
+      // Get results
+      const results = await this.prisma.result.findMany({
+        where,
+        include: {
+          contestant: {
+            select: {
+              id: true,
+              studentId: true,
+              student: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  studentCode: true,
+                },
+              },
+            },
+          },
+          match: {
+            select: {
+              id: true,
+              name: true,
+              roundId: true,
+              round: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy,
+        skip,
+        take: limit,
+      });
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        results: results as ResultResponse[],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
+        },
+      };
+    } catch (error) {
+      logger.error("Error getting results by contest slug:", error);
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      throw new CustomError(
+        "Lỗi khi lấy danh sách kết quả theo cuộc thi",
         500,
         ERROR_CODES.INTERNAL_SERVER_ERROR
       );

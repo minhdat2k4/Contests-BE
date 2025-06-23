@@ -238,7 +238,6 @@ export default class ContestantController {
       for (const id of ids) {
         const Contestant = await ContestantService.getContestantBy({
           id: Number(id),
-          include: { student: true }, // đảm bảo có student.fullName
         });
 
         if (!Contestant) {
@@ -321,7 +320,7 @@ export default class ContestantController {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: (req.query.search as string) || undefined,
-        studentId: parseInt(req.query.studentId as string) || undefined,
+        contestId: parseInt(req.query.contestId as string) || undefined,
         roundId: parseInt(req.query.roundId as string) || undefined,
         status: Object.values(ContestantStatus).includes(
           statusQuery as ContestantStatus
@@ -354,6 +353,7 @@ export default class ContestantController {
       const contest = await prisma.contest.findFirst({
         where: { slug: req.params.slug },
       });
+
       if (!contest) {
         throw new Error("Không tìm thấy cuộc thi");
       }
@@ -376,7 +376,7 @@ export default class ContestantController {
 
       for (const id of input.ids) {
         try {
-          const student = await prisma.student.findUnique({ where: { id } });
+          const student = await prisma.student.findFirst({ where: { id } });
           if (!student) {
             messages.push({
               status: "error",
@@ -389,7 +389,6 @@ export default class ContestantController {
           const existing = await prisma.contestant.findFirst({
             where: { studentId: id, contestId: contest.id },
           });
-
           if (existing) {
             messages.push({
               status: "error",
@@ -424,8 +423,8 @@ export default class ContestantController {
             continue;
           }
 
-          const created = await ContestantService.createMany({
-            ...input,
+          const created = await ContestantService.create({
+            roundId: round.id,
             studentId: id,
             contestId: contest.id,
           });
@@ -461,7 +460,7 @@ export default class ContestantController {
             errorCount,
             messages, // có thể xóa dòng này nếu không muốn gửi về
           },
-          "Hoàn tất xử lý danh sách"
+          ` Thêm danh sách thí sinh thành công `
         )
       );
     } catch (error) {

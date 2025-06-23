@@ -31,6 +31,8 @@ import { groupDivisionRoutes } from "@/modules/groupDivision";
 import { mediaRouter } from "@/modules/media";
 import { resultRouter } from "@/modules/result";
 import { sponsorRouter } from "@/modules/sponsor";
+import { classVideoRouter } from "@/modules/classVideo";
+
 import path from "path";
 
 // Load environment variables
@@ -53,20 +55,30 @@ app.use(
 );
 
 // Static file serving với explicit CORS headers
-app.use('/uploads', (req, res, next) => {
-  // Set CORS headers for static files
-  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || "http://localhost:5173");
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight OPTIONS request
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-    return;
-  }
-  next();
-}, express.static(path.join(__dirname, '../uploads')));
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    // Set CORS headers for static files
+    res.header(
+      "Access-Control-Allow-Origin",
+      process.env.CORS_ORIGIN || "http://localhost:5173"
+    );
+    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control"
+    );
+    res.header("Access-Control-Allow-Credentials", "true");
+
+    // Handle preflight OPTIONS request
+    if (req.method === "OPTIONS") {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  },
+  express.static(path.join(__dirname, "../uploads"))
+);
 
 // Request logging
 if (process.env.NODE_ENV === "development") {
@@ -116,7 +128,7 @@ app.use("/api/match", matchRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/group", groupRouter);
 app.use("/api/screen", screenRouter);
-
+app.use("/api/class-video", classVideoRouter);
 app.use("/api/questions", questionRoutes);
 app.use("/api/results", resultRouter);
 app.use("/api/sponsors", sponsorRouter);

@@ -8,7 +8,8 @@ import {
   CreateResultData,
   UpdateResultData,
   GetResultsQuery,
-  BatchDeleteResultsData
+  BatchDeleteResultsData,
+  GetResultsByContestSlugQuery
 } from "./result.schema";
 
 export class ResultController {
@@ -220,6 +221,40 @@ export class ResultController {
       res.json(successResponse(statistics, "Lấy thống kê contestant thành công"));
     } catch (error) {
       logger.error("Error in getContestantStatistics controller:", error);
+      if (error instanceof CustomError) {
+        res.status(error.statusCode).json(errorResponse(error.message, error.code));
+      } else {
+        res.status(500).json(errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR));
+      }
+    }
+  }
+
+  /**
+   * Get results by contest slug with pagination and filtering
+   */
+  async getResultsByContestSlug(req: Request, res: Response): Promise<void> {
+    try {
+      const { slug } = req.params;
+      
+      // Parse query parameters with defaults
+      const query: GetResultsByContestSlugQuery = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: req.query.search as string || undefined,
+        matchId: req.query.matchId ? parseInt(req.query.matchId as string) : undefined,
+        roundId: req.query.roundId ? parseInt(req.query.roundId as string) : undefined,
+        isCorrect: req.query.isCorrect === "true" ? true : req.query.isCorrect === "false" ? false : undefined,
+        questionOrder: req.query.questionOrder ? parseInt(req.query.questionOrder as string) : undefined,
+        sortBy: (req.query.sortBy as "createdAt" | "updatedAt" | "name" | "questionOrder" | "contestant") || "createdAt",
+        sortOrder: (req.query.sortOrder as "asc" | "desc") || "desc"
+      };
+
+      const result = await this.resultService.getResultsByContestSlug(slug, query);
+
+      logger.info(`Retrieved ${result.results.length} results for contest ${slug}`);
+      res.json(successResponse(result, "Lấy danh sách kết quả theo cuộc thi thành công"));
+    } catch (error) {
+      logger.error("Error in getResultsByContestSlug controller:", error);
       if (error instanceof CustomError) {
         res.status(error.statusCode).json(errorResponse(error.message, error.code));
       } else {

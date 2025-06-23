@@ -435,4 +435,40 @@ export default class MatchService {
       where: { matchId: matchId },
     });
   }
+
+  static async getListMatchByJudgeId(contestId: number, JudgeId: number) {
+    return prisma.match.findMany({
+      where: {
+        contestId: contestId,
+        groups: {
+          some: { userId: JudgeId },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+    });
+  }
+
+  static async UpdateMatchBySlug(
+    slug: string,
+    timeRemaining: number
+  ): Promise<Match | null> {
+    const match = await prisma.match.findFirst({
+      where: { slug: slug },
+      select: {
+        id: true,
+      },
+    });
+    if (!match) {
+      return null;
+    }
+
+    return prisma.match.update({
+      where: { id: match.id },
+      data: { remainingTime: timeRemaining },
+    });
+  }
 }

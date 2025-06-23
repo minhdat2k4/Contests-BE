@@ -339,6 +339,7 @@ Table Screen_Controls {
 Enum Role {
   Admin
   Judge
+  Student
 }
 
 Enum QuestionType {

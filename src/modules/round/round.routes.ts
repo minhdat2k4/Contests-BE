@@ -33,6 +33,14 @@ roundRouter.get(
 );
 
 roundRouter.get(
+  "/list-round/:id",
+  authenticate,
+  role("Admin"),
+  // validateQuery(RoundQuerySchema),
+  RoundController.getRoundByContestId
+);
+
+roundRouter.get(
   "/",
   authenticate,
   role("Admin"),

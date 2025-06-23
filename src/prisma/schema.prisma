@@ -19,6 +19,7 @@ generator dbml {
 enum Role {
   Admin
   Judge
+  Student
 }
 
 enum QuestionType {

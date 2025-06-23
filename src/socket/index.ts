@@ -125,7 +125,7 @@ export const initializeSocketIO = (io: Server) => {
   // Initialize timer service
   timerService.setIO(io);
 
-  // Namespace điều khiển trận đấu
+  // Namespace điều khiển trận đấu (dành cho Admin/Judge)
   const matchControlNamespace = io.of("/match-control");
 
   // Enable authentication middleware
@@ -143,9 +143,6 @@ export const initializeSocketIO = (io: Server) => {
     registerMatchControlEvents(io, authSocket);
     registerTestEvents(io, authSocket);
     
-    // Register student-specific events
-    registerStudentEvents(io, authSocket);
-    
     // Register match control events
     registerMatchEvents(io, authSocket);
 
@@ -156,5 +153,75 @@ export const initializeSocketIO = (io: Server) => {
     });
   });
 
-  logger.info("✅ Socket.IO server initialized.");
+  // Initialize /student namespace
+  const studentNamespace = io.of("/student");
+  studentNamespace.use(authMiddleware);
+  
+  studentNamespace.on("connection", (socket: Socket) => {
+    const authSocket = socket as AuthenticatedSocket;
+    const user = authSocket.user;
+
+    console.log(
+      `✅ [STUDENT] Client connected: ${socket.id} | User: ${user.username} (${user.role})`
+    );
+
+    // Only allow students to connect
+    if (user.role !== "Student") {
+      console.log(`❌ [STUDENT] Access denied for role: ${user.role}`);
+      socket.disconnect();
+      return;
+    }
+
+    // Student room management
+    socket.on("joinMatchRoom", (matchId: number, callback?: (response: any) => void) => {
+      try {
+        console.log(`🏠 [STUDENT] Socket ${socket.id} wants to join matchId: ${matchId}`);
+        
+        const roomName = `match-${matchId}`;
+        socket.join(roomName);
+        
+        console.log(`✅ [STUDENT] Socket ${socket.id} joined room: ${roomName}`);
+        logger.info(`[STUDENT] Socket ${socket.id} joined room: ${roomName}`);
+
+        // Check room size
+        const roomSize = studentNamespace.adapter.rooms.get(roomName)?.size || 0;
+        console.log(`📊 [STUDENT] Room ${roomName} now has ${roomSize} students`);
+
+        // Send acknowledgement
+        if (callback) {
+          const response = {
+            success: true,
+            message: `Successfully joined room ${roomName}`,
+            roomSize: roomSize
+          };
+          console.log(`📨 [STUDENT] Sending response:`, response);
+          callback(response);
+        }
+      } catch (error) {
+        console.error(`❌ [STUDENT] Error joining room for match ${matchId}:`, error);
+        logger.error(`[STUDENT] Error joining room for match ${matchId}`, error);
+        if (callback) {
+          callback({ success: false, message: "Failed to join room." });
+        }
+      }
+    });
+
+    socket.on("leaveMatchRoom", (matchId: number) => {
+      const roomName = `match-${matchId}`;
+      socket.leave(roomName);
+      console.log(`🚪 [STUDENT] Socket ${socket.id} left room: ${roomName}`);
+      logger.info(`[STUDENT] Socket ${socket.id} left room: ${roomName}`);
+    });
+
+    // Register student-specific events
+    registerStudentEvents(studentNamespace, authSocket);
+
+    socket.on("disconnect", (reason) => {
+      console.log(
+        `❌ [STUDENT] Client disconnected: ${socket.id} | Reason: ${reason}`
+      );
+    });
+  });
+
+  logger.info("✅ Socket.IO server initialized with /match-control and /student namespaces.");
 };

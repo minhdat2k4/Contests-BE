@@ -78,6 +78,10 @@ const EndMatchSchema = z.object({
   matchId: z.union([z.number().int().positive(), z.string().min(1)])
 });
 
+const GetMatchStatusSchema = z.object({
+  matchId: z.union([z.number().int().positive(), z.string().min(1)])
+});
+
 export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => {
   // Only allow Admin and Judge roles to control matches
   if (!["Admin", "Judge"].includes(socket.user.role)) {
@@ -122,6 +126,17 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
       // Broadcast to all clients in the match room
       io.of("/match-control").to(roomName).emit("match:started", {
+        matchId: match.id,
+        matchSlug: match.slug,
+        matchName: match.name,
+        contestName: match.round.contest.name,
+        status: "ongoing",
+        startedBy: socket.user.username,
+        startedAt: new Date().toISOString()
+      });
+
+      // Also broadcast to students namespace
+      io.of("/student").to(roomName).emit("match:started", {
         matchId: match.id,
         matchSlug: match.slug,
         matchName: match.name,
@@ -193,75 +208,105 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
       const questionDetail = await prisma.questionDetail.findFirst({
         where: {
           questionPackageId: match.questionPackageId,
-          questionOrder: nextQuestionOrder
+          questionOrder: nextQuestionOrder,
+          isActive: true
         },
         include: {
-          question: true
+          question: true // Không cần include options vì nó là Json field
         }
       });
 
       if (!questionDetail) {
-        const error = "Question not found";
-        console.log('🔍 [DEBUG] Question not found:', { 
-          questionOrder: nextQuestionOrder, 
-          packageId: match.questionPackageId 
+        callback({
+          success: false,
+          message: `Không tìm thấy câu hỏi ${nextQuestionOrder}`
         });
-        logger.warn(`❌ ${error}: Order ${nextQuestionOrder} in package ${match.questionPackageId}`);
-        return callback?.({ success: false, message: error });
+        return;
       }
 
+      // Type assertion để TypeScript hiểu include relationship
+      const questionDetailWithRelation = questionDetail as any;
+
       console.log('🔍 [DEBUG] Found question detail:', {
-        id: questionDetail.question.id,
-        defaultTime: questionDetail.question.defaultTime
+        id: questionDetailWithRelation.question.id,
+        defaultTime: questionDetailWithRelation.question.defaultTime,
+        optionsCount: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options.length : 0
       });
 
       // Update match with current question and reset timer
-      const updatedMatch = await prisma.match.update({
+      await prisma.match.update({
         where: { id: match.id },
         data: {
           currentQuestion: nextQuestionOrder,
-          remainingTime: questionDetail.question.defaultTime
+          remainingTime: questionDetailWithRelation.question.defaultTime
         }
       });
 
-      console.log('🔍 [DEBUG] Match updated successfully:', {
-        id: updatedMatch.id,
-        currentQuestion: updatedMatch.currentQuestion,
-        remainingTime: updatedMatch.remainingTime
-      });
+      console.log(`🔄 [DB] Updated match ${match.id} to question ${nextQuestionOrder}`);
 
       // Start timer using timer service
-      timerService.startTimer(match.id, questionDetail.question.defaultTime);
+      timerService.startTimer(match.id, questionDetailWithRelation.question.defaultTime);
 
       const roomName = `match-${match.id}`;
 
-      console.log('🔍 [DEBUG] About to emit match:questionChanged to room:', roomName);
-      console.log('🔍 [DEBUG] Event data:', {
+      console.log(`⏭️ [SOCKET] Broadcasting to room ${roomName}:`, {
         matchId: match.id,
         currentQuestion: nextQuestionOrder,
-        remainingTime: questionDetail.question.defaultTime
+        remainingTime: questionDetailWithRelation.question.defaultTime,
+        optionsCount: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options.length : 0
       });
 
-      // Broadcast question change to all clients
-      io.of("/match-control").to(roomName).emit("match:questionChanged", {
+      // Chuẩn bị data câu hỏi với options
+      const questionData = {
+        id: questionDetailWithRelation.question.id,
+        intro: questionDetailWithRelation.question.intro,
+        content: questionDetailWithRelation.question.content,
+        questionType: questionDetailWithRelation.question.questionType,
+        difficulty: questionDetailWithRelation.question.difficulty,
+        defaultTime: questionDetailWithRelation.question.defaultTime,
+        score: questionDetailWithRelation.question.score,
+        questionMedia: questionDetailWithRelation.question.questionMedia,
+        // Xử lý options từ Json field
+        options: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options : [],
+        // Không gửi correctAnswer và explanation để tránh gian lận
+      };
+
+      // Emit to match-control namespace (for admins)
+      io.of('/match-control').to(roomName).emit('match:questionChanged', {
         matchId: match.id,
         matchSlug: match.slug,
         currentQuestion: nextQuestionOrder,
-        remainingTime: questionDetail.question.defaultTime,
+        remainingTime: questionDetailWithRelation.question.defaultTime,
         currentQuestionData: {
           order: nextQuestionOrder,
-          question: {
-            id: questionDetail.question.id,
-            intro: questionDetail.question.intro,
-            content: questionDetail.question.content,
-            questionType: questionDetail.question.questionType,
-            difficulty: questionDetail.question.difficulty,
-            defaultTime: questionDetail.question.defaultTime,
-            score: questionDetail.question.score
-          }
-        },
-        changedBy: socket.user.username,
-        changedAt: new Date().toISOString()
+          question: questionData
+        }
+      });
+
+      // Emit to student namespace (for students)
+      io.of('/student').to(roomName).emit('match:questionChanged', {
+        matchId: match.id,
+        matchSlug: match.slug,
+        currentQuestion: nextQuestionOrder,
+        remainingTime: questionDetailWithRelation.question.defaultTime,
+        currentQuestionData: {
+          order: nextQuestionOrder,
+          question: questionData
+        }
+      });
+
+      // Send event to all students in /student namespace (global notification)
+      io.of('/student').emit('match:globalUpdate', {
+        eventType: 'questionChanged',
+        data: {
+          matchId: match.id,
+          matchSlug: match.slug,
+          currentQuestion: nextQuestionOrder,
+          remainingTime: questionDetailWithRelation.question.defaultTime,
+          totalQuestions: await prisma.questionDetail.count({
+            where: { questionPackageId: match.questionPackageId }
+          })
+        }
       });
 
       console.log('🔍 [DEBUG] Event emitted successfully');
@@ -278,7 +323,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
           matchId: match.id,
           matchSlug: match.slug,
           currentQuestion: nextQuestionOrder,
-          remainingTime: questionDetail.question.defaultTime,
+          remainingTime: questionDetailWithRelation.question.defaultTime,
           totalQuestions: await prisma.questionDetail.count({
             where: { questionPackageId: match.questionPackageId }
           })
@@ -328,6 +373,14 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         pausedAt: new Date().toISOString()
       });
 
+      // Also broadcast to students
+      io.of("/student").to(roomName).emit("match:timerPaused", {
+        matchId: match.id,
+        matchSlug: match.slug,
+        pausedBy: socket.user.username,
+        pausedAt: new Date().toISOString()
+      });
+
       logger.info(`⏸️ Timer paused for match ${match.id} (${match.slug}) by ${socket.user.username}`);
 
       callback?.({
@@ -371,6 +424,14 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
       // Broadcast timer resume to all clients
       io.of("/match-control").to(roomName).emit("match:timerResumed", {
+        matchId: match.id,
+        matchSlug: match.slug,
+        resumedBy: socket.user.username,
+        resumedAt: new Date().toISOString()
+      });
+
+      // Also broadcast to students
+      io.of("/student").to(roomName).emit("match:timerResumed", {
         matchId: match.id,
         matchSlug: match.slug,
         resumedBy: socket.user.username,
@@ -429,9 +490,25 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         updatedAt: new Date().toISOString()
       });
 
+      // Also broadcast to students
+      io.of("/student").to(roomName).emit("match:timerUpdated", {
+        matchId: match.id,
+        matchSlug: match.slug,
+        remainingTime: remainingTime,
+        updatedAt: new Date().toISOString()
+      });
+
       // If time is up, emit time up event
       if (remainingTime <= 0) {
         io.of("/match-control").to(roomName).emit("match:timeUp", {
+          matchId: match.id,
+          matchSlug: match.slug,
+          questionOrder: updatedMatch.currentQuestion,
+          timeUpAt: new Date().toISOString()
+        });
+
+        // Also to students
+        io.of("/student").to(roomName).emit("match:timeUp", {
           matchId: match.id,
           matchSlug: match.slug,
           questionOrder: updatedMatch.currentQuestion,
@@ -552,6 +629,20 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         }
       });
 
+      // Also broadcast to students
+      io.of("/student").to(roomName).emit("match:ended", {
+        matchId: match.id,
+        matchSlug: match.slug,
+        status: "finished",
+        endedBy: socket.user.username,
+        endedAt: new Date().toISOString(),
+        summary: {
+          totalQuestions: totalQuestions,
+          totalContestants: Object.keys(contestantStats).length,
+          contestantStats: Object.values(contestantStats)
+        }
+      });
+
       logger.info(
         `✅ Match ended: ${match.id} (${match.slug}) by ${socket.user.username} (${socket.user.role})`
       );
@@ -584,84 +675,74 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
    */
   socket.on("match:getStatus", async (data, callback) => {
     try {
-      const { matchId: matchIdentifier } = data;
-
-      console.log('🔍 [DEBUG] match:getStatus received:', { matchIdentifier, type: typeof matchIdentifier });
-
-      // Get match information using helper function
-      const match = await resolveMatch(matchIdentifier);
+      const validatedData = GetMatchStatusSchema.parse(data);
+      const match = await resolveMatch(validatedData.matchId);
 
       if (!match) {
-        const error = "Match not found";
-        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
-        return callback?.({ success: false, message: error });
+        return callback?.({ success: false, message: "Match not found" });
       }
 
-      console.log('🔍 [DEBUG] Match found for getStatus:', { id: match.id, slug: match.slug, name: match.name });
+      // Type assertion cho match object
+      const matchWithRelations = match as any;
 
-      // Get current question if any
-      let currentQuestionDetail = null;
-      if (match.currentQuestion > 0) {
-        currentQuestionDetail = await prisma.questionDetail.findFirst({
-          where: {
-            questionPackageId: match.questionPackageId,
-            questionOrder: match.currentQuestion
-          },
-          include: {
-            question: {
-              select: {
-                id: true,
-                intro: true,
-                content: true,
-                questionType: true,
-                difficulty: true,
-                defaultTime: true,
-                score: true
-              }
-            }
-          }
-        });
-      }
-
-      // Get total questions
       const totalQuestions = await prisma.questionDetail.count({
-        where: {
-          questionPackageId: match.questionPackageId
-        }
+        where: { questionPackageId: match.questionPackageId }
       });
 
-      // Get connected students count
-      const connectedStudents = io.of("/match-control").adapter.rooms.get(`match-${match.id}`)?.size || 0;
+      // Get current question detail if match has started
+      const currentQuestionDetail = match.currentQuestion > 0 ? await prisma.questionDetail.findFirst({
+        where: {
+          questionPackageId: match.questionPackageId,
+          questionOrder: match.currentQuestion,
+          isActive: true
+        },
+        include: {
+          question: true // Include question relation
+        }
+      }) : null;
+
+      // Type assertion để TypeScript hiểu include relationship
+      const questionDetailWithRelation = currentQuestionDetail as any;
+
+      const currentQuestionData = questionDetailWithRelation ? {
+        order: match.currentQuestion,
+        question: {
+          id: questionDetailWithRelation.question.id,
+          intro: questionDetailWithRelation.question.intro,
+          content: questionDetailWithRelation.question.content,
+          questionType: questionDetailWithRelation.question.questionType,
+          difficulty: questionDetailWithRelation.question.difficulty,
+          defaultTime: questionDetailWithRelation.question.defaultTime,
+          score: questionDetailWithRelation.question.score,
+          questionMedia: questionDetailWithRelation.question.questionMedia,
+          // Xử lý options từ Json field
+          options: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options : []
+        }
+      } : null;
 
       callback?.({
         success: true,
         data: {
           match: {
             id: match.id,
-            slug: match.slug,
             name: match.name,
             status: match.status,
             currentQuestion: match.currentQuestion,
             remainingTime: match.remainingTime,
-            contestName: match.round.contest.name,
-            questionPackageName: match.questionPackage.name
+            contestName: matchWithRelations.round.contest.name,
+            questionPackageName: matchWithRelations.questionPackage.name
           },
-          currentQuestion: currentQuestionDetail ? {
-            order: match.currentQuestion,
-            question: currentQuestionDetail.question
-          } : null,
+          currentQuestion: currentQuestionData,
           statistics: {
-            totalQuestions: totalQuestions,
-            connectedStudents: connectedStudents
+            totalQuestions,
+            connectedStudents: 0
           }
         }
       });
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.log('🔍 [DEBUG] Error in match:getStatus:', errorMessage);
       logger.error(`❌ Error in match:getStatus: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to get match status" });
     }
   });
-}; 
+};

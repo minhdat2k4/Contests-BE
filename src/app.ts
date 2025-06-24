@@ -26,6 +26,7 @@ import { enumRouter } from "@/modules/enum";
 import { awardRoutes } from "@/modules/award";
 import { groupRouter } from "@/modules/group";
 import { contestantRouter } from "@/modules/contestant";
+import { groupDivisionRoutes } from "@/modules/groupDivision";
 
 import { mediaRouter } from "@/modules/media";
 import { resultRouter } from "@/modules/result";
@@ -132,6 +133,8 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/results", resultRouter);
 app.use("/api/sponsors", sponsorRouter);
 app.use("/api/contestant", contestantRouter);
+app.use("/api/group-divisions", groupDivisionRoutes);
+app.use("/api/group-division", groupDivisionRoutes);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

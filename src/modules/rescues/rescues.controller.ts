@@ -7,11 +7,23 @@ import {
 } from "@/modules/rescues";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { Prisma, RescueStatus, RescueType } from "@prisma/client";
+import { RescueStatus, RescueType } from "@prisma/client";
 import prisma from "@/config/client";
 export default class RescueController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
+      const slug = req.params.slug;
+      if (!slug) {
+        throw new Error("Slug không được để trống");
+      }
+
+      const contest = await prisma.contest.findFirst({
+        where: { slug: slug },
+      });
+
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi ");
+      }
       const query: RescuesQueryInput = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
@@ -20,7 +32,7 @@ export default class RescueController {
         status: req.query.status as RescueStatus | undefined,
         rescueType: req.query.rescueType as RescueType | undefined,
       };
-      const data = await RescueService.getAll(query);
+      const data = await RescueService.getAll(query, contest.id);
       if (!data) {
         throw new Error("Không tìm thấy cứu trợ ");
       }

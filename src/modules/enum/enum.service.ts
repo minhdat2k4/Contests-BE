@@ -46,6 +46,9 @@ export default class EnumService {
     QuestionType: {
       multiple_choice: "Trắc nghiệm",
       essay: "Tự luận",
+      image: "Hình ảnh",
+      audio: "Âm thanh",
+      video: "Video",
     },
     Difficulty: {
       Alpha: "Alpha",
@@ -61,7 +64,7 @@ export default class EnumService {
     ContestantStatus: {
       compete: "Thi đấu",
       eliminate: "Bị loại",
-      advanced: "Tiến tiếp",
+      advanced: "Qua vòng",
     },
     ContestantMatchStatus: {
       not_started: "Chưa bắt đầu",
@@ -75,7 +78,7 @@ export default class EnumService {
     },
     RescueType: {
       resurrected: "Hồi sinh",
-      lifelineUsed: "Sử dụng cứu hộ",
+      lifelineUsed: "Phao cứu sinh",
     },
     RescueStatus: {
       notUsed: "Chưa sử dụng",
@@ -142,7 +145,7 @@ export default class EnumService {
    */
   static async getEnumByName(enumName: string): Promise<EnumData | null> {
     const enumObject = this.enumMap[enumName as keyof typeof this.enumMap];
-    
+
     if (!enumObject) {
       return null;
     }
@@ -159,7 +162,7 @@ export default class EnumService {
    */
   static async getEnumValues(enumName: string): Promise<string[] | null> {
     const enumObject = this.enumMap[enumName as keyof typeof this.enumMap];
-    
+
     if (!enumObject) {
       return null;
     }
@@ -172,7 +175,7 @@ export default class EnumService {
    */
   static async getEnumOptions(enumName: string): Promise<EnumOption[] | null> {
     const enumObject = this.enumMap[enumName as keyof typeof this.enumMap];
-    
+
     if (!enumObject) {
       return null;
     }

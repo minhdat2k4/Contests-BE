@@ -4,16 +4,100 @@ import {
   CreateQuestionDetailInput,
   UpdateQuestionDetailInput,
   QuestionDetailQueryInput,
-  QuestionDetailResponse,
   QuestionDetailListResponse,
   QuestionDetailStatsResponse,
   BulkCreateQuestionDetailsInput,
   ReorderQuestionsInput,
   BatchDeleteQuestionDetailsInput,
   BatchDeleteResponse,
+  SyncQuestionsInPackageInput
 } from "./questionDetail.schema";
 
 export default class QuestionDetailService {
+
+  /**
+   * Đồng bộ hóa (thêm, sửa, xóa) danh sách câu hỏi trong một gói
+   * @param packageId ID của gói câu hỏi
+   * @param desiredQuestions Mảng trạng thái câu hỏi mong muốn từ client
+   */
+  static async syncQuestionsInPackage(
+    packageId: number,
+    desiredQuestions: SyncQuestionsInPackageInput['questions']
+  ) {
+    // b1: Lấy danh sách câu hỏi hiện tại trong gói từ DB
+    const currentDetails = await prisma.questionDetail.findMany({
+      where: { questionPackageId: packageId },
+    });
+
+    // Sử dụng Set để tra cứu ID hiệu quả hơn
+    const currentQuestionIds = new Set(currentDetails.map(d => d.questionId));
+    const desiredQuestionIds = new Set(desiredQuestions.map(d => d.questionId));
+
+    // b3: Xác định các câu hỏi cần thêm mới
+    const toAdd = desiredQuestions
+      .filter(d => !currentQuestionIds.has(d.questionId))
+      .map(d => ({
+        questionPackageId: packageId,
+        questionId: d.questionId,
+        questionOrder: d.questionOrder,
+        isActive: true, // Mặc định là active khi thêm mới
+      }));
+
+    // Xác định các câu hỏi cần xóa
+    const toRemoveIds = currentDetails
+      .filter(d => !desiredQuestionIds.has(d.questionId))
+      .map(d => d.questionId);
+
+    // b4: Xác định các câu hỏi cần cập nhật thứ tự
+    const toUpdate = desiredQuestions
+      .filter(d => currentQuestionIds.has(d.questionId))
+      .map(d => {
+        const current = currentDetails.find(cd => cd.questionId === d.questionId);
+        // Chỉ cập nhật nếu thứ tự thay đổi
+        if (current && current.questionOrder !== d.questionOrder) {
+          return {
+            where: {
+              questionId_questionPackageId: {
+                questionId: d.questionId,
+                questionPackageId: packageId,
+              },
+            },
+            data: { questionOrder: d.questionOrder },
+          };
+        }
+        return null;
+      })
+      .filter(Boolean); // Loại bỏ các item null không cần cập nhật
+
+    // Thực hiện tất cả các thao tác trong một transaction
+    const [addedResult, removedResult, ...updatedResults] = await prisma.$transaction([
+      // Thao tác thêm
+      prisma.questionDetail.createMany({
+        data: toAdd,
+        skipDuplicates: true, // Bỏ qua nếu có lỗi trùng lặp (dù đã lọc)
+      }),
+      // Thao tác xóa
+      prisma.questionDetail.deleteMany({
+        where: {
+          questionPackageId: packageId,
+          questionId: { in: toRemoveIds },
+        },
+      }),
+      // Thao tác cập nhật
+      ...toUpdate.map(updateOp => prisma.questionDetail.update(updateOp!)),
+    ]);
+
+    // b5: Trả về kết quả tóm tắt
+    return {
+      packageId,
+      added: addedResult.count,
+      removed: removedResult.count,
+      updated: updatedResults.length,
+      total: desiredQuestions.length,
+    };
+  }
+
+
   /**
    * Create a new question detail relationship
    */
@@ -45,7 +129,6 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
-            plainText: true,
             questionType: true,
             difficulty: true,
             defaultTime: true,
@@ -83,7 +166,7 @@ export default class QuestionDetailService {
     questionPackageId: number,
     data: UpdateQuestionDetailInput
   ): Promise<QuestionDetail | null> {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
       const updateData: any = {};
 
       // Handle question order update with automatic reordering
@@ -182,7 +265,7 @@ export default class QuestionDetailService {
     questionId: number,
     questionPackageId: number
   ): Promise<QuestionDetail | null> {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
       // Get the question detail to know its order before deleting
       const questionDetail = await tx.questionDetail.findFirst({
         where: {
@@ -233,7 +316,7 @@ export default class QuestionDetailService {
     questionId: number,
     questionPackageId: number
   ): Promise<QuestionDetail | null> {
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async tx => {
       // Get the question detail to know its order before soft deleting
       const questionDetail = await tx.questionDetail.findFirst({
         where: {
@@ -335,7 +418,16 @@ export default class QuestionDetailService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, questionPackageId, questionId, search, isActive, sortBy, sortOrder } = queryInput;
+    const {
+      page,
+      limit,
+      questionPackageId,
+      questionId,
+      search,
+      isActive,
+      sortBy,
+      sortOrder,
+    } = queryInput;
     const skip = (page - 1) * limit;
 
     // Build where clause
@@ -352,12 +444,11 @@ export default class QuestionDetailService {
     if (isActive !== undefined) {
       whereClause.isActive = isActive;
     }
-
     if (search) {
       whereClause.OR = [
         {
           question: {
-            plainText: {
+            content: {
               contains: search,
             },
           },
@@ -389,7 +480,7 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
-            plainText: true,
+            content: true,
             questionType: true,
             difficulty: true,
           },
@@ -406,7 +497,7 @@ export default class QuestionDetailService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      questionDetails: questionDetails.map((detail) => ({
+      questionDetails: questionDetails.map(detail => ({
         questionId: detail.questionId,
         questionPackageId: detail.questionPackageId,
         questionOrder: detail.questionOrder,
@@ -425,7 +516,8 @@ export default class QuestionDetailService {
         hasPrev: page > 1,
       },
     };
-  }  /**
+  }
+  /**
    * Get questions by package ID with ordering and pagination
    */
   static async getQuestionsByPackageId(
@@ -438,7 +530,12 @@ export default class QuestionDetailService {
       questionType?: string;
       difficulty?: string;
       isActive?: boolean;
-      sortBy?: "questionOrder" | "createdAt" | "updatedAt" | "difficulty" | "questionType";
+      sortBy?:
+      | "questionOrder"
+      | "createdAt"
+      | "updatedAt"
+      | "difficulty"
+      | "questionType";
       sortOrder?: "asc" | "desc";
     }
   ): Promise<{
@@ -466,16 +563,16 @@ export default class QuestionDetailService {
       };
     };
   }> {
-    const { 
-      page, 
-      limit, 
-      includeInactive = false, 
-      search, 
+    const {
+      page,
+      limit,
+      includeInactive = false,
+      search,
       questionType,
       difficulty,
       isActive,
-      sortBy = "questionOrder", 
-      sortOrder = "asc" 
+      sortBy = "questionOrder",
+      sortOrder = "asc",
     } = queryInput;
     const skip = (page - 1) * limit;
 
@@ -487,7 +584,7 @@ export default class QuestionDetailService {
 
     // Build where clause for question details
     const whereClause: any = { questionPackageId };
-    
+
     // Handle includeInactive vs isActive filters
     if (isActive !== undefined) {
       whereClause.isActive = isActive;
@@ -497,17 +594,16 @@ export default class QuestionDetailService {
 
     // Build question filters
     const questionFilters: any = {};
-    
+
     if (questionType) {
       questionFilters.questionType = questionType;
     }
-    
+
     if (difficulty) {
       questionFilters.difficulty = difficulty;
     }
-
     if (search) {
-      questionFilters.plainText = {
+      questionFilters.content = {
         contains: search,
       };
     }
@@ -519,7 +615,7 @@ export default class QuestionDetailService {
 
     // Get total count for the package (without filters)
     const totalQuestions = await prisma.questionDetail.count({
-      where: { 
+      where: {
         questionPackageId,
         isActive: !includeInactive ? true : undefined,
       },
@@ -528,9 +624,9 @@ export default class QuestionDetailService {
     // Count filtered records
     const filteredTotal = await prisma.questionDetail.count({
       where: whereClause,
-    });    // Get paginated results with proper sorting
+    }); // Get paginated results with proper sorting
     let orderByClause: any = {};
-    
+
     if (sortBy === "questionType" || sortBy === "difficulty") {
       // Sort by question properties
       orderByClause = {
@@ -554,7 +650,8 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
-            plainText: true,
+            explanation: true,
+            content: true,
             questionType: true,
             difficulty: true,
           },
@@ -572,7 +669,7 @@ export default class QuestionDetailService {
 
     return {
       packageInfo,
-      questions: questionDetails.map((detail) => ({
+      questions: questionDetails.map(detail => ({
         questionId: detail.questionId,
         questionPackageId: detail.questionPackageId,
         questionOrder: detail.questionOrder,
@@ -618,7 +715,6 @@ export default class QuestionDetailService {
   ): Promise<{
     questionInfo: {
       id: number;
-      plainText: string;
       questionType: string;
       difficulty: string;
     } | null;
@@ -632,23 +728,29 @@ export default class QuestionDetailService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, includeInactive = false, search, sortBy = "questionOrder", sortOrder = "asc" } = queryInput;
+    const {
+      page,
+      limit,
+      includeInactive = false,
+      search,
+      sortBy = "questionOrder",
+      sortOrder = "asc",
+    } = queryInput;
     const skip = (page - 1) * limit;
 
     // Get question info
     const questionInfo = await prisma.question.findFirst({
       where: { id: questionId },
-      select: { 
-        id: true, 
-        plainText: true, 
-        questionType: true, 
-        difficulty: true 
+      select: {
+        id: true,
+        questionType: true,
+        difficulty: true,
       },
     });
 
     // Build where clause
     const whereClause: any = { questionId };
-    
+
     if (!includeInactive) {
       whereClause.isActive = true;
     }
@@ -677,7 +779,6 @@ export default class QuestionDetailService {
         question: {
           select: {
             id: true,
-            plainText: true,
             questionType: true,
             difficulty: true,
           },
@@ -695,7 +796,7 @@ export default class QuestionDetailService {
 
     return {
       questionInfo,
-      packages: questionDetails.map((detail) => ({
+      packages: questionDetails.map(detail => ({
         questionId: detail.questionId,
         questionPackageId: detail.questionPackageId,
         questionOrder: detail.questionOrder,
@@ -724,7 +825,7 @@ export default class QuestionDetailService {
   ): Promise<QuestionDetail[]> {
     const { questionPackageId, questions } = data;
 
-    const questionDetailsData = questions.map((q) => ({
+    const questionDetailsData = questions.map(q => ({
       questionId: q.questionId,
       questionPackageId,
       questionOrder: q.questionOrder,
@@ -732,7 +833,7 @@ export default class QuestionDetailService {
     }));
 
     return prisma.$transaction(
-      questionDetailsData.map((detail) =>
+      questionDetailsData.map(detail =>
         prisma.questionDetail.create({ data: detail })
       )
     );
@@ -763,7 +864,9 @@ export default class QuestionDetailService {
   /**
    * Get next available question order for a package
    */
-  static async getNextQuestionOrder(questionPackageId: number): Promise<number> {
+  static async getNextQuestionOrder(
+    questionPackageId: number
+  ): Promise<number> {
     const maxOrder = await prisma.questionDetail.findFirst({
       where: { questionPackageId, isActive: true },
       orderBy: { questionOrder: "desc" },
@@ -795,8 +898,11 @@ export default class QuestionDetailService {
     questionPackageId: number,
     questionId1: number,
     questionId2: number
-  ): Promise<{ updatedQuestion1: QuestionDetail; updatedQuestion2: QuestionDetail }> {
-    return prisma.$transaction(async (tx) => {
+  ): Promise<{
+    updatedQuestion1: QuestionDetail;
+    updatedQuestion2: QuestionDetail;
+  }> {
+    return prisma.$transaction(async tx => {
       // Get both question details
       const question1Detail = await tx.questionDetail.findFirst({
         where: {
@@ -849,24 +955,26 @@ export default class QuestionDetailService {
    * Get question detail statistics
    */
   static async getQuestionDetailStats(): Promise<QuestionDetailStatsResponse> {
-    const [totalCount, activeCount, uniqueQuestions, uniquePackages] = await Promise.all([
-      prisma.questionDetail.count(),
-      prisma.questionDetail.count({ where: { isActive: true } }),
-      prisma.questionDetail.groupBy({
-        by: ["questionId"],
-        where: { isActive: true },
-      }),
-      prisma.questionDetail.groupBy({
-        by: ["questionPackageId"],
-        where: { isActive: true },
-      }),
-    ]);
+    const [totalCount, activeCount, uniqueQuestions, uniquePackages] =
+      await Promise.all([
+        prisma.questionDetail.count(),
+        prisma.questionDetail.count({ where: { isActive: true } }),
+        prisma.questionDetail.groupBy({
+          by: ["questionId"],
+          where: { isActive: true },
+        }),
+        prisma.questionDetail.groupBy({
+          by: ["questionPackageId"],
+          where: { isActive: true },
+        }),
+      ]);
 
     const uniqueQuestionCount = uniqueQuestions.length;
     const uniquePackageCount = uniquePackages.length;
-    const averageQuestionsPerPackage = uniquePackageCount > 0 
-      ? Math.round((activeCount / uniquePackageCount) * 100) / 100
-      : 0;
+    const averageQuestionsPerPackage =
+      uniquePackageCount > 0
+        ? Math.round((activeCount / uniquePackageCount) * 100) / 100
+        : 0;
 
     return {
       totalQuestionDetails: totalCount,
@@ -901,7 +1009,9 @@ export default class QuestionDetailService {
   /**
    * Check if question package exists in the system
    */
-  static async questionPackageExists(questionPackageId: number): Promise<boolean> {
+  static async questionPackageExists(
+    questionPackageId: number
+  ): Promise<boolean> {
     const questionPackage = await prisma.questionPackage.findFirst({
       where: { id: questionPackageId },
     });
@@ -971,7 +1081,8 @@ export default class QuestionDetailService {
           result.failedItems.push({
             questionId: item.questionId,
             questionPackageId: item.questionPackageId,
-            reason: "Không thể xóa chi tiết câu hỏi đang được sử dụng trong trận đấu đang hoạt động",
+            reason:
+              "Không thể xóa chi tiết câu hỏi đang được sử dụng trong trận đấu đang hoạt động",
           });
           continue;
         }
@@ -999,7 +1110,8 @@ export default class QuestionDetailService {
         result.failedItems.push({
           questionId: item.questionId,
           questionPackageId: item.questionPackageId,
-          reason: `Lỗi khi xóa: ${error instanceof Error ? error.message : "Lỗi không xác định"}`,
+          reason: `Lỗi khi xóa: ${error instanceof Error ? error.message : "Lỗi không xác định"
+            }`,
         });
       }
     }
@@ -1010,7 +1122,10 @@ export default class QuestionDetailService {
         await this.normalizeQuestionOrders(packageId);
       } catch (error) {
         // Log error but don't fail the whole operation
-        console.error(`Failed to normalize orders for package ${packageId}:`, error);
+        console.error(
+          `Failed to normalize orders for package ${packageId}:`,
+          error
+        );
       }
     }
 
@@ -1021,7 +1136,9 @@ export default class QuestionDetailService {
    * Reorder question orders in a package to fill gaps (normalize)
    * This method ensures sequential order starting from 1
    */
-  static async normalizeQuestionOrders(questionPackageId: number): Promise<void> {
+  static async normalizeQuestionOrders(
+    questionPackageId: number
+  ): Promise<void> {
     // Get all active question details for the package, ordered by current questionOrder
     const questionDetails = await prisma.questionDetail.findMany({
       where: {
@@ -1029,7 +1146,7 @@ export default class QuestionDetailService {
         isActive: true,
       },
       orderBy: {
-        questionOrder: 'asc',
+        questionOrder: "asc",
       },
       select: {
         questionId: true,
@@ -1040,7 +1157,7 @@ export default class QuestionDetailService {
     // Update each question detail with normalized order (1, 2, 3, ...)
     const updatePromises = questionDetails.map((detail, index) => {
       const newOrder = index + 1;
-      
+
       // Only update if the order is different
       if (detail.questionOrder !== newOrder) {
         return prisma.questionDetail.update({
@@ -1066,7 +1183,7 @@ export default class QuestionDetailService {
    * Shift question orders up after a deletion at specific position
    */
   static async shiftQuestionOrdersUp(
-    questionPackageId: number, 
+    questionPackageId: number,
     deletedOrder: number
   ): Promise<void> {
     await prisma.questionDetail.updateMany({
@@ -1107,5 +1224,175 @@ export default class QuestionDetailService {
         },
       },
     });
+  }
+
+  /**
+   * Get questions not in a specific package with pagination and filtering
+   */
+  static async getQuestionsNotInPackage(
+    questionPackageId: number,
+    queryInput: {
+      page: number;
+      limit: number;
+      search?: string;
+      questionType?: string;
+      difficulty?: string;
+      isActive?: boolean;
+      sortBy?: "id" | "createdAt" | "updatedAt" | "difficulty" | "questionType";
+      sortOrder?: "asc" | "desc";
+    }
+  ): Promise<{
+    packageInfo: {
+      id: number;
+      name: string;
+    } | null;
+    questions: Array<{
+      id: number;
+      content: string;
+      questionType: string;
+      difficulty: string;
+      defaultTime: number;
+      score: number;
+      isActive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+    filters: {
+      totalQuestions: number;
+      filteredQuestions: number;
+      appliedFilters: {
+        questionType?: string;
+        difficulty?: string;
+        isActive?: boolean;
+        search?: string;
+      };
+    };
+  }> {
+    const {
+      page,
+      limit,
+      search,
+      questionType,
+      difficulty,
+      isActive = true,
+      sortBy = "id",
+      sortOrder = "asc",
+    } = queryInput;
+    const skip = (page - 1) * limit;
+
+    // Get package info
+    const packageInfo = await prisma.questionPackage.findFirst({
+      where: { id: questionPackageId },
+      select: { id: true, name: true },
+    });
+
+    if (!packageInfo) {
+      throw new Error("Không tìm thấy gói câu hỏi");
+    }
+
+    // Get IDs of questions already in the package
+    const existingQuestionIds = await prisma.questionDetail.findMany({
+      where: {
+        questionPackageId,
+        isActive: true,
+      },
+      select: {
+        questionId: true,
+      },
+    });
+
+    const existingIds = existingQuestionIds.map(item => item.questionId);
+
+    // Build where clause for questions not in the package
+    const whereClause: any = {
+      id: {
+        notIn: existingIds.length > 0 ? existingIds : [-1], // If no questions in package, use dummy value to avoid empty array
+      },
+      isActive,
+    };
+
+    // Add filters
+    if (questionType) {
+      whereClause.questionType = questionType;
+    }
+
+    if (difficulty) {
+      whereClause.difficulty = difficulty;
+    }
+
+    if (search) {
+      whereClause.content = {
+        contains: search,
+      };
+    }
+
+    // Get total count of all available questions not in package
+    const totalQuestions = await prisma.question.count({
+      where: {
+        id: {
+          notIn: existingIds.length > 0 ? existingIds : [-1],
+        },
+        isActive: true,
+      },
+    });
+
+    // Count filtered records
+    const filteredTotal = await prisma.question.count({
+      where: whereClause,
+    });
+
+    // Get paginated results with proper sorting
+    const questions = await prisma.question.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      select: {
+        id: true,
+        content: true,
+        questionType: true,
+        difficulty: true,
+        defaultTime: true,
+        score: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    const totalPages = Math.ceil(filteredTotal / limit);
+
+    return {
+      packageInfo,
+      questions,
+      pagination: {
+        page,
+        limit,
+        total: filteredTotal,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+      filters: {
+        totalQuestions,
+        filteredQuestions: filteredTotal,
+        appliedFilters: {
+          ...(questionType && { questionType }),
+          ...(difficulty && { difficulty }),
+          ...(isActive !== undefined && { isActive }),
+          ...(search && { search }),
+        },
+      },
+    };
   }
 }

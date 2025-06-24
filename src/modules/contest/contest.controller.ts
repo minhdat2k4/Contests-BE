@@ -7,7 +7,7 @@ import {
 } from "@/modules/contest";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { ContestStatus, Contest } from "@prisma/client";
+import { ContestStatus, User } from "@prisma/client";
 import { prisma } from "@/config/database";
 import { htmlToPlainText } from "@/utils/html";
 
@@ -171,7 +171,7 @@ export default class ContestController {
       const { ids } = req.body;
 
       if (!Array.isArray(ids)) {
-        throw new Error("Danh sách không hợp lệ");
+        throw new Error("Danh sách ID không hợp lệ");
       }
 
       const messages: { status: "success" | "error"; msg: string }[] = [];
@@ -188,61 +188,36 @@ export default class ContestController {
         }
 
         // Kiểm tra liên kết
-        const relatedChecks = [
-          {
-            count: await prisma.round.count({
-              where: { contestId: contest.id },
-            }),
-            type: "vòng đấu",
-          },
-          {
-            count: await prisma.match.count({
-              where: { contestId: contest.id },
-            }),
-            type: "trận đấu",
-          },
-          {
-            count: await prisma.contestant.count({
-              where: { contestId: contest.id },
-            }),
-            type: "thí sinh",
-          },
-          {
-            count: await prisma.sponsor.count({
-              where: { contestId: contest.id },
-            }),
-            type: "nhà tài trợ",
-          },
-          {
-            count: await prisma.classVideo.count({
-              where: { contestId: contest.id },
-            }),
-            type: "video tham gia",
-          },
-          {
-            count: await prisma.award.count({
-              where: { contestId: contest.id },
-            }),
-            type: "giải thưởng",
-          },
+        const relatedChecks = await Promise.all([
+          prisma.round.count({ where: { contestId: contest.id } }),
+          prisma.match.count({ where: { contestId: contest.id } }),
+          prisma.contestant.count({ where: { contestId: contest.id } }),
+          prisma.sponsor.count({ where: { contestId: contest.id } }),
+          prisma.classVideo.count({ where: { contestId: contest.id } }),
+          prisma.award.count({ where: { contestId: contest.id } }),
+        ]);
+
+        const types = [
+          "vòng đấu",
+          "trận đấu",
+          "thí sinh",
+          "nhà tài trợ",
+          "video tham gia",
+          "giải thưởng",
         ];
 
-        let hasError = false;
-        for (const check of relatedChecks) {
-          if (check.count > 0) {
-            messages.push({
-              status: "error",
-              msg: `Cuộc thi này đang có ${check.count} ${check.type} không thể xóa`,
-            });
-            hasError = true;
-          }
+        const indexViolated = relatedChecks.findIndex(count => count > 0);
+
+        if (indexViolated !== -1) {
+          messages.push({
+            status: "error",
+            msg: `Cuộc thi "${contest.name}" đang có ${relatedChecks[indexViolated]} ${types[indexViolated]}, không thể xóa.`,
+          });
+          continue;
         }
 
-        if (hasError) continue;
-
-        // Tiến hành xóa
+        // Không liên kết -> xóa
         const deleted = await Contestervice.delete(contest.id);
-
         if (!deleted) {
           messages.push({
             status: "error",
@@ -250,6 +225,7 @@ export default class ContestController {
           });
           continue;
         }
+
         messages.push({
           status: "success",
           msg: `Xóa cuộc thi "${contest.name}" thành công`,
@@ -312,6 +288,43 @@ export default class ContestController {
           `Cập nhật  trạng thái cuộc thi ${contest.name} thành công`
         )
       );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async ListContestNotSlug(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const Contest = await Contestervice.ListContest(slug);
+      if (!Contest) {
+        throw new Error("Không tìm thấy cuộc thi");
+      }
+      logger.info(`Lấy thông tin cuộc thi thành công`);
+      res.json(successResponse(Contest, `Lấy danh sách cuộc thi thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getListContestByJudgeId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const judgeId = req.user?.userId;
+
+      if (!judgeId) {
+        throw new Error("ID giám khảo không hợp lệ");
+      }
+      const contests = await Contestervice.getListContestByJudgeId(judgeId);
+      if (!contests) {
+        throw new Error("Không tìm thấy cuộc thi cho giám khảo này");
+      }
+      logger.info(`Lấy danh sách cuộc thi cho giám khảo thành công`);
+      res.json(successResponse(contests, "Lấy danh sách cuộc thi thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

@@ -16,12 +16,24 @@ import { classRouter } from "@/modules/class";
 import { questionTopicRoutes } from "@/modules/questionTopic";
 import { questionPackageRouter } from "@/modules/questionPackage";
 import { questionDetailRouter } from "@/modules/questionDetail";
+import questionRoutes from "@/modules/question/question.routes";
 import { rescueRoute } from "@/modules/rescues";
 import { contestRoute } from "@/modules/contest";
 import { matchRouter } from "@/modules/match";
+import { screenRouter } from "@/modules/screen";
 
 import { enumRouter } from "@/modules/enum";
+import { awardRoutes } from "@/modules/award";
+import { groupRouter } from "@/modules/group";
+import { contestantRouter } from "@/modules/contestant";
+import { groupDivisionRoutes } from "@/modules/groupDivision";
+
 import { mediaRouter } from "@/modules/media";
+import { resultRouter } from "@/modules/result";
+import { sponsorRouter } from "@/modules/sponsor";
+import { classVideoRouter } from "@/modules/classVideo";
+
+import path from "path";
 
 // Load environment variables
 dotenv.config();
@@ -32,14 +44,40 @@ const app = express();
 app.use(helmet());
 app.use(cookieParser());
 
-// CORS configuration
+// CORS configuration - must be before static files
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
+);
+
+// Static file serving với explicit CORS headers
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    // Set CORS headers for static files
+    res.header(
+      "Access-Control-Allow-Origin",
+      process.env.CORS_ORIGIN || "http://localhost:5173"
+    );
+    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.header(
+      "Access-Control-Allow-Headers",
+      "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control"
+    );
+    res.header("Access-Control-Allow-Credentials", "true");
+
+    // Handle preflight OPTIONS request
+    if (req.method === "OPTIONS") {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  },
+  express.static(path.join(__dirname, "../uploads"))
 );
 
 // Request logging
@@ -85,8 +123,18 @@ app.use("/api/question-details", questionDetailRouter);
 app.use("/api/contest", contestRoute);
 app.use("/api/rescue", rescueRoute);
 app.use("/api/enums", enumRouter);
+app.use("/api/awards", awardRoutes);
 app.use("/api/match", matchRouter);
 app.use("/api/media", mediaRouter);
+app.use("/api/group", groupRouter);
+app.use("/api/screen", screenRouter);
+app.use("/api/class-video", classVideoRouter);
+app.use("/api/questions", questionRoutes);
+app.use("/api/results", resultRouter);
+app.use("/api/sponsors", sponsorRouter);
+app.use("/api/contestant", contestantRouter);
+app.use("/api/group-divisions", groupDivisionRoutes);
+app.use("/api/group-division", groupDivisionRoutes);
 
 // API documentation endpoint
 app.get("/api/v1", (req, res) => {

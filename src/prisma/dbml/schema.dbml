@@ -59,6 +59,7 @@ Table Students {
   class Classes [not null]
   isActive Boolean [not null, default: true]
   contestants Contestants [not null]
+  match Matches [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -71,8 +72,8 @@ Table About {
   email String
   fanpage String
   mapEmbedCode String
-  logo String
-  banner String
+  logo Json
+  banner Json
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -101,9 +102,7 @@ Table Questions {
   id Int [pk, increment]
   intro String
   defaultTime Int [not null]
-  remainingTime Int
   questionType QuestionType [not null]
-  plainText String [not null]
   content String [not null]
   questionMedia Json
   options Json
@@ -188,6 +187,8 @@ Table Matches {
   name String [not null]
   startTime DateTime [not null]
   endTime DateTime [not null]
+  slug String
+  remainingTime Int
   status ContestStatus [not null, default: 'upcoming']
   currentQuestion Int [not null]
   questionPackageId Int [not null]
@@ -197,6 +198,8 @@ Table Matches {
   roundId Int [not null]
   round Rounds [not null]
   isActive Boolean [not null, default: true]
+  studentId Int
+  student Students
   groups Groups [not null]
   contestantMatches Contestant_Matches [not null]
   results Results [not null]
@@ -221,7 +224,6 @@ Table Groups {
 
 Table Contestants {
   id Int [pk, increment]
-  name String [not null]
   contestId Int [not null]
   contest Contests [not null]
   studentId Int [not null]
@@ -245,6 +247,7 @@ Table Contestant_Matches {
   group Groups [not null]
   registrationNumber Int [not null]
   status ContestantMatchStatus [not null, default: 'not_started']
+  eliminatedAtQuestionOrder Int
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -276,7 +279,7 @@ Table Rescues {
   studentIds Json
   supportAnswers Json
   remainingContestants Int [not null]
-  maxStudent Int [not null]
+  questionOrder Int
   index Int [not null]
   status RescueStatus [not null]
   matchId Int [not null]
@@ -292,7 +295,7 @@ Table Awards {
   contest Contests [not null]
   contestantId Int
   contestant Contestants
-  type AwardType [unique, not null]
+  type AwardType [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -324,11 +327,11 @@ Table Class_Videos {
 
 Table Screen_Controls {
   id Int [pk, increment]
-  controlKey ControlKey [not null]
-  controlValue ControlValue [not null]
+  controlKey ControlKey [not null, default: 'background']
+  controlValue ControlValue
   matchId Int [unique, not null]
   match Matches [not null]
-  media String [not null]
+  media String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -336,11 +339,15 @@ Table Screen_Controls {
 Enum Role {
   Admin
   Judge
+  Student
 }
 
 Enum QuestionType {
   multiple_choice
   essay
+  image
+  audio
+  video
 }
 
 Enum Difficulty {
@@ -450,6 +457,8 @@ Ref: Matches.questionPackageId > Question_Packages.id [delete: Restrict]
 Ref: Matches.contestId > Contests.id [delete: Restrict]
 
 Ref: Matches.roundId > Rounds.id [delete: Restrict]
+
+Ref: Matches.studentId > Students.id [delete: Restrict]
 
 Ref: Groups.userId > Users.id [delete: Restrict]
 

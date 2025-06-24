@@ -8,20 +8,26 @@ import {
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
+
 export default class RoundController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
+      const slug = req.params.slug;
+      const contest = await prisma.contest.findUnique({
+        where: { slug: slug },
+      });
+      if (!contest) throw new Error(` Không tim thấy cuộc thi`);
+
       const query: RoundQueryInput = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: (req.query.search as string) || undefined,
-        contestId: parseInt(req.query.contestId as string) || undefined,
         isActive:
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
             : undefined,
       };
-      const data = await RoundService.getAll(query);
+      const data = await RoundService.getAll(query, contest.id);
       if (!data) {
         throw new Error("Không tìm thấy vòng đấu ");
       }
@@ -60,14 +66,20 @@ export default class RoundController {
 
   static async createRound(req: Request, res: Response): Promise<void> {
     try {
-      const input: CreateRoundInput = req.body;
+      const slug = req.params.slug;
+      const input: Omit<CreateRoundInput, "contestId"> = req.body;
       const contest = await prisma.contest.findFirst({
-        where: { id: input.contestId },
+        where: { slug: slug },
       });
       if (!contest) {
         throw new Error("Không tìm thấy cuộc thi");
       }
-      const round = await RoundService.createRound(input);
+      if (input.startTime > input.endTime)
+        throw new Error("Ngày bắt đầu vòng đấu phải lớn hơn ngày kết thúc");
+      const round = await RoundService.createRound({
+        ...input,
+        contestId: contest.id,
+      });
       if (!round) {
         throw new Error(`Thêm vòng đấu ${input.name} thành công`);
       }
@@ -150,9 +162,27 @@ export default class RoundController {
         throw new Error("Không tìm thấy cuộc thi");
       }
       const Round = await RoundService.getRoundBy({ id: Number(id) });
+
       if (!Round) {
         throw new Error("Không tìm thấy vòng thi");
       }
+
+      if (input.startTime !== undefined) {
+        if (input.startTime > Round.endTime)
+          throw new Error("Ngày bắt đầu vòng đấu phải lớn hơn ngày kết thúc");
+      }
+
+      if (input.endTime !== undefined) {
+        if (input.endTime < Round.startTime)
+          throw new Error("Ngày bắt đầu vòng đấu phải lớn hơn ngày kết thúc");
+      }
+
+      if (input.startTime !== undefined && input.endTime !== undefined) {
+        if (input.startTime > input.endTime) {
+          throw new Error("Ngày bắt đầu vòng đấu phải nhỏ hơn ngày kết thúc");
+        }
+      }
+
       const updateRound = await RoundService.updateRound(Number(id), input);
       if (!updateRound) {
         throw new Error("Cập nhật vòng thi thất bại");
@@ -233,6 +263,57 @@ export default class RoundController {
         success: true,
         messages,
       });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getListRound(req: Request, res: Response): Promise<void> {
+    try {
+      const contest = await prisma.contest.findFirst({
+        where: { slug: req.params.slug },
+      });
+      if (!contest) throw new Error("Không tìm thấy trận đấu");
+      const round = await RoundService.getListRound(contest?.id);
+      if (!round) {
+        throw new Error("Không tìm thấy vòng đấu ");
+      }
+      logger.info(`Lấy thông tin vòng đấu thành công`);
+      res.json(successResponse(round, `Lấy danh sách  vòng đấu thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getRoundByContestId(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      let round: any;
+
+      if (isNaN(Number(id))) {
+        round = await prisma.round.findMany({
+          select: {
+            id: true,
+            name: true,
+          },
+        });
+
+        logger.info("Lấy danh sách tất cả lớp thành công");
+        res.json(successResponse(round, "Lấy danh sách tất cả lớp thành công"));
+        return;
+      }
+      const contest = await prisma.contest.findFirst({
+        where: { id: Number(id) },
+      });
+
+      if (!contest) throw new Error("Không tìm thấy thuộc thi");
+
+      round = await RoundService.getListRound(contest.id);
+
+      logger.info("Lấy danh sách vòng đấu thành công");
+      res.json(successResponse(round, "Lấy danh sách vòng đấu  thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

@@ -17,10 +17,10 @@ const rescueRoute = Router();
 // // prive
 
 rescueRoute.get(
-  "/",
+  "/contest/:slug",
   authenticate,
   role("Admin"),
-  validateQuery(RescuesQuerySchema),
+  // validateQuery(RescuesQuerySchema),
   RescuesController.getAlls
 );
 

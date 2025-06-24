@@ -5,7 +5,14 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { MatchController } from "@/modules/match";
-
+import {
+  MatchIdShame,
+  CreateMatchSchema,
+  UpdateMatchInput,
+  deleteMatchesSchema,
+  MatchQuerySchema,
+  UpdateMatchSchema,
+} from "./match.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const matchRouter = Router();
 // prive
@@ -17,59 +24,123 @@ matchRouter.get(
   MatchController.getListMatch
 );
 
-// roundRouter.get(
-//   "/",
-//   authenticate,
-//   role("Admin"),
-//   validateQuery(RoundQuerySchema),
-//   RoundController.getAlls
-// );
+matchRouter.get(
+  "/:slug/matchInfo",
+  authenticate,
+  role("Admin"),
+  MatchController.matchInfo
+);
 
-// roundRouter.get(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(RoundIdShame),
-//   RoundController.getRoundById
-// );
+matchRouter.get(
+  "/:slug/bgContest",
+  authenticate,
+  role("Admin"),
+  MatchController.bgContest
+);
 
-// roundRouter.post(
-//   "/",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(CreateRoundShema),
-//   RoundController.createRound
-// );
+matchRouter.get(
+  "/:slug/CurrentQuestion",
+  authenticate,
+  role("Admin"),
+  MatchController.CurrentQuestion
+);
 
-// roundRouter.patch(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(UpdeateRoundhema),
-//   validateParams(RoundIdShame),
-//   RoundController.updateRound
-// );
+matchRouter.get(
+  "/:slug/ListRescues",
+  authenticate,
+  role("Admin"),
+  MatchController.ListRescues
+);
 
-// roundRouter.patch(
-//   "/:id/toggle-active",
-//   authenticate,
-//   role("Admin"),
-//   RoundController.toggleActive
-// );
-// roundRouter.delete(
-//   "/:id",
-//   authenticate,
-//   role("Admin"),
-//   validateParams(RoundIdShame),
-//   RoundController.deleteRound
-// );
+matchRouter.get(
+  "/:slug/ListContestant",
+  authenticate,
+  role("Admin"),
+  MatchController.ListContestant
+);
 
-// roundRouter.post(
-//   "/delete-many",
-//   authenticate,
-//   role("Admin"),
-//   validateBody(deleteRoundesSchema),
-//   RoundController.deleteRounds
-// );
+matchRouter.get(
+  "/:slug/countContestant",
+  authenticate,
+  role("Admin"),
+  MatchController.countContestant
+);
+
+matchRouter.get(
+  "/:slug/ListQuestion",
+  authenticate,
+  role("Admin"),
+  MatchController.ListQuestion
+);
+
+matchRouter.get(
+  "/:slug/ScreenControl",
+  authenticate,
+  role("Admin"),
+  MatchController.ScreenControl
+);
+
+matchRouter.get(
+  "/contest/:slug/all",
+  authenticate,
+  role("Admin"),
+  // validateQuery(MatchQuerySchema),
+  MatchController.getAlls
+);
+
+matchRouter.get(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(MatchIdShame),
+  MatchController.getById
+);
+
+matchRouter.post(
+  "/contest/:slug",
+  authenticate,
+  role("Admin"),
+  // validateBody(CreateMatchSchema),
+  MatchController.create
+);
+
+matchRouter.patch(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(MatchIdShame),
+  MatchController.update
+);
+
+matchRouter.patch(
+  "/:id/toggle-active",
+  authenticate,
+  role("Admin"),
+  MatchController.toggleActive
+);
+matchRouter.delete(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  validateParams(MatchIdShame),
+  MatchController.delete
+);
+
+matchRouter.post(
+  "/delete-many",
+  authenticate,
+  role("Admin"),
+  validateBody(deleteMatchesSchema),
+  MatchController.deletes
+);
+
+//  Judge routes
+
+matchRouter.get(
+  "/judge/:id",
+  authenticate,
+  role("Judge"),
+  MatchController.getListMatchByJudgeId
+);
 
 export { matchRouter };

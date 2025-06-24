@@ -20,8 +20,17 @@ classRouter.get(
   "/",
   authenticate,
   role("Admin"),
-  validateQuery(ClassQuerySchema),
+  // validateQuery(ClassQuerySchema),
+
   ClassController.getAlls
+);
+
+classRouter.get(
+  "/school/:id",
+  authenticate,
+  role("Admin"),
+  validateQuery(ClassQuerySchema),
+  ClassController.getClassBySchoolId
 );
 
 classRouter.get(

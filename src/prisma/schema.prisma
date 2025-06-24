@@ -19,11 +19,15 @@ generator dbml {
 enum Role {
   Admin
   Judge
+  Student
 }
 
 enum QuestionType {
   multiple_choice
   essay
+  image
+  audio
+  video
 }
 
 enum Difficulty {
@@ -177,6 +181,7 @@ model Student {
   class        Class    @relation(fields: [classId], references: [id],onUpdate:Restrict, onDelete:Restrict)
   isActive     Boolean  @default(true) 
   contestants  Contestant[]
+  match        Match[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -191,8 +196,8 @@ model About {
   email         String?  @db.VarChar(255)
   fanpage       String?  @db.VarChar(255)
   mapEmbedCode  String?  @db.Text
-  logo          String?  @db.VarChar(255)
-  banner        String?  @db.VarChar(255)
+  logo          Json?    // Array of logo media objects
+  banner        Json?    // Array of banner media objects
   isActive      Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -226,14 +231,12 @@ model QuestionPackage {
 model Question {
   id             Int             @id @default(autoincrement())
   intro          String?         @db.VarChar(255)
-  defaultTime    Int             
-  remainingTime  Int?           
+  defaultTime    Int                     
   questionType   QuestionType   
-  plainText      String          @db.Text
   content        String          @db.Text
   questionMedia  Json?         
   options        Json?           
-  correctAnswer  String          @db.Text @map("correct_answer")
+  correctAnswer  String          @db.Text
   mediaAnswer    Json?          
   score          Int             @default(1)
   difficulty     Difficulty
@@ -325,7 +328,9 @@ model Match {
   id               Int                @id @default(autoincrement())
   name             String             @db.VarChar(255)
   startTime        DateTime        
-  endTime          DateTime          
+  endTime          DateTime        
+  slug             String?          
+  remainingTime  Int?   
   status           ContestStatus      @default(upcoming)
   currentQuestion  Int               
   questionPackageId Int             
@@ -335,6 +340,8 @@ model Match {
   roundId          Int 
   round            Round              @relation(fields:[roundId],references:[id],onDelete :Restrict , onUpdate :Restrict)
   isActive         Boolean            @default(true) 
+  studentId        Int?              
+  student           Student?           @relation(fields: [studentId], references: [id] , onDelete:Restrict ,onUpdate:Restrict)
   groups           Group[]
   contestantMatches ContestantMatch[]
   results          Result[]
@@ -362,7 +369,6 @@ model Group {
 
 model Contestant {
   id                Int               @id @default(autoincrement())
-  name              String            @db.VarChar(255)
   contestId         Int              
   contest           Contest           @relation(fields: [contestId], references: [id],onDelete:Restrict,onUpdate:Restrict)
   studentId         Int              
@@ -375,7 +381,6 @@ model Contestant {
   awards            Award[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@map("Contestants")
 }
 
@@ -388,6 +393,7 @@ model ContestantMatch {
   group            Group               @relation(fields: [groupId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   registrationNumber Int              
   status           ContestantMatchStatus @default(not_started)
+  eliminatedAtQuestionOrder Int?       
   isActive         Boolean              @default(true) 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -419,7 +425,7 @@ model Rescue {
   studentIds         Json?        
   supportAnswers     Json?      
   remainingContestants Int     
-  maxStudent         Int      
+  questionOrder         Int?      
   index              Int         
   status             RescueStatus
   matchId            Int          @map("match_id")
@@ -437,7 +443,7 @@ model Award {
   contest      Contest    @relation(fields: [contestId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   contestantId Int?       @map("contestant_id")
   contestant   Contestant? @relation(fields: [contestantId], references: [id],onDelete :Restrict , onUpdate :Restrict)
-  type         AwardType  @unique
+  type         AwardType  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -478,11 +484,11 @@ model ClassVideo {
 
 model ScreenControl {
   id           Int          @id @default(autoincrement())
-  controlKey   ControlKey  
-  controlValue ControlValue 
+  controlKey   ControlKey   @default(background)
+  controlValue ControlValue?
   matchId      Int          @unique     
   match        Match        @relation(fields: [matchId], references: [id],onDelete:Restrict,onUpdate:Restrict)
-  media        String       @db.VarChar(255)
+  media        String?       @db.VarChar(255)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

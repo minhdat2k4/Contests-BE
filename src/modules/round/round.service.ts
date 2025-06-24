@@ -9,7 +9,10 @@ import {
 import { Round } from "@prisma/client";
 
 export default class RoundService {
-  static async getAll(query: RoundQueryInput): Promise<{
+  static async getAll(
+    query: RoundQueryInput,
+    contestId: number
+  ): Promise<{
     rounds: Rounds[];
     pagination: {
       page: number;
@@ -20,7 +23,7 @@ export default class RoundService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search, isActive, contestId } = query;
+    const { page, limit, search, isActive } = query;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
     if (isActive !== undefined) {
@@ -106,6 +109,8 @@ export default class RoundService {
     return prisma.round.create({
       data: {
         ...data,
+        startTime: new Date(data.startTime),
+        endTime: new Date(data.endTime),
       },
     });
   }
@@ -133,11 +138,11 @@ export default class RoundService {
     }
 
     if (data.endTime !== undefined) {
-      updateData.endTime = data.endTime;
+      updateData.startTime = new Date(data.endTime);
     }
 
     if (data.startTime !== undefined) {
-      updateData.startTime = data.startTime;
+      updateData.startTime = new Date(data.startTime);
     }
 
     return prisma.round.update({
@@ -166,6 +171,15 @@ export default class RoundService {
     return prisma.contestant.count({
       where: {
         roundId: id,
+      },
+    });
+  }
+  static async getListRound(contestId: number) {
+    return prisma.round.findMany({
+      where: { isActive: true, contestId: contestId },
+      select: {
+        id: true,
+        name: true,
       },
     });
   }

@@ -30,11 +30,29 @@ export const ERROR_CODES = {  // Authentication & Authorization
   NOT_FOUND: 'NOT_FOUND',
   METHOD_NOT_ALLOWED: 'METHOD_NOT_ALLOWED',
   TOO_MANY_REQUESTS: 'TOO_MANY_REQUESTS',
-
   // File & Upload
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
   INVALID_FILE_TYPE: 'INVALID_FILE_TYPE',
-  UPLOAD_FAILED: 'UPLOAD_FAILED',
+  UPLOAD_FAILED: 'UPLOAD_FAILED',  // Contest & Award Related
+  CONTEST_NOT_FOUND: 'CONTEST_NOT_FOUND',
+  CONTESTANT_NOT_FOUND: 'CONTESTANT_NOT_FOUND',
+  AWARD_NOT_FOUND: 'AWARD_NOT_FOUND',
+  AWARD_TYPE_EXISTS: 'AWARD_TYPE_EXISTS',
+
+  // Question Related
+  QUESTION_NOT_FOUND: 'QUESTION_NOT_FOUND',
+  QUESTION_TOPIC_NOT_FOUND: 'QUESTION_TOPIC_NOT_FOUND',
+  QUESTION_PACKAGE_NOT_FOUND: 'QUESTION_PACKAGE_NOT_FOUND',
+
+  // Result Related
+  RESULT_NOT_FOUND: 'RESULT_NOT_FOUND',
+  RESULT_ALREADY_EXISTS: 'RESULT_ALREADY_EXISTS',
+
+  // Match Related
+  MATCH_NOT_FOUND: 'MATCH_NOT_FOUND',
+
+  // Sponsor Related
+  SPONSOR_NOT_FOUND: 'SPONSOR_NOT_FOUND',
 } as const;
 
 export const ERROR_MESSAGES = {  [ERROR_CODES.UNAUTHORIZED]: 'Unauthorized access',
@@ -64,8 +82,25 @@ export const ERROR_MESSAGES = {  [ERROR_CODES.UNAUTHORIZED]: 'Unauthorized acces
   [ERROR_CODES.NOT_FOUND]: 'Resource not found',
   [ERROR_CODES.METHOD_NOT_ALLOWED]: 'Method not allowed',
   [ERROR_CODES.TOO_MANY_REQUESTS]: 'Too many requests',
-
   [ERROR_CODES.FILE_TOO_LARGE]: 'File too large',
   [ERROR_CODES.INVALID_FILE_TYPE]: 'Invalid file type',
   [ERROR_CODES.UPLOAD_FAILED]: 'Upload failed',
+
+  [ERROR_CODES.CONTEST_NOT_FOUND]: 'Contest not found',
+  [ERROR_CODES.CONTESTANT_NOT_FOUND]: 'Contestant not found',
+  [ERROR_CODES.AWARD_NOT_FOUND]: 'Award not found',
+  [ERROR_CODES.AWARD_TYPE_EXISTS]: 'Award type already exists for this contest',
+  // Question Related
+  [ERROR_CODES.QUESTION_NOT_FOUND]: 'Question not found',
+  [ERROR_CODES.QUESTION_TOPIC_NOT_FOUND]: 'Question topic not found',
+  [ERROR_CODES.QUESTION_PACKAGE_NOT_FOUND]: 'Question package not found',
+
+  // Result Related
+  [ERROR_CODES.RESULT_NOT_FOUND]: 'Result not found',
+  [ERROR_CODES.RESULT_ALREADY_EXISTS]: 'Result already exists',
+  // Match Related
+  [ERROR_CODES.MATCH_NOT_FOUND]: 'Match not found',
+
+  // Sponsor Related
+  [ERROR_CODES.SPONSOR_NOT_FOUND]: 'Sponsor not found',
 } as const;

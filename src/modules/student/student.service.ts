@@ -6,6 +6,7 @@ import {
   UpdateStudentInput,
   Students,
 } from "@/modules/student";
+import { table } from "console";
 export default class StudentService {
   static async updateStudent(
     id: number,
@@ -127,5 +128,89 @@ export default class StudentService {
         ...data,
       },
     });
+  }
+
+  static async getStudentNotContestId(
+    query: StudentQueryInput,
+    contestId: number
+  ): Promise<{
+    students: Students[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search, isActive, classId } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive;
+    }
+
+    if (classId !== undefined) {
+      whereClause.classId = classId;
+    }
+
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { fullName: { contains: keyword } },
+        { studentCode: { contains: keyword } },
+        { class: { name: { contains: keyword } } },
+      ]);
+    }
+
+    const studentRaw = await prisma.student.findMany({
+      where: {
+        ...whereClause,
+        contestants: { none: { contestId: contestId } },
+      },
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        fullName: true,
+        studentCode: true,
+        isActive: true,
+        class: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    const students = studentRaw.map(k => ({
+      id: k.id,
+      fullName: k.fullName,
+      studentCode: k.studentCode ?? undefined,
+      isActive: k.isActive,
+      className: k.class?.name ?? null,
+    }));
+    const total = await prisma.student.count({
+      where: {
+        ...whereClause,
+        contestants: { none: { contestId: contestId } },
+      },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+    return {
+      students: students,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 }

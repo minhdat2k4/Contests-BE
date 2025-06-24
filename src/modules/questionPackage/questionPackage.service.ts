@@ -33,14 +33,14 @@ export default class QuestionPackageService {
   ): Promise<QuestionPackageDetailResponse | null> {
     const questionPackage = await prisma.questionPackage.findFirst({
       where: { id },
-      include: {        questionDetails: {
+      include: {
+        questionDetails: {
           select: {
             questionOrder: true,
             isActive: true,
             question: {
               select: {
                 id: true,
-                plainText: true,
                 questionType: true,
                 difficulty: true,
               },
@@ -50,7 +50,7 @@ export default class QuestionPackageService {
             isActive: true,
           },
           orderBy: {
-            questionOrder: 'asc',
+            questionOrder: "asc",
           },
         },
         matches: {
@@ -63,7 +63,7 @@ export default class QuestionPackageService {
           where: { isActive: true },
         },
         _count: {
-          select: { 
+          select: {
             questionDetails: true,
             matches: true,
           },
@@ -111,7 +111,9 @@ export default class QuestionPackageService {
   /**
    * Soft delete question package (set isActive to false)
    */
-  static async deleteQuestionPackage(id: number): Promise<QuestionPackage | null> {
+  static async deleteQuestionPackage(
+    id: number
+  ): Promise<QuestionPackage | null> {
     return prisma.questionPackage.update({
       where: { id },
       data: { isActive: false },
@@ -133,7 +135,7 @@ export default class QuestionPackageService {
    */
   static async nameExists(name: string, excludeId?: number): Promise<boolean> {
     const whereClause: any = { name };
-    
+
     if (excludeId) {
       whereClause.NOT = { id: excludeId };
     }
@@ -167,7 +169,7 @@ export default class QuestionPackageService {
     const isActive = queryInput.isActive;
     const sortBy = queryInput.sortBy || "createdAt";
     const sortOrder = queryInput.sortOrder || "desc";
-    
+
     const skip = (page - 1) * limit;
 
     const whereClause: any = {};
@@ -198,7 +200,7 @@ export default class QuestionPackageService {
       },
       include: {
         _count: {
-          select: { 
+          select: {
             questionDetails: true,
             matches: true,
           },
@@ -209,7 +211,7 @@ export default class QuestionPackageService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      questionPackages: questionPackages.map((pkg) => ({
+      questionPackages: questionPackages.map(pkg => ({
         id: pkg.id,
         name: pkg.name,
         isActive: pkg.isActive,
@@ -306,7 +308,8 @@ export default class QuestionPackageService {
       } catch (error) {
         failedIds.push({
           id,
-          reason: `Lỗi hệ thống khi xóa gói câu hỏi: ${error instanceof Error ? error.message : "Lỗi không xác định"}`,
+          reason: `Lỗi hệ thống khi xóa gói câu hỏi: ${error instanceof Error ? error.message : "Lỗi không xác định"
+            }`,
         });
       }
     }
@@ -318,5 +321,17 @@ export default class QuestionPackageService {
       successfulIds,
       failedIds,
     };
+  }
+
+  static async getListQuestionPackage() {
+    return prisma.questionPackage.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
   }
 }

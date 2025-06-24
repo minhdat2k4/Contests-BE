@@ -36,7 +36,6 @@ export default class QuestionTopicService {
         questions: {
           select: {
             id: true,
-            plainText: true,
             questionType: true,
             difficulty: true,
           },

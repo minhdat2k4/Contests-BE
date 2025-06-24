@@ -8,7 +8,10 @@ import {
 } from "@/modules/rescues";
 import { Rescue } from "@prisma/client";
 export default class RescueService {
-  static async getAll(query: RescuesQueryInput): Promise<{
+  static async getAll(
+    query: RescuesQueryInput,
+    contestId: number
+  ): Promise<{
     rescues: Rescues[];
     pagination: {
       page: number;
@@ -45,7 +48,12 @@ export default class RescueService {
     }
 
     const RescueRaw = await prisma.rescue.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        match: {
+          contestId: contestId,
+        },
+      },
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
@@ -58,7 +66,7 @@ export default class RescueService {
         studentIds: true,
         supportAnswers: true,
         remainingContestants: true,
-        maxStudent: true,
+        questionOrder: true,
         index: true,
         status: true,
         match: {
@@ -72,15 +80,23 @@ export default class RescueService {
     const rescues = RescueRaw.map(key => ({
       id: key.id,
       name: key.name,
-      rescueType: key.rescueType,
+      rescueType: (key.rescueType === "resurrected"
+        ? "Hồi sinh"
+        : "Phao cứu sinh") as "Hồi sinh" | "Phao cứu sinh",
+
       questionFrom: key.questionFrom,
       questionTo: key.questionTo,
       studentIds: key.studentIds,
       supportAnswers: key.supportAnswers,
       remainingContestants: key.remainingContestants,
-      maxStudent: key.maxStudent,
+      questionOrder: key.questionOrder,
       index: key.index,
-      status: key.status,
+      status:
+        key.status === "notUsed"
+          ? "Chưa sử dụng"
+          : key.status === "used"
+          ? "Đã sử dụng"
+          : ("Đã qua" as "Chưa sử dụng" | "Đã sử dụng" | "Đã qua"),
       matchName: key.match?.name,
     }));
     const total = await prisma.rescue.count({ where: whereClause });
@@ -112,7 +128,7 @@ export default class RescueService {
         studentIds: true,
         supportAnswers: true,
         remainingContestants: true,
-        maxStudent: true,
+        questionOrder: true,
         index: true,
         status: true,
         matchId: true,
@@ -151,8 +167,8 @@ export default class RescueService {
       updateData.index = data.index;
     }
 
-    if (data.maxStudent !== undefined) {
-      updateData.maxStudent = data.maxStudent;
+    if (data.questionOrder !== undefined) {
+      updateData.questionOrder = data.questionOrder;
     }
 
     if (data.questionFrom !== undefined) {
@@ -198,19 +214,4 @@ export default class RescueService {
       },
     });
   }
-
-  // static async countMatchesByRescueId(id: number) {
-  //   return prisma.match.count({
-  //     where: {
-  //       RescueId: id,
-  //     },
-  //   });
-  // }
-  // static async countContestantsByRescueId(id: number) {
-  //   return prisma.contestant.count({
-  //     where: {
-  //       RescueId: id,
-  //     },
-  //   });
-  // }
 }

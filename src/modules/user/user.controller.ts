@@ -7,7 +7,7 @@ import {
 } from "@/modules/user";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { validateData } from "@/middlewares/validation";
+
 import bcrypt from "bcrypt";
 import { Role } from "@prisma/client";
 
@@ -56,7 +56,6 @@ export default class UserController {
         id: user.id,
         username: user.username,
         email: user.email,
-        password: user.password,
         role: user.role,
         isActive: user.isActive,
       };
@@ -253,6 +252,20 @@ export default class UserController {
         success: true,
         messages,
       });
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getListUser(req: Request, res: Response): Promise<void> {
+    try {
+      const user = await UserService.getListUser();
+      if (!user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      logger.info(`Lấy thông tin người thành công ${user}`);
+      res.json(successResponse(user, "Lấy danh sách người dùng thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

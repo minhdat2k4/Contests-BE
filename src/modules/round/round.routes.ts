@@ -8,7 +8,7 @@ import { RoundController } from "@/modules/round";
 import {
   RoundQuerySchema,
   RoundIdShame,
-  CreateRoundShema,
+  CreateRoundSchema,
   UpdeateRoundhema,
   deleteRoundesSchema,
 } from "./round.schema";
@@ -17,11 +17,27 @@ const roundRouter = Router();
 // prive
 
 roundRouter.get(
-  "/",
+  "/contest/:slug",
   authenticate,
   role("Admin"),
   validateQuery(RoundQuerySchema),
   RoundController.getAlls
+);
+
+roundRouter.get(
+  "/contest/:slug/get-round",
+  authenticate,
+  role("Admin"),
+  validateQuery(RoundQuerySchema),
+  RoundController.getListRound
+);
+
+roundRouter.get(
+  "/list-round/:id",
+  authenticate,
+  role("Admin"),
+  // validateQuery(RoundQuerySchema),
+  RoundController.getRoundByContestId
 );
 
 roundRouter.get(
@@ -41,10 +57,9 @@ roundRouter.get(
 );
 
 roundRouter.post(
-  "/",
+  "/contest/:slug",
   authenticate,
   role("Admin"),
-  validateBody(CreateRoundShema),
   RoundController.createRound
 );
 

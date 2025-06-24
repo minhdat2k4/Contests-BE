@@ -9,8 +9,9 @@ import {
   prepareFileInfoCustom,
   moveUploadedFile,
   deleteFile,
+  ensureFolderExists,
 } from "@/utils/uploadFile";
-import { type } from "os";
+
 import { Media } from "@prisma/client";
 
 export default class mediaController {
@@ -19,13 +20,24 @@ export default class mediaController {
       const slug = req.params.slug;
       const contest = await Contestervice.getBy({ slug: slug });
       if (!contest) throw new Error("Không tìm thấy cuộc thi");
-      const data = await MediaService.getAll(contest.id);
-      if (!data) {
-        throw new Error("Không tìm thấy hình ảnh ");
-      }
+      const images = await MediaService.getAll(contest.id);
+
+      const logo = await MediaService.getBy({
+        type: "logo",
+        contestId: contest.id,
+      });
+
+      const background = await MediaService.getBy({
+        type: "background",
+        contestId: contest.id,
+      });
+
       logger.info(`Lấy danh sách media thành công`);
       res.json(
-        successResponse({ medias: data }, "Lấy danh sách media thành công")
+        successResponse(
+          { images, logo, background },
+          "Lấy danh sách media thành công"
+        )
       );
     } catch (error) {
       logger.error((error as Error).message);
@@ -91,6 +103,7 @@ export default class mediaController {
       const file = req.file;
 
       const folderPath = "uploads/media";
+      await ensureFolderExists(folderPath);
       const info = prepareFileInfoCustom(file, folderPath);
       console.log(info);
       const data = {

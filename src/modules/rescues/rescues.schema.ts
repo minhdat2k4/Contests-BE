@@ -4,15 +4,15 @@ import { RescueType, RescueStatus, Match } from "@prisma/client";
 export const RescuesShema = z.object({
   id: z.number(),
   name: z.string(),
-  rescueType: z.nativeEnum(RescueType),
+  rescueType: z.enum(["Hồi sinh", "Phao cứu sinh"]),
   questionFrom: z.number(),
   questionTo: z.number(),
   studentIds: z.any().optional(),
   supportAnswers: z.any().optional(),
   remainingContestants: z.number(),
-  maxStudent: z.number(),
+  questionOrder: z.number().nullable(),
   index: z.number(),
-  status: z.nativeEnum(RescueStatus),
+  status: z.enum(["Chưa sử dụng", "Đã sử dụng", "Đã qua"]),
   matchName: z.string(),
 });
 
@@ -37,10 +37,6 @@ export const CreateRescuesShema = z.object({
   supportAnswers: z.any(),
   remainingContestants: z.number({
     required_error: "Vui lòng nhập số thí sinh còn lại",
-    invalid_type_error: "Vui lòng nhập kí tự số",
-  }),
-  maxStudent: z.number({
-    required_error: "Vui lòng nhập số lượng thí sinh tối đa",
     invalid_type_error: "Vui lòng nhập kí tự số",
   }),
   matchId: z
@@ -93,9 +89,9 @@ export const UpdateRescuesShema = z.object({
       invalid_type_error: "Vui lòng nhập kí tự số",
     })
     .optional(),
-  maxStudent: z
+  questionOrder: z
     .number({
-      required_error: "Vui lòng nhập số lượng thí sinh tối đa",
+      required_error: "Vui lòng nhập số thứ tự câu hỏi",
       invalid_type_error: "Vui lòng nhập kí tự số",
     })
     .optional(),
@@ -151,7 +147,7 @@ export type RescuesById = {
   studentIds?: any;
   supportAnswers?: any;
   remainingContestants: number;
-  maxStudent: number;
+  questionOrder: number | null;
   matchId: number;
   index: number;
   status: RescueStatus;

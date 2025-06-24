@@ -425,7 +425,7 @@ model Rescue {
   studentIds         Json?        
   supportAnswers     Json?      
   remainingContestants Int     
-  maxStudent         Int      
+  questionOrder         Int?      
   index              Int         
   status             RescueStatus
   matchId            Int          @map("match_id")

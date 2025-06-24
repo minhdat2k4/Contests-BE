@@ -7,7 +7,7 @@ import {
 } from "@/modules/rescues";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { Prisma, RescueStatus, RescueType } from "@prisma/client";
+import { RescueStatus, RescueType } from "@prisma/client";
 import prisma from "@/config/client";
 export default class RescueController {
   static async getAlls(req: Request, res: Response): Promise<void> {

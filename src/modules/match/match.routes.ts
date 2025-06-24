@@ -84,7 +84,7 @@ matchRouter.get(
   "/contest/:slug/all",
   authenticate,
   role("Admin"),
-  validateQuery(MatchQuerySchema),
+  // validateQuery(MatchQuerySchema),
   MatchController.getAlls
 );
 

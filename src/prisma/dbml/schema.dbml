@@ -278,7 +278,7 @@ Table Rescues {
   studentIds Json
   supportAnswers Json
   remainingContestants Int [not null]
-  maxStudent Int [not null]
+  questionOrder Int
   index Int [not null]
   status RescueStatus [not null]
   matchId Int [not null]

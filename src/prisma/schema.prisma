@@ -329,7 +329,7 @@ model Match {
   name             String             @db.VarChar(255)
   startTime        DateTime        
   endTime          DateTime        
-  slug             String?          
+  slug             String?           @unique
   remainingTime  Int?   
   status           ContestStatus      @default(upcoming)
   currentQuestion  Int               
@@ -436,7 +436,7 @@ model Rescue {
   @@map("Rescues")
 }
 
-model Award {
+model Award { 
   id           Int        @id @default(autoincrement())
   name         String     @db.VarChar(255)
   contestId    Int        @map("contest_id")

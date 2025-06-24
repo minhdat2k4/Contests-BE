@@ -27,21 +27,21 @@ matchRouter.get(
 matchRouter.get(
   "/:slug/matchInfo",
   authenticate,
-  role("Admin"),
+  role("Admin", "Judge"),
   MatchController.matchInfo
 );
 
 matchRouter.get(
   "/:slug/bgContest",
   authenticate,
-  role("Admin"),
+  role("Admin", "Judge"),
   MatchController.bgContest
 );
 
 matchRouter.get(
   "/:slug/CurrentQuestion",
   authenticate,
-  role("Admin"),
+  role("Admin", "Judge"),
   MatchController.CurrentQuestion
 );
 
@@ -55,7 +55,7 @@ matchRouter.get(
 matchRouter.get(
   "/:slug/ListContestant",
   authenticate,
-  role("Admin"),
+  role("Admin", "Judge"),
   MatchController.ListContestant
 );
 

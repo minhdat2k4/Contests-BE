@@ -68,7 +68,7 @@ export const UpdateRescuesShema = z.object({
     .min(1, "Vui lòng nhập tên cứu trợ")
     .max(255, "Tên cứu trợ tối đa 255 kí tự")
     .optional(),
-  rescueType: z.nativeEnum(RescueType),
+  rescueType: z.nativeEnum(RescueType).optional(),
   questionFrom: z
     .number({
       required_error: "Vui lòng nhập câu bắt đầu",
@@ -82,7 +82,7 @@ export const UpdateRescuesShema = z.object({
     })
     .optional(),
   studentIds: z.any(),
-  supportAnswers: z.any(),
+  supportAnswers: z.array(z.string()).optional(),
   remainingContestants: z
     .number({
       required_error: "Vui lòng nhập số thí sinh còn lại",
@@ -130,6 +130,10 @@ export const RescuesQuerySchema = z.object({
       "Id trận đấu phải là số nguyên dương"
     )
     .optional(),
+});
+
+export const SupportAnswerSchema = z.object({
+  supportAnswers: z.string().min(1, "Nội dung không được để trống"),
 });
 
 export const deleteRescuesesSchema = z.object({

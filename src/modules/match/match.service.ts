@@ -407,8 +407,20 @@ export default class MatchService {
   }
 
   static async ListContestant(matchId: number) {
-    return prisma.contestantMatch.findMany({
+    return prisma.group.findMany({
       where: { matchId: matchId },
+      select: {
+        id: true,
+        name: true,
+        confirmCurrentQuestion: true,
+        user: { select: { username: true } },
+        contestantMatches: {
+          select: {
+            registrationNumber: true,
+            status: true,
+          },
+        },
+      },
     });
   }
 

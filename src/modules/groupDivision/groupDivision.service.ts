@@ -6,7 +6,7 @@ import {
   GetAvailableJudgesInput,
   ContestantInfo,
   JudgeInfo,
-  GroupInfo
+  GroupInfo,
 } from "./groupDivision.schema";
 
 export default class GroupDivisionService {
@@ -22,7 +22,7 @@ export default class GroupDivisionService {
     // Lấy thông tin trận đấu
     const match = await prisma.match.findUnique({
       where: { id: matchId },
-      include: { round: true } 
+      include: { round: true },
     });
 
     if (!match) {
@@ -33,14 +33,16 @@ export default class GroupDivisionService {
     const whereConditions: any = {
       contestId: match.round.contestId,
       ...(roundId ? { roundId } : { roundId: match.roundId }),
-      ...(status ? { status: status as ContestantStatus } : { status: "compete" })
-    };    // Điều kiện tìm kiếm theo tên hoặc mã sinh viên
+      ...(status
+        ? { status: status as ContestantStatus }
+        : { status: "compete" }),
+    }; // Điều kiện tìm kiếm theo tên hoặc mã sinh viên
     if (search) {
       whereConditions.student = {
         OR: [
           { fullName: { contains: search } },
-          { studentCode: { contains: search } }
-        ]
+          { studentCode: { contains: search } },
+        ],
       };
     }
 
@@ -49,8 +51,8 @@ export default class GroupDivisionService {
       whereConditions.student = {
         ...whereConditions.student,
         class: {
-          schoolId
-        }
+          schoolId,
+        },
       };
     }
 
@@ -58,13 +60,13 @@ export default class GroupDivisionService {
     if (classId) {
       whereConditions.student = {
         ...whereConditions.student,
-        classId
+        classId,
       };
     }
 
     // Đếm tổng số thí sinh
     const total = await prisma.contestant.count({
-      where: whereConditions
+      where: whereConditions,
     });
 
     // Lấy danh sách thí sinh với phân trang
@@ -75,16 +77,15 @@ export default class GroupDivisionService {
           include: {
             class: {
               include: {
-                school: true
-              }
-            }
-          }
-        }
-      },      orderBy: [
-        { student: { fullName: "asc" } }
-      ],
+                school: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ student: { fullName: "asc" } }],
       skip: (page - 1) * limit,
-      take: limit
+      take: limit,
     });
 
     return {
@@ -93,8 +94,8 @@ export default class GroupDivisionService {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -106,18 +107,18 @@ export default class GroupDivisionService {
 
     const whereConditions: any = {
       role: Role.Judge,
-      isActive: true
+      isActive: true,
     };
 
     if (search) {
       whereConditions.OR = [
-        { username: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } }
+        { username: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
       ];
     }
 
     const total = await prisma.user.count({
-      where: whereConditions
+      where: whereConditions,
     });
 
     const judges = await prisma.user.findMany({
@@ -125,11 +126,11 @@ export default class GroupDivisionService {
       select: {
         id: true,
         username: true,
-        email: true
+        email: true,
       },
       orderBy: { username: "asc" },
       skip: (page - 1) * limit,
-      take: limit
+      take: limit,
     });
 
     return {
@@ -138,8 +139,8 @@ export default class GroupDivisionService {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit)
-      }
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -149,13 +150,15 @@ export default class GroupDivisionService {
   static async getCurrentGroups(matchId: number): Promise<GroupInfo[]> {
     const groups = await prisma.group.findMany({
       where: { matchId },
-      include: {        user: {
+      include: {
+        user: {
           select: {
             id: true,
             username: true,
-            email: true
-          }
-        },        contestantMatches: {
+            email: true,
+          },
+        },
+        contestantMatches: {
           include: {
             contestant: {
               include: {
@@ -163,45 +166,47 @@ export default class GroupDivisionService {
                   select: {
                     id: true,
                     fullName: true,
-                    studentCode: true
-                  }
+                    studentCode: true,
+                  },
                 },
                 round: {
                   select: {
                     id: true,
-                    name: true
-                  }
-                }
-              }
-            }
+                    name: true,
+                  },
+                },
+              },
+            },
           },
-          orderBy: { registrationNumber: "asc" }
-        }
+          orderBy: { registrationNumber: "asc" },
+        },
       },
-      orderBy: { name: "asc" }
-    });    return groups.map(group => ({
+      orderBy: { name: "asc" },
+    });
+    return groups.map(group => ({
       id: group.id,
       name: group.name,
       userId: group.userId,
       judge: {
         id: group.user.id,
         username: group.user.username,
-        email: group.user.email
-      },      contestantMatches: group.contestantMatches.map((cm: any) => ({
+        email: group.user.email,
+      },
+      contestantMatches: group.contestantMatches.map((cm: any) => ({
         contestant: {
           id: cm.contestant.id,
           student: {
             id: cm.contestant.student.id,
             fullName: cm.contestant.student.fullName,
-            studentCode: cm.contestant.student.studentCode
+            studentCode: cm.contestant.student.studentCode,
           },
           round: {
             id: cm.contestant.round.id,
-            name: cm.contestant.round.name
-          }
+            name: cm.contestant.round.name,
+          },
         },
-        registrationNumber: cm.registrationNumber
-      }))
+        registrationNumber: cm.registrationNumber,
+      })),
     }));
   }
 
@@ -209,10 +214,10 @@ export default class GroupDivisionService {
    * Chia nhóm thí sinh cho trận đấu
    */
   static async divideGroups(matchId: number, input: DivideGroupsInput) {
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async tx => {
       // 1. Kiểm tra trận đấu có tồn tại không
       const match = await tx.match.findUnique({
-        where: { id: matchId }
+        where: { id: matchId },
       });
 
       if (!match) {
@@ -221,51 +226,54 @@ export default class GroupDivisionService {
 
       // 2. Xóa dữ liệu cũ (Groups và ContestantMatches)
       await tx.contestantMatch.deleteMany({
-        where: { matchId }
+        where: { matchId },
       });
 
       await tx.group.deleteMany({
-        where: { matchId }
+        where: { matchId },
       });
 
       // 3. Tạo các nhóm mới
       const createdGroups = [];
-      
+
       for (let i = 0; i < input.groups.length; i++) {
         const groupData = input.groups[i];
-        
+
         // Kiểm tra trọng tài có tồn tại và có role Judge không
         const judge = await tx.user.findFirst({
           where: {
             id: groupData.judgeId,
             role: Role.Judge,
-            isActive: true
-          }
+            isActive: true,
+          },
         });
 
         if (!judge) {
-          throw new Error(`Không tìm thấy trọng tài với ID ${groupData.judgeId}`);
+          throw new Error(
+            `Không tìm thấy trọng tài với ID ${groupData.judgeId}`
+          );
         }
 
         // Tạo nhóm
-        const groupName = groupData.groupName || `Nhóm ${String.fromCharCode(65 + i)}`; // A, B, C...
-        
+        const groupName =
+          groupData.groupName || `Nhóm ${String.fromCharCode(65 + i)}`; // A, B, C...
+
         const createdGroup = await tx.group.create({
           data: {
             name: groupName,
             userId: groupData.judgeId,
             matchId: matchId,
-            confirmCurrentQuestion: 0
-          }
+            confirmCurrentQuestion: 0,
+          },
         });
 
         // Tạo ContestantMatches cho nhóm này
         for (let j = 0; j < groupData.contestantIds.length; j++) {
           const contestantId = groupData.contestantIds[j];
-          
+
           // Kiểm tra thí sinh có tồn tại không
           const contestant = await tx.contestant.findUnique({
-            where: { id: contestantId }
+            where: { id: contestantId },
           });
 
           if (!contestant) {
@@ -278,8 +286,8 @@ export default class GroupDivisionService {
               matchId,
               groupId: createdGroup.id,
               registrationNumber: j + 1, // Số thứ tự trong nhóm
-              status: "not_started"
-            }
+              status: "not_started",
+            },
           });
         }
 
@@ -298,9 +306,9 @@ export default class GroupDivisionService {
       where: { isActive: true },
       select: {
         id: true,
-        name: true
+        name: true,
       },
-      orderBy: { name: "asc" }
+      orderBy: { name: "asc" },
     });
   }
 
@@ -309,15 +317,52 @@ export default class GroupDivisionService {
    */
   static async getClassesBySchool(schoolId: number) {
     return await prisma.class.findMany({
-      where: { 
+      where: {
         schoolId,
-        isActive: true 
+        isActive: true,
       },
       select: {
         id: true,
-        name: true
+        name: true,
       },
-      orderBy: { name: "asc" }
+      orderBy: { name: "asc" },
+    });
+  }
+
+  static async getContestantByJudgeIdAndMatchId(
+    judgeId: number,
+    matchId: number
+  ) {
+    return prisma.contestantMatch.findMany({
+      where: {
+        matchId: matchId,
+        group: {
+          userId: judgeId,
+        },
+      },
+      select: {
+        registrationNumber: true,
+        status: true,
+      },
+    });
+  }
+
+  static async UpdateContestantMatchStatus(
+    contestantMatchId: number,
+    status:
+      | "not_started"
+      | "in_progress"
+      | "confirmed1"
+      | "confirmed2"
+      | "eliminated"
+      | "rescued"
+      | "banned"
+      | "completed",
+    ids: number[] = []
+  ) {
+    return await prisma.contestantMatch.updateMany({
+      where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
+      data: { status },
     });
   }
 }

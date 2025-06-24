@@ -168,4 +168,21 @@ export default class UserService {
       where: { isActive: true },
     });
   }
+
+  static async ListJudgeByMatchId(matchId: number): Promise<{ id: number }[]> {
+    return prisma.user.findMany({
+      where: {
+        isActive: true,
+        role: "Judge",
+        groups: {
+          some: {
+            matchId: matchId,
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
 }

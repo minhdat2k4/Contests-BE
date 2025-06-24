@@ -9,6 +9,7 @@ import {
 } from "@/modules/match";
 import { Match } from "@prisma/client";
 import slugify from "slugify";
+import { UserService } from "../user";
 
 export default class MatchService {
   static async getAll(
@@ -407,8 +408,20 @@ export default class MatchService {
   }
 
   static async ListContestant(matchId: number) {
-    return prisma.contestantMatch.findMany({
+    return prisma.group.findMany({
       where: { matchId: matchId },
+      select: {
+        id: true,
+        name: true,
+        confirmCurrentQuestion: true,
+        user: { select: { username: true } },
+        contestantMatches: {
+          select: {
+            registrationNumber: true,
+            status: true,
+          },
+        },
+      },
     });
   }
 

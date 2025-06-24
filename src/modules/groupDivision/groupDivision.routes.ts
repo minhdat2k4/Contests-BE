@@ -6,6 +6,13 @@ const router = Router();
 
 // Tất cả routes đều yêu cầu authenticate và role Admin
 router.use(authenticate);
+router.use(role("Judge"));
+
+router.get(
+  "/contestant/judge/:match",
+  GroupDivisionController.getContestantByJudgeIdAndMatchId
+);
+
 router.use(role("Admin"));
 
 // Lấy danh sách thí sinh có thể tham gia trận đấu
@@ -15,10 +22,7 @@ router.get(
 );
 
 // Lấy danh sách trọng tài có thể chấm thi
-router.get(
-  "/judges",
-  GroupDivisionController.getAvailableJudges
-);
+router.get("/judges", GroupDivisionController.getAvailableJudges);
 
 // Lấy danh sách nhóm hiện tại của trận đấu
 router.get(
@@ -33,10 +37,7 @@ router.post(
 );
 
 // Lấy danh sách trường học để lọc
-router.get(
-  "/schools",
-  GroupDivisionController.getSchools
-);
+router.get("/schools", GroupDivisionController.getSchools);
 
 // Lấy danh sách lớp học theo trường
 router.get(

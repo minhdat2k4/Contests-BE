@@ -187,7 +187,7 @@ Table Matches {
   name String [not null]
   startTime DateTime [not null]
   endTime DateTime [not null]
-  slug String
+  slug String [unique]
   remainingTime Int
   status ContestStatus [not null, default: 'upcoming']
   currentQuestion Int [not null]

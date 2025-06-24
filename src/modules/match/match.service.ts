@@ -9,7 +9,6 @@ import {
 } from "@/modules/match";
 import { Match } from "@prisma/client";
 import slugify from "slugify";
-import { UserService } from "../user";
 
 export default class MatchService {
   static async getAll(

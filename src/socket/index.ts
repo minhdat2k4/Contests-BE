@@ -8,6 +8,7 @@ import cookie from "cookie";
 import { registerTestEvents } from "./events/test.events";
 import { registerStudentEvents } from "./events/student.events";
 import { registerMatchEvents } from "./events/match.events";
+import { registerAudienceEvents } from "./events/audience.events";
 import { timerService } from "./services/timer.service";
 import { prisma } from "@/config/database";
 
@@ -145,6 +146,9 @@ export const initializeSocketIO = (io: Server) => {
     
     // Register match control events
     registerMatchEvents(io, authSocket);
+    
+    // Register audience control events
+    registerAudienceEvents(io, authSocket);
 
     socket.on("disconnect", reason => {
       logger.info(

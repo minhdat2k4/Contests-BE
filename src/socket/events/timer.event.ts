@@ -1,10 +1,13 @@
 import { Server, Socket } from "socket.io";
 import { MatchService } from "@/modules/match";
 
-interface TimerUpdateData {
-  match: string;
-  newTime?: number; // Thêm trường này nếu cần cập nhật thời gian mới
-}
+import z from "zod";
+
+const TimerUpdateData = z.object({
+  match: z.string(),
+  newTime: z.number().optional(),
+});
+export type TimerUpdateData = z.infer<typeof TimerUpdateData>;
 
 type TimerStatus = "running" | "paused";
 
@@ -19,19 +22,24 @@ export const matchTimers = new Map<string, MatchTimer>();
 export const registerTimerEvents = (io: Server, socket: Socket) => {
   const getRoomName = (match: string) => `match-${match}`;
 
-  socket.on("timer:play", async (data: TimerUpdateData, callback) => {
+  socket.on("timer:play", async (data: unknown, callback) => {
     try {
-      const { match } = data;
-      const roomName = getRoomName(match);
+      const validation = TimerUpdateData.safeParse(data);
+      if (!validation.success) {
+        return callback({ success: false, message: "Dữ liệu không hợp lệ" });
+      }
 
-      const matchInfo = await MatchService.MatchControl(match);
+      const payload = validation.data;
+      const roomName = getRoomName(payload.match);
+
+      const matchInfo = await MatchService.MatchControl(payload.match);
       if (!matchInfo) {
-        return callback(new Error("Không tìm thấy trận đấu"));
+        return callback({ success: false, message: "Không tìm thấy trận đấu" });
       }
 
       const defaultTime = matchInfo.remainingTime ?? 30;
 
-      let matchTimer = matchTimers.get(match);
+      let matchTimer = matchTimers.get(payload.match);
 
       if (!matchTimer) {
         matchTimer = {
@@ -39,9 +47,12 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
           intervalId: null,
           status: "paused",
         };
-        matchTimers.set(match, matchTimer);
+        matchTimers.set(payload.match, matchTimer);
       } else if (matchTimer.status === "running") {
-        return callback(new Error("Bộ đếm thời gian đang chạy"));
+        return callback({
+          success: false,
+          message: "Bộ đếm thời gian đang chạy",
+        });
       } else {
         // Nếu đã có timer nhưng đổi câu → cập nhật thời gian mới từ DB
         matchTimer.timeRemaining = defaultTime;
@@ -55,11 +66,14 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
 
           try {
             await MatchService.UpdateMatchBySlug(
-              match,
+              payload.match,
               matchTimer!.timeRemaining
             );
           } catch (error) {
-            console.error("Lỗi khi cập nhật DB:", error);
+            return callback?.({
+              success: false,
+              message: "Cập nhật thời gian thất bại",
+            });
           }
 
           io.of("/match-control").to(roomName).emit("timer:update", {
@@ -85,18 +99,29 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
       });
     } catch (err) {
       console.error("timer:play error", err);
-      callback?.(new Error("Có lỗi xảy ra khi chạy bộ đếm"));
+      callback?.({
+        success: false,
+        message: "Có lỗi xảy ra khi bắt đầu đếm thời gian",
+      });
     }
   });
 
-  socket.on("timer:pause", async (data: TimerUpdateData, callback) => {
+  socket.on("timer:pause", async (data: unknown, callback) => {
     try {
-      const { match } = data;
+      const validation = TimerUpdateData.safeParse(data);
+      if (!validation.success) {
+        return callback({ success: false, message: "Dữ liệu không hợp lệ" });
+      }
+
+      const { match } = validation.data;
       const roomName = getRoomName(match);
       const matchTimer = matchTimers.get(match);
 
       if (!matchTimer) {
-        return callback(new Error("Không tìm thấy bộ đếm thời gian"));
+        return callback({
+          success: false,
+          message: "Không tìm thấy bộ đếm thời gian",
+        });
       }
 
       clearInterval(matchTimer.intervalId!);
@@ -115,19 +140,32 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
       });
     } catch (err) {
       console.error("timer:pause error", err);
-      callback?.(new Error("Có lỗi xảy ra khi tạm dừng bộ đếm"));
+      callback?.({
+        success: false,
+        message: "Có lỗi xảy ra khi tạm dừng bộ đếm",
+      });
     }
   });
 
-  socket.on("timer:reset", async (data: TimerUpdateData, callback) => {
+  socket.on("timer:reset", async (data: unknown, callback) => {
     try {
-      const { match } = data;
+      const validation = TimerUpdateData.safeParse(data);
+      if (!validation.success) {
+        return callback({
+          success: false,
+          message: "Dữ liệu không hợp lệ",
+        });
+      }
+
+      const { match } = validation.data;
       const roomName = getRoomName(match);
-      console.log("timer:reset", match);
       const matchInfo = await MatchService.MatchControl(match);
 
       if (!matchInfo) {
-        return callback(new Error("Không tìm thấy trận đấu"));
+        return callback({
+          success: false,
+          message: "Không tìm thấy trận đấu",
+        });
       }
 
       const currentQuestion = await MatchService.CurrentQuestion(
@@ -164,21 +202,32 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
       });
     } catch (err) {
       console.error("timer:reset error", err);
-      callback?.(new Error("Có lỗi xảy ra khi reset thời gian"));
+      callback?.({
+        success: false,
+        message: "Có lỗi xảy ra khi reset thời gian",
+      });
     }
   });
 
-  socket.on("timer:update", async (data: TimerUpdateData, callback) => {
+  socket.on("timer:update", async (data: unknown, callback) => {
     try {
-      const { match } = data;
+      const validation = TimerUpdateData.safeParse(data);
+      if (!validation.success) {
+        return callback({
+          success: false,
+          message: "Dữ liệu không hợp lệ",
+        });
+      }
+
+      const { match, newTime } = validation.data;
       const roomName = getRoomName(match);
       const matchInfo = await MatchService.MatchControl(match);
 
       if (!matchInfo) {
-        return callback(new Error("Không tìm thấy trận đấu"));
+        return callback({ success: false, message: "Không tìm thấy trận đấu" });
       }
 
-      const defaultTime = Number(data.newTime) ?? 30;
+      const defaultTime = Number(newTime) ?? 30;
 
       let matchTimer = matchTimers.get(match);
       if (!matchTimer) {
@@ -206,8 +255,10 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
         message: "Cập nhật thời gian thành công",
       });
     } catch (err) {
-      console.error("timer:update error", err);
-      callback?.(new Error("Có lỗi xảy ra khi cập nhật thời gian"));
+      callback?.({
+        success: false,
+        message: "Có lỗi xảy ra khi cập nhật thời gian",
+      });
     }
   });
 };

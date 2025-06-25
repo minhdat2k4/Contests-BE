@@ -10,7 +10,7 @@ import { registerTestEvents } from "./events/test.events";
 /**
  * Middleware xác thực kết nối Socket.IO bằng JWT trongc ookie httpOnly
  */
-const authMiddleware = (
+export const authMiddleware = (
   socket: Socket,
   next: (err?: ExtendedError) => void
 ) => {

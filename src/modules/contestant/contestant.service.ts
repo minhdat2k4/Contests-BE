@@ -7,6 +7,7 @@ import {
   ContestantById,
 } from "@/modules/contestant";
 import { Contestant } from "@prisma/client";
+import { group } from "console";
 
 export default class ContestantService {
   static async getAll(

@@ -187,7 +187,7 @@ Table Matches {
   name String [not null]
   startTime DateTime [not null]
   endTime DateTime [not null]
-  slug String
+  slug String [unique]
   remainingTime Int
   status ContestStatus [not null, default: 'upcoming']
   currentQuestion Int [not null]
@@ -279,7 +279,7 @@ Table Rescues {
   studentIds Json
   supportAnswers Json
   remainingContestants Int [not null]
-  maxStudent Int [not null]
+  questionOrder Int
   index Int [not null]
   status RescueStatus [not null]
   matchId Int [not null]
@@ -332,6 +332,7 @@ Table Screen_Controls {
   matchId Int [unique, not null]
   match Matches [not null]
   media String
+  value String
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
@@ -407,8 +408,10 @@ Enum AwardType {
 }
 
 Enum ControlKey {
+  qrcode
   background
   question
+  questionIntro
   questionInfo
   answer
   matchDiagram

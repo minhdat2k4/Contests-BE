@@ -88,8 +88,10 @@ enum AwardType {
 }
 
 enum ControlKey {
+  qrcode
   background
   question
+  questionIntro
   questionInfo
   answer
   matchDiagram
@@ -329,7 +331,7 @@ model Match {
   name             String             @db.VarChar(255)
   startTime        DateTime        
   endTime          DateTime        
-  slug             String?          
+  slug             String?           @unique
   remainingTime  Int?   
   status           ContestStatus      @default(upcoming)
   currentQuestion  Int               
@@ -425,7 +427,7 @@ model Rescue {
   studentIds         Json?        
   supportAnswers     Json?      
   remainingContestants Int     
-  maxStudent         Int      
+  questionOrder         Int?      
   index              Int         
   status             RescueStatus
   matchId            Int          @map("match_id")
@@ -436,7 +438,7 @@ model Rescue {
   @@map("Rescues")
 }
 
-model Award {
+model Award { 
   id           Int        @id @default(autoincrement())
   name         String     @db.VarChar(255)
   contestId    Int        @map("contest_id")
@@ -489,6 +491,7 @@ model ScreenControl {
   matchId      Int          @unique     
   match        Match        @relation(fields: [matchId], references: [id],onDelete:Restrict,onUpdate:Restrict)
   media        String?       @db.VarChar(255)
+  value        String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

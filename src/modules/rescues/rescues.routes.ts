@@ -33,7 +33,7 @@ rescueRoute.patch(
   authenticate,
   role("Admin"),
   validateBody(UpdateRescuesShema),
-  RescuesController.UpdateSupportAnswers
+  RescuesController.update
 );
 
 rescueRoute.get(

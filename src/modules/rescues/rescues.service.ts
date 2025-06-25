@@ -155,6 +155,8 @@ export default class RescueService {
   ): Promise<Rescue | null> {
     const updateData: any = {};
 
+    console.log(data);
+
     if (data.name !== undefined) {
       updateData.name = data.name;
     }

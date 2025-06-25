@@ -277,4 +277,27 @@ export default class GroupController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async getByMatchSlug(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+
+      const match = await prisma.match.findFirst({
+        where: { slug: slug },
+      });
+      if (!match) throw new Error("Không tìm thấy trận đấu");
+
+      const groups = await GroupService.getBy({
+        matchId: match.id,
+        userId: req.user?.userId,
+      });
+      if (!groups) {
+        throw new Error("Không tìm thấy nhóm trong trận đấu này");
+      }
+      res.json(successResponse(groups));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

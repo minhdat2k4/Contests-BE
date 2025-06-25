@@ -10,6 +10,7 @@ import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
 import { ContestStatus } from "@prisma/client";
+import { createLogger } from "winston";
 export default class MatchController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
@@ -549,7 +550,7 @@ export default class MatchController {
         throw new Error("ID không hợp lệ");
       }
 
-      const match = await MatchService.getListMatchByJudgeId(judgeId, id);
+      const match = await MatchService.getListMatchByJudgeId(id, judgeId);
 
       res.json(successResponse(match, "Lấy danh sách trận đấu thành công"));
     } catch (error) {

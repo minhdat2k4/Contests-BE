@@ -259,8 +259,8 @@ export default class RescueController {
         questionType: currentQuestion.questionType,
         questionTopic: currentQuestion.questionTopic?.name || null,
         questionMedia: currentQuestion.questionMedia || null,
+        correctAnswer: currentQuestion.correctAnswer,
       };
-
       logger.info(`Lấy danh sách cứu trợ cho trận đấu ${id} thành công`);
       res.json(successResponse(question, "Lấy danh sách cứu trợ thành công"));
     } catch (error) {

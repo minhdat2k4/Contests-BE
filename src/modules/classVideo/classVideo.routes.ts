@@ -16,6 +16,13 @@ const classVideoRouter = Router();
 const uploads = multer({ dest: "tmp/" });
 // prive
 
+classVideoRouter.get(
+  "/contest/list-video/:slug",
+  authenticate,
+  role("Admin"),
+  ClassVideoController.ClassVideosByContestSlug
+);
+
 classVideoRouter.post(
   "/contest/:slug",
   authenticate,

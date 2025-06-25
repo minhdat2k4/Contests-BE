@@ -1,11 +1,5 @@
 import { Request, Response } from "express";
-import {
-  CreateGroupInput,
-  UpdateGroupInput,
-  GroupQueryInput,
-  GrouType,
-  GroupByIdType,
-} from "./group.schema";
+import { CreateGroupInput, GroupQueryInput } from "./group.schema";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";

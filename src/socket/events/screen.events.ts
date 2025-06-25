@@ -26,8 +26,6 @@ export const registerScreenEvents = (io: Server, socket: Socket) => {
     const updatedScreen = await ScreenService.update(screen.id, updatePayload);
     if (!updatedScreen) return;
 
-    console.log(data);
-
     io.of("/match-control").to(roomName).emit("screen:update", {
       updatedScreen,
     });

@@ -75,7 +75,7 @@ export const authenticate = async (
 };
 
 export const role =
-  (...roles: String[]) =>
+  (...roles: string[]) =>
   (req: Request, res: Response, next: NextFunction): void => {
     const user = req.user;
     if (!user) {

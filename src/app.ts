@@ -59,10 +59,7 @@ app.use(
   "/uploads",
   (req, res, next) => {
     // Set CORS headers for static files
-    res.header(
-      "Access-Control-Allow-Origin",
-      process.env.CORS_ORIGIN || "http://localhost:5173"
-    );
+    res.header("Access-Control-Allow-Origin", process.env.CORS_ORIGIN || "");
     res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.header(
       "Access-Control-Allow-Headers",

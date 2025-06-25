@@ -15,7 +15,7 @@
 
 ### Environment
 - Backend server: `http://localhost:3000`
-- Database: PostgreSQL
+
 - Tool: Postman hoặc Thunder Client
 
 ### Import Postman Collection

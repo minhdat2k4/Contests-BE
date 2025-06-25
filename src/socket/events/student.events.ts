@@ -498,18 +498,14 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       const validatedData = JoinMatchSchema.parse(data);
       const { matchId } = validatedData;
 
-      // Check if contestant exists and is part of this match
+      // Check if contestant exists and has access to this match
       const contestant = await prisma.contestant.findUnique({
         where: { id: socket.contestantId },
         include: {
-          contest: {
+          round: {
             include: {
-              round: {
-                include: {
-                  matches: {
-                    where: { id: matchId }
-                  }
-                }
+              matches: {
+                where: { id: matchId }
               }
             }
           }
@@ -522,18 +518,10 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         return callback?.({ success: false, message: error });
       }
 
-      // Check if match exists in contestant's contest
-      const match = await prisma.match.findFirst({
-        where: {
-          id: matchId,
-          round: {
-            contestId: contestant.contestId
-          }
-        }
-      });
-
-      if (!match) {
-        const error = "Match not found or not accessible";
+      // Check if match exists in contestant's round
+      const hasAccess = contestant.round?.matches?.some((match: any) => match.id === matchId) || false;
+      if (!hasAccess) {
+        const error = "No access to this match";
         logger.warn(`❌ ${error}: Match ${matchId} for contestant ${socket.contestantId}`);
         return callback?.({ success: false, message: error });
       }
@@ -593,6 +581,35 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         return callback?.({ success: false, message: error });
       }
 
+      // 🔥 NEW: Check if contestant is eliminated before allowing answer submission
+      const contestant = await prisma.contestant.findUnique({
+        where: { id: socket.contestantId },
+        select: { 
+          id: true, 
+          status: true,
+          student: {
+            select: { fullName: true, studentCode: true }
+          }
+        }
+      });
+
+      if (!contestant) {
+        const error = "Contestant not found";
+        logger.warn(`❌ ${error}: ${socket.contestantId}`);
+        return callback?.({ success: false, message: error });
+      }
+
+      // 🔥 NEW: Block eliminated students from submitting answers
+      if (contestant.status === "eliminate") {
+        const error = "Bạn đã bị loại khỏi trận đấu và không thể trả lời thêm câu hỏi";
+        logger.warn(`🚫 [BLOCKED] Eliminated student tried to submit: ${socket.contestantId} (${contestant.student?.fullName})`);
+        return callback?.({ 
+          success: false, 
+          message: error,
+          eliminated: true,
+        });
+      }
+
       // Check if match is active
       const match = await prisma.match.findUnique({
         where: { id: matchId },
@@ -631,7 +648,7 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
 
       if (!questionDetail) {
         const error = "Question not found";
-        logger.warn(`❌ ${error}: Order ${questionOrder} in package ${match.questionPackageId}`);
+        logger.warn(`❌ [VALIDATION] Question not found for match ${matchId}, order ${questionOrder}`);
         return callback?.({ success: false, message: error });
       }
 
@@ -653,7 +670,8 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
           result: {
             isCorrect: existingResult.isCorrect,
             questionOrder: questionOrder,
-            submittedAt: existingResult.createdAt
+            submittedAt: existingResult.createdAt,
+            eliminated: (contestant.status as string) === "eliminate"
           }
         });
       }
@@ -735,45 +753,43 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       // Broadcast to students namespace
       io.of("/student").to(roomName).emit("match:answerSubmitted", answerSubmissionData);
 
-      // Handle incorrect answer - Auto-elimination Logic
+      // 🔥 IMPROVED: Handle incorrect answer - Auto-elimination Logic
+      let isEliminated = false;
       if (!isCorrect) {
         console.log(`⚠️ [ELIMINATION] Thí sinh ${socket.contestantId} trả lời sai - bắt đầu elimination logic`);
 
         try {
           // Update contestant status to eliminated
           const eliminatedContestant = await prisma.contestant.update({
-            where: { id: socket.contestantId! },
+            where: { id: socket.contestantId },
             data: { 
-              status: "eliminated",
-              eliminatedAt: new Date()
-            },
-            include: {
-              student: {
-                select: { fullName: true, studentCode: true }
-              }
+              status: "eliminate"
             }
           });
 
-          console.log(`🚫 [ELIMINATION] Thí sinh ${eliminatedContestant.student?.fullName} đã bị loại`);
+          isEliminated = true;
+          console.log(`🚫 [ELIMINATION] Thí sinh ${contestant.student?.fullName} đã bị loại`);
 
-          // Create elimination log for tracking
-          await prisma.$executeRaw`
-            INSERT INTO elimination_logs (contestant_id, match_id, question_order, elimination_reason, eliminated_at)
-            VALUES (${socket.contestantId}, ${matchId}, ${questionOrder}, 'incorrect_answer', NOW())
-            ON DUPLICATE KEY UPDATE 
-            elimination_reason = VALUES(elimination_reason),
-            eliminated_at = VALUES(eliminated_at)
-          `;
+          // 🔥 IMPROVED: Create elimination log with better error handling
+          try {
+            await prisma.$executeRaw`
+              INSERT INTO elimination_logs (contestant_id, question_order, elimination_reason, eliminated_at)
+              VALUES (${socket.contestantId}, ${questionOrder}, 'incorrect_answer', NOW())
+            `;
+          } catch (logError) {
+            console.warn(`⚠️ [ELIMINATION] Could not create elimination log: ${logError}`);
+            // Continue with elimination process even if logging fails
+          }
 
-          // Prepare elimination data
+          // Prepare elimination data for broadcast
           const eliminationData = {
             contestantId: socket.contestantId,
-            studentName: eliminatedContestant.student?.fullName,
-            studentCode: eliminatedContestant.student?.studentCode,
+            studentName: contestant.student?.fullName,
+            studentCode: contestant.student?.studentCode,
             questionOrder: questionOrder,
             eliminationReason: 'incorrect_answer',
             eliminatedAt: new Date().toISOString(),
-            matchId: matchId
+            matchId: socket.matchId
           };
 
           // Broadcast elimination to admin/judge namespace
@@ -793,7 +809,7 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
           });
 
           logger.info(
-            `🚫 Contestant eliminated: ${socket.contestantId} (${eliminatedContestant.student?.fullName}) | Question ${questionOrder} | Reason: incorrect_answer`
+            `🚫 Contestant eliminated: ${socket.contestantId} (${contestant.student?.fullName}) | Question ${questionOrder} | Reason: incorrect_answer`
           );
 
         } catch (eliminationError) {
@@ -813,14 +829,15 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
           correctAnswer: !isCorrect ? question.correctAnswer : undefined, // Show correct answer if wrong
           explanation: !isCorrect ? question.explanation : undefined, // Show explanation if wrong
           score: isCorrect ? question.score : 0,
-          eliminated: !isCorrect // Let frontend know if student is eliminated
+          eliminated: isEliminated // 🔥 IMPROVED: Use actual elimination status
         }
       };
 
       callback?.(responseData);
 
-      // Additional statistics logging
-      const studentStats = await prisma.result.aggregate({
+      // Additional statistics logging - Fixed aggregate query
+      const studentStats = await prisma.result.groupBy({
+        by: ['contestantId'],
         where: {
           contestantId: socket.contestantId,
           matchId: matchId
@@ -829,15 +846,27 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
           id: true
         },
         _sum: {
+          questionOrder: true // Use a numeric field that exists
+        }
+      });
+
+      // Calculate correct answers separately
+      const correctAnswersCount = await prisma.result.count({
+        where: {
+          contestantId: socket.contestantId,
+          matchId: matchId,
           isCorrect: true
         }
       });
 
+      const totalAnswers = studentStats[0]?._count.id || 0;
+      
       console.log(`📊 [STATS] Thí sinh ${socket.contestantId} stats:`, {
-        totalAnswers: studentStats._count.id,
-        correctAnswers: studentStats._sum.isCorrect || 0,
-        accuracy: studentStats._count.id > 0 ? 
-          Math.round(((studentStats._sum.isCorrect || 0) / studentStats._count.id) * 100) : 0
+        totalAnswers: totalAnswers,
+        correctAnswers: correctAnswersCount,
+        accuracy: totalAnswers > 0 ? 
+          Math.round((correctAnswersCount / totalAnswers) * 100) : 0,
+        eliminated: isEliminated
       });
 
     } catch (error) {
@@ -969,110 +998,116 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
 
       if (!questionDetail) {
         const error = "Question not found";
-        logger.warn(`❌ ${error}: Order ${questionOrder} in package ${match.questionPackageId}`);
+        logger.warn(`❌ [VALIDATION] Question not found for match ${matchId}, order ${questionOrder}`);
         return callback?.({ success: false, message: error });
       }
 
-      // Get total questions in package
-      const totalQuestions = await prisma.questionDetail.count({
-        where: {
-          questionPackageId: match.questionPackageId
-        }
-      });
-
-      // Check if student has answered this question
-      const existingResult = await prisma.result.findFirst({
-        where: {
-          contestantId: socket.contestantId,
-          matchId: matchId,
-          questionOrder: questionOrder
-        }
-      });
-
-      const question = questionDetail.question;
-      
-      // Parse options if it's multiple choice
-      let options = null;
-      if (question.questionType === "multiple_choice" && question.options) {
-        try {
-          options = JSON.parse(question.options as string);
-        } catch (e) {
-          logger.warn(`Error parsing options for question ${question.id}`);
-        }
-      }
-
-      // Parse question media
-      let questionMedia = null;
-      if (question.questionMedia) {
-        try {
-          questionMedia = JSON.parse(question.questionMedia as string);
-        } catch (e) {
-          logger.warn(`Error parsing question media for question ${question.id}`);
-        }
-      }
-
-      const responseData = {
-        // Contest info
-        contest: {
-          id: match.round.contest.name,
-          name: match.round.contest.name,
-          status: match.round.contest.status
-        },
-        // Round info
-        round: {
-          name: match.round.name
-        },
-        // Match info
-        match: {
-          id: match.id,
-          name: match.name,
+      callback?.({
+        success: true,
+        data: {
+          matchId: match.id,
+          matchName: match.name,
+          contestName: match.round.contest.name,
           currentQuestion: match.currentQuestion,
           remainingTime: match.remainingTime,
-          status: match.status
-        },
-        // Question package info
-        questionPackage: {
-          name: match.questionPackage.name,
-          totalQuestions: totalQuestions,
-          currentOrder: questionOrder
-        },
-        // Question details
-        question: {
-          id: question.id,
-          intro: question.intro,
-          content: question.content,
-          questionType: question.questionType,
-          difficulty: question.difficulty,
-          defaultTime: question.defaultTime,
-          score: question.score,
-          options: options,
-          questionMedia: questionMedia,
-          topic: question.questionTopic.name
-        },
-        // Student status
-        studentStatus: {
-          hasAnswered: !!existingResult,
-          answerResult: existingResult ? {
-            answer: existingResult.name,
-            isCorrect: existingResult.isCorrect,
-            submittedAt: existingResult.createdAt
-          } : null
+          question: {
+            id: questionDetail.question.id,
+            intro: questionDetail.question.intro,
+            content: questionDetail.question.content,
+            questionType: questionDetail.question.questionType,
+            difficulty: questionDetail.question.difficulty,
+            defaultTime: questionDetail.question.defaultTime,
+            score: questionDetail.question.score,
+            options: questionDetail.question.options ? JSON.parse(questionDetail.question.options as string) : null,
+            correctAnswer: questionDetail.question.correctAnswer
+          }
         }
-      };
-
-      callback?.({ 
-        success: true, 
-        data: responseData
       });
-
-      logger.info(
-        `✅ Question retrieved: Contestant ${socket.contestantId} | Match ${matchId} | Question ${questionOrder}`
-      );
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error(`❌ [GET_QUESTION] Error in student:getQuestion:`, errorMessage);
       logger.error(`❌ Error in student:getQuestion: ${errorMessage}`);
-      callback?.({ success: false, message: "Failed to get question" });
+      callback?.({ 
+        success: false, 
+        message: "Không thể lấy thông tin câu hỏi. Vui lòng thử lại!" 
+      });
     }
   });
-}; 
+
+  /**
+   * Event: joinMatchRoom
+   * Allow student to join a match room for real-time updates
+   */
+  socket.on("joinMatchRoom", async (matchId: number, callback?: (response: any) => void) => {
+    try {
+      console.log(`🏠 [STUDENT JOIN ROOM] Socket ${socket.id} wants to join matchId: ${matchId}`);
+      
+      // Check if contestant exists and has access to this match
+      const contestant = await prisma.contestant.findUnique({
+        where: { id: socket.contestantId },
+        include: {
+          round: {
+            include: {
+              matches: {
+                where: { id: matchId }
+              }
+            }
+          }
+        }
+      });
+
+      if (!contestant) {
+        const error = "Contestant not found";
+        logger.warn(`❌ ${error}: ${socket.contestantId}`);
+        return callback?.({ success: false, message: error });
+      }
+
+      // Check if match exists in contestant's round
+      const hasAccess = contestant.round?.matches?.some((match: any) => match.id === matchId) || false;
+      if (!hasAccess) {
+        const error = "No access to this match";
+        logger.warn(`❌ ${error}: Match ${matchId} for contestant ${socket.contestantId}`);
+        return callback?.({ success: false, message: error });
+      }
+
+      const roomName = `match-${matchId}`;
+      socket.join(roomName);
+      
+      console.log(`✅ [STUDENT JOIN ROOM] Socket ${socket.id} joined room: ${roomName}`);
+      logger.info(`Student socket ${socket.id} joined room: ${roomName}`);
+
+      // Kiểm tra số lượng clients trong room
+      const roomSize = namespace.adapter.rooms.get(roomName)?.size || 0;
+      console.log(`📊 [STUDENT JOIN ROOM] Room ${roomName} now has ${roomSize} students`);
+
+      // Response với acknowledgement
+      if (callback) {
+        const response = {
+          success: true,
+          message: `Successfully joined room ${roomName}`,
+          roomSize: roomSize
+        };
+        console.log(`📨 [STUDENT JOIN ROOM] Sending response:`, response);
+        callback(response);
+      }
+    } catch (error) {
+      console.error(`❌ [STUDENT JOIN ROOM] Error joining room for match ${matchId}:`, error);
+      logger.error(`Error joining room for match ${matchId}`, error);
+      if (callback) {
+        callback({ success: false, message: "Failed to join room." });
+      }
+    }
+  });
+
+  /**
+   * Event: leaveMatchRoom
+   * Allow student to leave a match room
+   */
+  socket.on("leaveMatchRoom", (matchId: number) => {
+    const roomName = `match-${matchId}`;
+    socket.leave(roomName);
+    console.log(`🚪 [STUDENT LEAVE ROOM] Socket ${socket.id} left room: ${roomName}`);
+    logger.info(`Student socket ${socket.id} left room: ${roomName}`);
+  });
+}

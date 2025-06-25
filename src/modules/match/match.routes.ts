@@ -137,7 +137,7 @@ matchRouter.post(
 //  Judge routes
 
 matchRouter.get(
-  "/list-judge/:id",
+  "/judge/:id",
   authenticate,
   role("Judge"),
   MatchController.getListMatchByJudgeId

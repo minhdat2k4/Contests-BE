@@ -5,7 +5,7 @@ export const CreateScreenSchema = z.object({
   controlKey: z.nativeEnum(ControlKey),
   controlValue: z.nativeEnum(ControlValue),
   matchId: z.number(),
-  media: z.string(),
+  media: z.string().optional(),
 });
 
 export const ScreenSchema = z.object({
@@ -14,6 +14,7 @@ export const ScreenSchema = z.object({
   matchId: z.number(),
   media: z.string().nullable(),
   matchName: z.string(),
+  value: z.string().optional(),
 });
 
 export const ScreensIdShema = z.object({
@@ -28,6 +29,7 @@ export const UpdateScreenSchema = z.object({
   controlValue: z.nativeEnum(ControlValue).optional(),
   matchId: z.number().optional(),
   media: z.string().optional(),
+  value: z.string().optional(),
 });
 
 export const ScreenQuerySchema = z.object({

@@ -7,11 +7,25 @@ import {
 } from "@/modules/rescues";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
-import { Prisma, RescueStatus, RescueType } from "@prisma/client";
+import { RescueStatus, RescueType, Match } from "@prisma/client";
 import prisma from "@/config/client";
+import { MatchService } from "../match";
+import string from "zod";
 export default class RescueController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
+      const slug = req.params.slug;
+      if (!slug) {
+        throw new Error("Slug không được để trống");
+      }
+
+      const contest = await prisma.contest.findFirst({
+        where: { slug: slug },
+      });
+
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi ");
+      }
       const query: RescuesQueryInput = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
@@ -20,7 +34,7 @@ export default class RescueController {
         status: req.query.status as RescueStatus | undefined,
         rescueType: req.query.rescueType as RescueType | undefined,
       };
-      const data = await RescueService.getAll(query);
+      const data = await RescueService.getAll(query, contest.id);
       if (!data) {
         throw new Error("Không tìm thấy cứu trợ ");
       }
@@ -191,5 +205,149 @@ export default class RescueController {
       success: true,
       data: rescueTypes,
     });
+  }
+
+  static async getRescueByMatchSlug(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { slug, id } = req.params;
+
+      if (!slug) {
+        throw new Error("Slug không được để trống");
+      }
+
+      if (!id) {
+        throw new Error("Match ID không hợp lệ");
+      }
+
+      const match = await MatchService.getMatchBy({
+        slug: slug,
+      });
+
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu");
+      }
+
+      const rescuese = await RescueService.getRescueBy({
+        id: Number(id),
+        rescueType: "lifelineUsed",
+      });
+
+      if (!rescuese) {
+        throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
+      }
+
+      if (rescuese.questionOrder === null) {
+        throw new Error("Cứu trợ không hợp lệ");
+      }
+
+      const currentQuestion = await MatchService.CurrentQuestion(
+        rescuese.questionOrder,
+        match.questionPackageId
+      );
+
+      if (!currentQuestion) {
+        throw new Error("Câu hỏi hiện tại không hợp lệ");
+      }
+
+      const question = {
+        id: currentQuestion.id,
+        content: currentQuestion.content,
+        options: currentQuestion.options,
+        questionType: currentQuestion.questionType,
+        questionTopic: currentQuestion.questionTopic?.name || null,
+        questionMedia: currentQuestion.questionMedia || null,
+        correctAnswer: currentQuestion.correctAnswer,
+      };
+      logger.info(`Lấy danh sách cứu trợ cho trận đấu ${id} thành công`);
+      res.json(successResponse(question, "Lấy danh sách cứu trợ thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async RescueChart(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        throw new Error("Match ID không hợp lệ");
+      }
+
+      const rescuese = await RescueService.getRescueBy({
+        id: Number(id),
+        rescueType: "lifelineUsed",
+      });
+
+      if (!rescuese) {
+        throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
+      }
+
+      if (rescuese.supportAnswers.length === 0) {
+        throw new Error("Không có câu trả lời hỗ trợ nào cho cứu trợ này");
+      }
+
+      const data = Object.entries(
+        rescuese.supportAnswers.reduce(
+          (acc: Record<string, number>, curr: string) => {
+            acc[curr] = (acc[curr] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        )
+      ).map(([label, value]) => ({ label, value }));
+
+      logger.info(`Lấy data cứu trợ cho trận đấu ${id} thành công`);
+      res.json(successResponse(data, "Lấy data cứu trợ thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async UpdateSupportAnswers(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      const input: UpdateRescueInput = req.body;
+
+      if (!id) {
+        throw new Error("Match ID không hợp lệ");
+      }
+
+      const rescuese = await RescueService.getRescueBy({
+        id: Number(id),
+      });
+
+      if (!rescuese) {
+        throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
+      }
+
+      if (rescuese.status === "used") {
+        throw new Error("Đã hết lượt cứu trợ");
+      }
+
+      const supportAnswers = [...rescuese.supportAnswers, input.supportAnswers];
+
+      const updatedRescue = await RescueService.updateRescue(rescuese.id, {
+        supportAnswers: supportAnswers,
+      });
+
+      if (!updatedRescue) {
+        throw new Error("Cứu trợ thất bại");
+      }
+
+      logger.info(`Cứu trợ thành công`);
+      res.json(successResponse(null, "Cứu trợ thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
   }
 }

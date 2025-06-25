@@ -27,21 +27,21 @@ matchRouter.get(
 matchRouter.get(
   "/:slug/matchInfo",
   authenticate,
-  role("Admin"),
+  role("Admin", "Judge"),
   MatchController.matchInfo
 );
 
 matchRouter.get(
   "/:slug/bgContest",
   authenticate,
-  role("Admin"),
+  role("Admin", "Judge"),
   MatchController.bgContest
 );
 
 matchRouter.get(
   "/:slug/CurrentQuestion",
   authenticate,
-  role("Admin"),
+  role("Admin", "Judge"),
   MatchController.CurrentQuestion
 );
 
@@ -55,7 +55,7 @@ matchRouter.get(
 matchRouter.get(
   "/:slug/ListContestant",
   authenticate,
-  role("Admin"),
+  role("Admin", "Judge"),
   MatchController.ListContestant
 );
 
@@ -84,7 +84,7 @@ matchRouter.get(
   "/contest/:slug/all",
   authenticate,
   role("Admin"),
-  validateQuery(MatchQuerySchema),
+  // validateQuery(MatchQuerySchema),
   MatchController.getAlls
 );
 
@@ -132,6 +132,15 @@ matchRouter.post(
   role("Admin"),
   validateBody(deleteMatchesSchema),
   MatchController.deletes
+);
+
+//  Judge routes
+
+matchRouter.get(
+  "/judge/:id",
+  authenticate,
+  role("Judge"),
+  MatchController.getListMatchByJudgeId
 );
 
 export { matchRouter };

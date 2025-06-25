@@ -187,7 +187,7 @@ Table Matches {
   name String [not null]
   startTime DateTime [not null]
   endTime DateTime [not null]
-  slug String
+  slug String [unique]
   remainingTime Int
   status ContestStatus [not null, default: 'upcoming']
   currentQuestion Int [not null]
@@ -247,6 +247,7 @@ Table Contestant_Matches {
   group Groups [not null]
   registrationNumber Int [not null]
   status ContestantMatchStatus [not null, default: 'not_started']
+  eliminatedAtQuestionOrder Int
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -278,7 +279,7 @@ Table Rescues {
   studentIds Json
   supportAnswers Json
   remainingContestants Int [not null]
-  maxStudent Int [not null]
+  questionOrder Int
   index Int [not null]
   status RescueStatus [not null]
   matchId Int [not null]

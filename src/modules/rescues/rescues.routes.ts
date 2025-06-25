@@ -6,21 +6,41 @@ import {
 } from "@/utils/validation";
 import { RescuesController } from "@/modules/rescues";
 import {
-  RescuesQuerySchema,
   RescuesIdShame,
   CreateRescuesShema,
   UpdateRescuesShema,
   deleteRescuesesSchema,
+  SupportAnswerSchema,
 } from "./rescues.schema";
 import { authenticate, role } from "@/middlewares/auth";
-const rescueRoute = Router();
-// // prive
+import requestQueue from "@/middlewares/queue";
 
-rescueRoute.get(
-  "/",
+const rescueRoute = Router();
+
+rescueRoute.get("/match/:slug/:id", RescuesController.getRescueByMatchSlug);
+
+rescueRoute.get("/chart/:id", RescuesController.RescueChart);
+
+rescueRoute.post(
+  "/supportAnswer/:id",
+  validateBody(SupportAnswerSchema),
+  requestQueue,
+  RescuesController.UpdateSupportAnswers
+);
+
+rescueRoute.patch(
+  "/:id",
   authenticate,
   role("Admin"),
-  validateQuery(RescuesQuerySchema),
+  validateBody(UpdateRescuesShema),
+  RescuesController.UpdateSupportAnswers
+);
+
+rescueRoute.get(
+  "/contest/:slug",
+  authenticate,
+  role("Admin"),
+  // validateQuery(RescuesQuerySchema),
   RescuesController.getAlls
 );
 

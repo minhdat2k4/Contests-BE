@@ -78,7 +78,7 @@ export default class EnumService {
     },
     RescueType: {
       resurrected: "Hồi sinh",
-      lifelineUsed: "Sử dụng cứu hộ",
+      lifelineUsed: "Phao cứu sinh",
     },
     RescueStatus: {
       notUsed: "Chưa sử dụng",

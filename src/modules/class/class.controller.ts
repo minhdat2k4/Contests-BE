@@ -229,17 +229,33 @@ export default class ClassController {
   static async getClassBySchoolId(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id;
+      let classes: any;
 
+      // Nếu id không hợp lệ (không phải số), trả về tất cả lớp
+      if (isNaN(Number(id))) {
+        classes = await prisma.class.findMany({
+          select: {
+            id: true,
+            name: true,
+          },
+        });
+
+        logger.info("Lấy danh sách tất cả lớp thành công");
+        res.json(
+          successResponse(classes, "Lấy danh sách tất cả lớp thành công")
+        );
+        return;
+      }
       const school = await prisma.school.findFirst({
         where: { id: Number(id) },
       });
 
       if (!school) throw new Error("Không tìm thấy trường");
 
-      const classes = await ClassService.getClassBySchoolId(school.id);
+      classes = await ClassService.getClassBySchoolId(school.id);
 
-      logger.info(`Lấy danh sách thành công`);
-      res.json(successResponse(classes, `Lấy danh sách lớp thành công`));
+      logger.info("Lấy danh sách lớp thành công");
+      res.json(successResponse(classes, "Lấy danh sách lớp thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

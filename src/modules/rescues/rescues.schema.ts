@@ -1,18 +1,18 @@
-import z, { number } from "zod";
+import z from "zod";
 import { RescueType, RescueStatus, Match } from "@prisma/client";
 
 export const RescuesShema = z.object({
   id: z.number(),
   name: z.string(),
-  rescueType: z.nativeEnum(RescueType),
+  rescueType: z.enum(["Hồi sinh", "Phao cứu sinh"]),
   questionFrom: z.number(),
   questionTo: z.number(),
   studentIds: z.any().optional(),
   supportAnswers: z.any().optional(),
   remainingContestants: z.number(),
-  maxStudent: z.number(),
+  questionOrder: z.number().nullable(),
   index: z.number(),
-  status: z.nativeEnum(RescueStatus),
+  status: z.enum(["Chưa sử dụng", "Đã sử dụng", "Đã qua"]),
   matchName: z.string(),
 });
 
@@ -37,10 +37,6 @@ export const CreateRescuesShema = z.object({
   supportAnswers: z.any(),
   remainingContestants: z.number({
     required_error: "Vui lòng nhập số thí sinh còn lại",
-    invalid_type_error: "Vui lòng nhập kí tự số",
-  }),
-  maxStudent: z.number({
-    required_error: "Vui lòng nhập số lượng thí sinh tối đa",
     invalid_type_error: "Vui lòng nhập kí tự số",
   }),
   matchId: z
@@ -72,7 +68,7 @@ export const UpdateRescuesShema = z.object({
     .min(1, "Vui lòng nhập tên cứu trợ")
     .max(255, "Tên cứu trợ tối đa 255 kí tự")
     .optional(),
-  rescueType: z.nativeEnum(RescueType),
+  rescueType: z.nativeEnum(RescueType).optional(),
   questionFrom: z
     .number({
       required_error: "Vui lòng nhập câu bắt đầu",
@@ -86,16 +82,16 @@ export const UpdateRescuesShema = z.object({
     })
     .optional(),
   studentIds: z.any(),
-  supportAnswers: z.any(),
+  supportAnswers: z.array(z.string()).optional(),
   remainingContestants: z
     .number({
       required_error: "Vui lòng nhập số thí sinh còn lại",
       invalid_type_error: "Vui lòng nhập kí tự số",
     })
     .optional(),
-  maxStudent: z
+  questionOrder: z
     .number({
-      required_error: "Vui lòng nhập số lượng thí sinh tối đa",
+      required_error: "Vui lòng nhập số thứ tự câu hỏi",
       invalid_type_error: "Vui lòng nhập kí tự số",
     })
     .optional(),
@@ -136,6 +132,10 @@ export const RescuesQuerySchema = z.object({
     .optional(),
 });
 
+export const SupportAnswerSchema = z.object({
+  supportAnswers: z.string().min(1, "Nội dung không được để trống"),
+});
+
 export const deleteRescuesesSchema = z.object({
   ids: z
     .array(z.number().int().positive("ID phải là số nguyên dương"))
@@ -151,7 +151,7 @@ export type RescuesById = {
   studentIds?: any;
   supportAnswers?: any;
   remainingContestants: number;
-  maxStudent: number;
+  questionOrder: number | null;
   matchId: number;
   index: number;
   status: RescueStatus;

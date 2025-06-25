@@ -21,7 +21,7 @@ interface AuthenticatedSocket extends Socket {
 /**
  * Middleware xác thực kết nối Socket.IO bằng JWT trong cookie httpOnly
  */
-const authMiddleware = async (
+export const authMiddleware = async (
   socket: Socket,
   next: (err?: ExtendedError) => void
 ) => {

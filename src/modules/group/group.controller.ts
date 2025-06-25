@@ -205,21 +205,23 @@ export default class GroupController {
         throw new Error("Không tìm thấy nhóm ");
       }
 
+      // Lấy số lượng thí sinh trong nhóm để thông báo
       const countContestant = await prisma.contestantMatch.count({
         where: { groupId: group.id },
       });
 
-      if (countContestant > 0)
-        throw new Error(
-          ` Nhóm này ${countContestant} thí sinh nên không thể xóa`
-        );
-
-      const deleteGroup = await GroupService.delete(group.id);
+      // Xóa nhóm cùng với tất cả thí sinh trong nhóm (cascade delete)
+      const deleteGroup = await GroupService.deleteWithContestants(group.id);
       if (!deleteGroup) {
         throw new Error(`Xóa nhóm ${group.name} thất bại `);
       }
-      logger.info(`Xóa nhóm ${group.name} thành công`);
-      res.json(successResponse(null, `Xóa nhóm ${group.name} thành công`));
+
+      const message = countContestant > 0 
+        ? `Xóa nhóm "${group.name}" và ${countContestant} thí sinh thành công`
+        : `Xóa nhóm "${group.name}" thành công`;
+
+      logger.info(message);
+      res.json(successResponse(null, message));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -250,15 +252,8 @@ export default class GroupController {
           where: { groupId: group.id },
         });
 
-        if (countContestant > 0) {
-          messages.push({
-            status: "error",
-            msg: ` Nhóm này ${countContestant} thí sinh nên không thể xóa`,
-          });
-          continue;
-        }
-
-        const deleted = await GroupService.delete(group.id);
+        // Xóa nhóm cùng với thí sinh (nếu có)
+        const deleted = await GroupService.deleteWithContestants(group.id);
 
         if (!deleted) {
           messages.push({
@@ -267,11 +262,16 @@ export default class GroupController {
           });
           continue;
         }
+
+        const successMessage = countContestant > 0 
+          ? `Xóa nhóm "${group.name}" và ${countContestant} thí sinh thành công`
+          : `Xóa nhóm "${group.name}" thành công`;
+
         messages.push({
           status: "success",
-          msg: `Xóa nhóm "${group.name}" thành công`,
+          msg: successMessage,
         });
-        logger.info(`Xóa nhóm "${group.name}" thành công`);
+        logger.info(successMessage);
       }
 
       res.json({

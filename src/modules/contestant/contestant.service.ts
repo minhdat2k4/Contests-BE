@@ -23,7 +23,7 @@ export default class ContestantService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search, roundId, status } = query;
+    const { page, limit, search, roundId, status, schoolId, classId, groupId, matchId } = query;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
 
@@ -39,12 +39,53 @@ export default class ContestantService {
       whereClause.status = status;
     }
 
+    // Filter by school ID
+    if (schoolId !== undefined) {
+      whereClause.student = {
+        ...whereClause.student,
+        class: {
+          ...whereClause.student?.class,
+          schoolId: schoolId
+        }
+      };
+    }
+
+    // Filter by class ID
+    if (classId !== undefined) {
+      whereClause.student = {
+        ...whereClause.student,
+        classId: classId
+      };
+    }
+
+    // Filter by group ID
+    if (groupId !== undefined && matchId) {
+      if (groupId === -1) {
+        // Filter for contestants not assigned to any group in this specific match
+        whereClause.contestantMatches = {
+          none: {
+            matchId: matchId
+          }
+        };
+      } else if (groupId > 0) {
+        // Filter for contestants in specific group within this specific match
+        whereClause.contestantMatches = {
+          some: {
+            matchId: matchId,
+            groupId: groupId
+          }
+        };
+      }
+    }
+
     if (search) {
       const keywords = search.trim().split(/\s+/);
       whereClause.OR = keywords.flatMap((keyword: string) => [
         { contest: { is: { name: { contains: keyword } } } },
         { student: { is: { fullName: { contains: keyword } } } },
         { round: { is: { name: { contains: keyword } } } },
+        { student: { is: { class: { is: { school: { is: { name: { contains: keyword } } } } } } } },
+        { student: { is: { class: { is: { name: { contains: keyword } } } } } },
       ]);
     }
 
@@ -56,20 +97,57 @@ export default class ContestantService {
       select: {
         id: true,
         status: true,
-        student: { select: { fullName: true } },
+        student: { 
+          select: { 
+            fullName: true,
+            studentCode: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          } 
+        },
         round: { select: { name: true } },
         contest: {
           select: {
             name: true,
           },
         },
+        contestantMatches: {
+          select: {
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          where: matchId ? {
+            matchId: matchId
+          } : undefined
+        },
       },
     });
     const Contestantes = ContestantRaw.map(key => ({
       id: key.id,
       fullName: key.student.fullName,
+      studentCode: key.student.studentCode,
       roundName: key.round.name,
       status: key.status,
+      schoolId: key.student.class.school.id,
+      schoolName: key.student.class.school.name,
+      classId: key.student.class.id,
+      className: key.student.class.name,
+      groupId: key.contestantMatches[0]?.group?.id || null,
+      groupName: key.contestantMatches[0]?.group?.name || null,
     }));
 
     const total = await prisma.contestant.count({ where: whereClause });
@@ -97,7 +175,24 @@ export default class ContestantService {
         roundId: true,
         studentId: true,
         status: true,
-        student: { select: { fullName: true } },
+        student: { 
+          select: { 
+            fullName: true,
+            studentCode: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          } 
+        },
         round: { select: { name: true } },
         contest: {
           select: {
@@ -224,6 +319,19 @@ export default class ContestantService {
           select: {
             id: true,
             fullName: true,
+            studentCode: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
           },
         },
         round: {
@@ -242,9 +350,14 @@ export default class ContestantService {
     const contestants = contestantsRaw.map(item => ({
       id: item.id,
       fullName: item.student.fullName,
+      studentCode: item.student.studentCode,
       roundName: item.round.name,
       status: item.status,
       studentId: item.student.id,
+      schoolId: item.student.class.school.id,
+      schoolName: item.student.class.school.name,
+      classId: item.student.class.id,
+      className: item.student.class.name,
     }));
 
     // Đếm tổng số bản ghi

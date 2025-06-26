@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { SponsorController } from "./sponsor.controller";
 import { authenticate, role } from "@/middlewares/auth";
-import { validateBody, validateParams, validateQuery } from "@/utils/validation";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "@/utils/validation";
 import { handleUploadError } from "@/middlewares/multer/uploadErrorHandler";
 import { sponsorUploadMiddleware } from "./sponsor.upload";
 import {
@@ -12,7 +16,7 @@ import {
   getSponsorsQuerySchema,
   contestSlugSchema,
   batchDeleteSponsorsSchema,
-  uploadFilesSchema
+  uploadFilesSchema,
 } from "./sponsor.schema";
 
 const router = Router();
@@ -28,7 +32,7 @@ const handleMediaUpload = (uploadMiddleware: any) => {
         }
         next();
       });
-    }
+    },
   ];
 };
 
@@ -145,6 +149,13 @@ router.delete(
   role("Admin"),
   validateParams(deleteSponsorSchema),
   sponsorController.deleteSponsor.bind(sponsorController)
+);
+
+router.get(
+  "/contest/list-video/:slug",
+  authenticate,
+  role("Admin"),
+  SponsorController.SponsorsByContestSlug
 );
 
 export { router as sponsorRouter };

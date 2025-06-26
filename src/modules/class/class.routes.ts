@@ -14,6 +14,13 @@ import {
 } from "./class.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const classRouter = Router();
+
+// public routes
+classRouter.get(
+  "/list-with-school",
+  ClassController.listClassesWithSchool
+);
+
 // prive
 
 classRouter.get(

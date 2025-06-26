@@ -6,14 +6,17 @@ import GroupDivisionService from "./groupDivision.service";
 import {
   divideGroupsSchema,
   getAvailableContestantsSchema,
-  getAvailableJudgesSchema
+  getAvailableJudgesSchema,
 } from "./groupDivision.schema";
 
 export default class GroupDivisionController {
   /**
    * Lấy danh sách thí sinh có thể tham gia trận đấu
    */
-  static async getAvailableContestants(req: Request, res: Response): Promise<void> {
+  static async getAvailableContestants(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const matchId = parseInt(req.params.matchId);
       if (!matchId) {
@@ -21,24 +24,28 @@ export default class GroupDivisionController {
       }
 
       const query = getAvailableContestantsSchema.parse({
-        roundId: req.query.roundId ? parseInt(req.query.roundId as string) : undefined,
+        roundId: req.query.roundId
+          ? parseInt(req.query.roundId as string)
+          : undefined,
         status: req.query.status as any,
-        schoolId: req.query.schoolId ? parseInt(req.query.schoolId as string) : undefined,
-        classId: req.query.classId ? parseInt(req.query.classId as string) : undefined,
+        schoolId: req.query.schoolId
+          ? parseInt(req.query.schoolId as string)
+          : undefined,
+        classId: req.query.classId
+          ? parseInt(req.query.classId as string)
+          : undefined,
         search: req.query.search as string,
         page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 20
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 20,
       });
 
-      const data = await GroupDivisionService.getAvailableContestants(matchId, query);
+      const data = await GroupDivisionService.getAvailableContestants(
+        matchId,
+        query
+      );
 
       logger.info(`Lấy danh sách thí sinh cho trận đấu ${matchId} thành công`);
-      res.json(
-        successResponse(
-          data,
-          "Lấy danh sách thí sinh thành công"
-        )
-      );
+      res.json(successResponse(data, "Lấy danh sách thí sinh thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -53,18 +60,13 @@ export default class GroupDivisionController {
       const query = getAvailableJudgesSchema.parse({
         search: req.query.search as string,
         page: req.query.page ? parseInt(req.query.page as string) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string) : 50
+        limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
       });
 
       const data = await GroupDivisionService.getAvailableJudges(query);
 
       logger.info("Lấy danh sách trọng tài thành công");
-      res.json(
-        successResponse(
-          data,
-          "Lấy danh sách trọng tài thành công"
-        )
-      );
+      res.json(successResponse(data, "Lấy danh sách trọng tài thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -84,12 +86,7 @@ export default class GroupDivisionController {
       const groups = await GroupDivisionService.getCurrentGroups(matchId);
 
       logger.info(`Lấy danh sách nhóm cho trận đấu ${matchId} thành công`);
-      res.json(
-        successResponse(
-          { groups },
-          "Lấy danh sách nhóm thành công"
-        )
-      );
+      res.json(successResponse({ groups }, "Lấy danh sách nhóm thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -111,12 +108,7 @@ export default class GroupDivisionController {
       const result = await GroupDivisionService.divideGroups(matchId, input);
 
       logger.info(`Chia nhóm cho trận đấu ${matchId} thành công`);
-      res.json(
-        successResponse(
-          { groups: result },
-          "Chia nhóm thành công"
-        )
-      );
+      res.json(successResponse({ groups: result }, "Chia nhóm thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -132,10 +124,7 @@ export default class GroupDivisionController {
 
       logger.info("Lấy danh sách trường học thành công");
       res.json(
-        successResponse(
-          { schools },
-          "Lấy danh sách trường học thành công"
-        )
+        successResponse({ schools }, "Lấy danh sách trường học thành công")
       );
     } catch (error) {
       logger.error((error as Error).message);
@@ -157,9 +146,54 @@ export default class GroupDivisionController {
 
       logger.info(`Lấy danh sách lớp học cho trường ${schoolId} thành công`);
       res.json(
+        successResponse({ classes }, "Lấy danh sách lớp học thành công")
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getContestantByJudgeIdAndMatchId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const slug = req.params.match;
+
+      if (!slug) {
+        throw new Error("Slug không hợp lệ");
+      }
+
+      const match = await prisma.match.findUnique({
+        where: { slug: slug },
+      });
+
+      if (!match) {
+        throw new Error("Không tìm thấy trân đấu");
+      }
+
+      if (!req.user || !req.user.userId) {
+        throw new Error("Người dùng không hợp lệ");
+      }
+
+      const contestant =
+        await GroupDivisionService.getContestantByJudgeIdAndMatchId(
+          req.user.userId,
+          match.id
+        );
+
+      if (!contestant) {
+        throw new Error("Không tìm thấy thí sinh cho trọng tài này");
+      }
+
+      logger.info(
+        `Lấy thí sinh cho trọng tài ${req.user.userId} trong trận đấu ${slug} thành công`
+      );
+      res.json(
         successResponse(
-          { classes },
-          "Lấy danh sách lớp học thành công"
+          contestant,
+          `Lấy thí sinh cho trọng tài ${req.user.userId} thành công`
         )
       );
     } catch (error) {

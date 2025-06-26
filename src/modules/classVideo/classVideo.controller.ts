@@ -218,4 +218,40 @@ export default class ClassVideoController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async ClassVideosByContestSlug(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { slug } = req.params;
+      const contest = await prisma.contest.findUnique({
+        where: { slug },
+      });
+
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi");
+      }
+
+      const classVideos = await prisma.classVideo.findMany({
+        where: { contestId: contest.id },
+        select: {
+          id: true,
+          name: true,
+          videos: true,
+        },
+      });
+
+      if (!classVideos) {
+        throw new Error("Không tìm thấy video lớp học nào cho cuộc thi này");
+      }
+
+      res.json(
+        successResponse(classVideos, "Lấy danh sách video lớp học thành công")
+      );
+    } catch (error) {
+      logger.error("Error fetching class videos by contest slug:", error);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

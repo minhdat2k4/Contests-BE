@@ -164,4 +164,18 @@ export default class GroupService {
       },
     });
   }
+
+  static async deleteWithContestants(id: number): Promise<Group> {
+    return await prisma.$transaction(async (tx) => {
+      // Xóa tất cả thí sinh trong nhóm trước
+      await tx.contestantMatch.deleteMany({
+        where: { groupId: id },
+      });
+
+      // Xóa nhóm
+      return await tx.group.delete({
+        where: { id: id },
+      });
+    });
+  }
 }

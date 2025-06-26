@@ -24,6 +24,13 @@ groupRouter.get(
 );
 
 groupRouter.get(
+  "/match/:match",
+  authenticate,
+  role("Judge"),
+  GroupController.getByMatchSlug
+);
+
+groupRouter.get(
   "/:id",
   authenticate,
   role("Admin"),

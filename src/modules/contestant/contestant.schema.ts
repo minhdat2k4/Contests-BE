@@ -182,6 +182,43 @@ export const CreatesContestShema = z.object({
   }),
 });
 
+export const ContestantMatchParamsSchema = z.object({
+  id: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id thí sinh phải là số nguyên dương"
+    ),
+  matchId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trận đấu phải là số nguyên dương"
+    ),
+});
+
+export const ContestantDetailParamsSchema = z.object({
+  id: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id thí sinh phải là số nguyên dương"
+    ),
+  slug: z
+    .string()
+    .min(1, "Slug cuộc thi không được để trống"),
+  matchId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trận đấu phải là số nguyên dương"
+    ),
+});
+
 export type ContestantById = {
   id: number;
   roundId: number;
@@ -208,3 +245,5 @@ export type UpdateContestantInput = z.infer<typeof UpdateContestantSchema>;
 export type ContestantQueryInput = z.infer<typeof ContestantQuerySchema>;
 export type ContestantType = z.infer<typeof ContestantSchema>;
 export type CreatesContestInput = z.infer<typeof CreatesContestShema>;
+export type ContestantMatchParams = z.infer<typeof ContestantMatchParamsSchema>;
+export type ContestantDetailParams = z.infer<typeof ContestantDetailParamsSchema>;

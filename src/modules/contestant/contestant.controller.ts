@@ -472,4 +472,139 @@ export default class ContestantController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async getByIdAndMatch(req: Request, res: Response): Promise<void> {
+    try {
+      const contestantId = Number(req.params.id);
+      const matchId = Number(req.params.matchId);
+
+      if (!contestantId || !matchId) {
+        throw new Error("ID thí sinh và ID trận đấu không hợp lệ");
+      }
+
+      const contestant = await ContestantService.getContestantByIdAndMatch(
+        contestantId,
+        matchId
+      );
+
+      if (!contestant) {
+        throw new Error("Không tìm thấy thí sinh trong trận đấu này");
+      }
+
+      // Transform data to include group info properly
+      const responseData = {
+        id: contestant.id,
+        roundId: contestant.roundId,
+        studentId: contestant.studentId,
+        status: contestant.status,
+        student: contestant.student,
+        round: contestant.round,
+        contest: contestant.contest,
+        group: contestant.contestantMatches?.[0]?.group || null
+      };
+
+      logger.info(
+        `Lấy thông tin thí sinh ${contestant.student.fullName} trong trận đấu thành công`
+      );
+      res.json(
+        successResponse(
+          responseData,
+          `Lấy thông tin thí sinh ${contestant.student.fullName} trong trận đấu thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getAllWithGroups(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const contest = await prisma.contest.findFirst({ where: { slug: slug } });
+      if (!contest) throw new Error("Không tìm thấy cuộc thi");
+
+      const statusQuery = req.query.status as string;
+
+      const query: ContestantQueryInput = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: (req.query.search as string) || undefined,
+        studentId: parseInt(req.query.studentId as string) || undefined,
+        roundId: parseInt(req.query.roundId as string) || undefined,
+        schoolId: parseInt(req.query.schoolId as string) || undefined,
+        classId: parseInt(req.query.classId as string) || undefined,
+        status: Object.values(ContestantStatus).includes(
+          statusQuery as ContestantStatus
+        )
+          ? (statusQuery as ContestantStatus)
+          : undefined,
+      };
+
+      // Lấy matchId từ query parameter (optional)
+      const matchId = parseInt(req.query.matchId as string) || undefined;
+
+      const data = await ContestantService.getAllWithMatchGroups(query, contest.id, matchId);
+      if (!data) {
+        throw new Error("Không tìm thấy dữ liệu");
+      }
+      logger.info(`Lấy danh sách thí sinh với thông tin nhóm thành công`);
+      res.json(
+        successResponse(
+          { Contestantes: data.contestantes, pagination: data.pagination },
+          "Lấy danh sách thí sinh với thông tin nhóm thành công"
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getDetailWithGroups(req: Request, res: Response): Promise<void> {
+    try {
+      const contestantId = Number(req.params.id);
+      const contestSlug = req.params.slug;
+      const matchId = Number(req.params.matchId);
+      
+      if (!contestantId || !matchId) {
+        throw new Error("ID thí sinh và ID trận đấu không hợp lệ");
+      }
+
+      const contestant = await ContestantService.getContestantDetailWithGroups(
+        contestantId,
+        contestSlug,
+        matchId
+      );
+      
+      if (!contestant) {
+        throw new Error("Không tìm thấy thí sinh trong cuộc thi này");
+      }
+
+      // Transform data to include group info properly
+      const responseData = {
+        id: contestant.id,
+        roundId: contestant.roundId,
+        studentId: contestant.studentId,
+        status: contestant.status,
+        student: contestant.student,
+        round: contestant.round,
+        contest: contestant.contest,
+        group: contestant.contestantMatches?.[0]?.group || null
+      };
+
+      logger.info(
+        `Lấy thông tin thí sinh ${contestant.student.fullName} trong trận đấu thành công`
+      );
+      res.json(
+        successResponse(
+          responseData,
+          `Lấy thông tin thí sinh ${contestant.student.fullName} trong trận đấu thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

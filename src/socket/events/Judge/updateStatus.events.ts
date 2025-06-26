@@ -80,7 +80,6 @@ export const registerUpdateStatusByJudgeEvents = (
         io.of("/match-control")
           .to(judgeRoom)
           .emit("contestant:status-update-judge", {
-            match,
             data,
           });
 

@@ -44,11 +44,16 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       });
     }
 
+    const matchInfo = await MatchService.MatchControl(match);
+
+    if (!matchInfo) {
+      return callback({ success: false, message: "Không tìm thấy trận đấu" });
+    }
+
     callback?.(null, {
       success: true,
       message: `Đã chuyển sang câu ${currentQuestion.questionOrder}`,
     });
-    const matchInfo = await MatchService.MatchControl(match);
     io.of("/match-control").to(roomName).emit("currentQuestion:get", {
       currentQuestion,
       matchInfo,

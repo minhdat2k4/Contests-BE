@@ -280,7 +280,7 @@ export default class GroupController {
 
   static async getByMatchSlug(req: Request, res: Response): Promise<void> {
     try {
-      const slug = req.params.slug;
+      const slug = req.params.match;
 
       const match = await prisma.match.findFirst({
         where: { slug: slug },

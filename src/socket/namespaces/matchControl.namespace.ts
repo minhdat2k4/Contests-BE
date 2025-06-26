@@ -5,6 +5,7 @@ import { registerQuestionEvents } from "../events/question.events";
 import { registerScreenEvents } from "../events/screen.events";
 import { registerTimerEvents } from "../events/timer.event";
 import { registerUpdateStatusByAdminEvents } from "../events/Admin/updateStatus.events";
+import { registerUpdateStatusByJudgeEvents } from "../events/Judge/updateStatus.events";
 import { verifyToken, JwtPayload } from "@/utils/jwt";
 import cookie from "cookie";
 
@@ -86,4 +87,5 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   registerScreenEvents(io, socket);
   registerTimerEvents(io, socket);
   registerUpdateStatusByAdminEvents(io, socket);
+  registerUpdateStatusByJudgeEvents(io, socket);
 };

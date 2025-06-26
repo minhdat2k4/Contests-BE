@@ -56,9 +56,11 @@ export default class AuthController {
   static async registerStudent(req: Request, res: Response): Promise<void> {
     try {
       const input: StudentRegisterInput = req.body;
-      
+
       // Kiểm tra username đã tồn tại chưa
-      const existingUserName = await UserService.existingUserName(input.username);
+      const existingUserName = await UserService.existingUserName(
+        input.username
+      );
       if (existingUserName) {
         logger.error(`Tên tài khoản ${input.username} đã tồn tại`);
         res
@@ -100,11 +102,12 @@ export default class AuthController {
       }
 
       // Mã hóa mật khẩu
-      const { confirmPassword, fullName, classId, studentCode, ...userInput } = input;
+      const { confirmPassword, fullName, classId, studentCode, ...userInput } =
+        input;
       const hashedPassword = await bcrypt.hash(userInput.password, 10);
 
       // Tạo transaction để đảm bảo tính nhất quán dữ liệu
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async tx => {
         // Tạo User với role Student
         const user = await tx.user.create({
           data: {
@@ -141,7 +144,9 @@ export default class AuthController {
           "Đăng ký tài khoản sinh viên thành công"
         )
       );
-      logger.info(`Đăng ký tài khoản sinh viên thành công cho ${input.username}`);
+      logger.info(
+        `Đăng ký tài khoản sinh viên thành công cho ${input.username}`
+      );
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -382,6 +387,7 @@ export default class AuthController {
       logger.info(`Truy cập hồ sơ ${req.user.username} thành công`);
       res.json(
         successResponse({
+          id: user.userId,
           username: user.username,
           email: user.email,
           isActive: user.isActive,

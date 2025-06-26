@@ -31,6 +31,8 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
     "joinMatchRoom",
     (matchId: number, callback?: (response: any) => void) => {
       try {
+        console.log(`🏠 [JOIN ROOM] Socket ${socket.id} wants to join matchId: ${matchId}`);
+        
         const roomName = `match-${matchId}`;
         socket.join(roomName);
         logger.info(`✅ Socket ${socket.id} joined room: ${roomName}`);

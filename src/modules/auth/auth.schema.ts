@@ -164,11 +164,6 @@ export const StudentRegisterSchema = z
         invalid_type_error: "Id lớp là một số nguyên",
       })
       .refine(val => !isNaN(val) && val > 0, "Id lớp là một số nguyên dương"),
-    studentCode: z
-      .string()
-      .min(1, "Vui lòng nhập mã số sinh viên")
-      .max(12, "Mã số sinh viên tối đa 12 kí tự")
-      .optional(),
   })
   .refine(data => data.password === data.confirmPassword, {
     message: "Xác nhận mật khẩu không khớp với mật khẩu",

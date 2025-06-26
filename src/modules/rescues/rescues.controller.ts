@@ -274,7 +274,7 @@ export default class RescueController {
       const { id } = req.params;
 
       if (!id) {
-        throw new Error("Match ID không hợp lệ");
+        throw new Error("Rescue ID không hợp lệ");
       }
 
       const rescuese = await RescueService.getRescueBy({
@@ -286,12 +286,17 @@ export default class RescueController {
         throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
       }
 
-      if (rescuese.supportAnswers.length === 0) {
+      // Kiểm tra và đảm bảo supportAnswers là mảng
+      const supportAnswers = Array.isArray(rescuese.supportAnswers) 
+        ? rescuese.supportAnswers 
+        : [];
+
+      if (supportAnswers.length === 0) {
         throw new Error("Không có câu trả lời hỗ trợ nào cho cứu trợ này");
       }
 
       const data = Object.entries(
-        rescuese.supportAnswers.reduce(
+        supportAnswers.reduce(
           (acc: Record<string, number>, curr: string) => {
             acc[curr] = (acc[curr] || 0) + 1;
             return acc;
@@ -333,7 +338,12 @@ export default class RescueController {
         throw new Error("Đã hết lượt cứu trợ");
       }
 
-      const supportAnswers = [...rescuese.supportAnswers, input.supportAnswers];
+      // Kiểm tra và đảm bảo supportAnswers là mảng trước khi thêm
+      const currentSupportAnswers = Array.isArray(rescuese.supportAnswers) 
+        ? rescuese.supportAnswers 
+        : [];
+
+      const supportAnswers = [...currentSupportAnswers, input.supportAnswers];
 
       const updatedRescue = await RescueService.updateRescue(rescuese.id, {
         supportAnswers: supportAnswers,

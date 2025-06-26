@@ -55,6 +55,16 @@ groupRouter.patch(
   GroupController.update
 );
 
+// api đổi tên nhóm
+groupRouter.patch(
+  "/:id/name",
+  authenticate,
+  role("Admin"),
+  validateParams(GroupsIdShema),
+  validateBody(UpdateGroupsSchema.pick({ name: true })),
+  GroupController.updateName
+);
+
 groupRouter.delete(
   "/:id",
   authenticate,

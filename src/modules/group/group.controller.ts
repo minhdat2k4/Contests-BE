@@ -300,4 +300,52 @@ export default class GroupController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async updateName(req: Request, res: Response): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      const { name } = req.body;
+
+      if (!name || name.trim() === '') {
+        throw new Error("Tên nhóm không được để trống");
+      }
+
+      // Kiểm tra nhóm có tồn tại không
+      const group = await GroupService.getBy({ id: id });
+      if (!group) {
+        throw new Error("Không tìm thấy nhóm");
+      }
+
+      // Kiểm tra trùng tên trong cùng trận đấu
+      const existingGroup = await prisma.group.findFirst({
+        where: {
+          name: name.trim(),
+          matchId: group.matchId,
+          id: { not: id } // Loại trừ chính nhóm này
+        }
+      });
+
+      if (existingGroup) {
+        throw new Error(`Tên nhóm "${name}" đã tồn tại trong trận đấu này`);
+      }
+
+      // Cập nhật chỉ tên nhóm
+      const updatedGroup = await GroupService.updateName(id, name.trim());
+
+      if (!updatedGroup) {
+        throw new Error("Cập nhật tên nhóm thất bại");
+      }
+
+      logger.info(`Cập nhật tên nhóm từ "${group.name}" thành "${name}" thành công`);
+      res.json(
+        successResponse(
+          updatedGroup, 
+          `Cập nhật tên nhóm từ "${group.name}" thành "${name}" thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

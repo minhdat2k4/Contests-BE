@@ -201,4 +201,131 @@ export default class GroupDivisionController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  /**
+   * Lấy danh sách nhóm hiện tại của trận đấu (không sắp xếp - dành cho frontend)
+   */
+  static async getCurrentGroupsUnsorted(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      if (!matchId) {
+        throw new Error("Match ID không hợp lệ");
+      }
+
+      const groups = await GroupDivisionService.getCurrentGroupsUnsorted(matchId);
+
+      logger.info(`Lấy danh sách nhóm không sắp xếp cho trận đấu ${matchId} thành công`);
+      res.json(successResponse({ groups }, "Lấy danh sách nhóm thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  /**
+   * Tạo nhóm mới trong trận đấu
+   */
+  static async createGroup(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      const { groupName, judgeId } = req.body;
+
+      if (!matchId) {
+        throw new Error("Match ID không hợp lệ");
+      }
+
+      if (!groupName || !judgeId) {
+        throw new Error("Tên nhóm và ID trọng tài là bắt buộc");
+      }
+
+      const newGroup = await GroupDivisionService.createGroup(
+        matchId,
+        groupName,
+        judgeId
+      );
+
+      logger.info(`Tạo nhóm ${groupName} cho trận đấu ${matchId} thành công`);
+      res.json(successResponse(newGroup, "Tạo nhóm thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  /**
+   * Xóa nhóm
+   */
+  static async deleteGroup(req: Request, res: Response): Promise<void> {
+    try {
+      const groupId = parseInt(req.params.groupId);
+
+      if (!groupId) {
+        throw new Error("Group ID không hợp lệ");
+      }
+
+      const result = await GroupDivisionService.deleteGroup(groupId);
+
+      const message = result.deletedContestantsCount > 0 
+        ? `Xóa nhóm và ${result.deletedContestantsCount} thí sinh thành công`
+        : "Xóa nhóm thành công";
+
+      logger.info(`Xóa nhóm ${groupId} thành công`);
+      res.json(successResponse(result, message));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  /**
+   * Xóa nhiều nhóm cùng lúc
+   */
+  static async deleteAllGroups(req: Request, res: Response): Promise<void> {
+    try {
+      const { groupIds } = req.body;
+
+      if (!Array.isArray(groupIds) || groupIds.length === 0) {
+        throw new Error("Danh sách ID nhóm không hợp lệ");
+      }
+
+      const result = await GroupDivisionService.deleteAllGroups(groupIds);
+
+      const message = `Xóa ${result.deletedGroupsCount} nhóm và ${result.deletedContestantsCount} thí sinh thành công`;
+
+      logger.info(`Xóa ${result.deletedGroupsCount} nhóm thành công`);
+      res.json(successResponse(result, message));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  /**
+   * Cập nhật tên nhóm
+   */
+  static async updateGroupName(req: Request, res: Response): Promise<void> {
+    try {
+      const groupId = parseInt(req.params.groupId);
+      const { name } = req.body;
+
+      if (!groupId) {
+        throw new Error("Group ID không hợp lệ");
+      }
+
+      if (!name || !name.trim()) {
+        throw new Error("Tên nhóm là bắt buộc");
+      }
+
+      const updatedGroup = await GroupDivisionService.updateGroupName(
+        groupId,
+        name.trim()
+      );
+
+      logger.info(`Cập nhật tên nhóm ${groupId} thành công`);
+      res.json(successResponse(updatedGroup, "Cập nhật tên nhóm thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

@@ -39,10 +39,40 @@ router.get(
   GroupDivisionController.getCurrentGroups
 );
 
+// Lấy danh sách nhóm hiện tại của trận đấu (không sắp xếp - dành cho frontend)
+router.get(
+  "/matches/:matchId/groups/unsorted",
+  GroupDivisionController.getCurrentGroupsUnsorted
+);
+
 // Chia nhóm thí sinh cho trận đấu
 router.post(
   "/matches/:matchId/divide-groups",
   GroupDivisionController.divideGroups
+);
+
+// Tạo nhóm mới trong trận đấu
+router.post(
+  "/matches/:matchId/groups",
+  GroupDivisionController.createGroup
+);
+
+// Xóa nhóm
+router.delete(
+  "/groups/:groupId",
+  GroupDivisionController.deleteGroup
+);
+
+// Xóa nhiều nhóm cùng lúc
+router.delete(
+  "/groups",
+  GroupDivisionController.deleteAllGroups
+);
+
+// Cập nhật tên nhóm
+router.put(
+  "/groups/:groupId/name",
+  GroupDivisionController.updateGroupName
 );
 
 // Lấy danh sách trường học để lọc

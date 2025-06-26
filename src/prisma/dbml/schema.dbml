@@ -2,7 +2,7 @@
 //// THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 //// ------------------------------------------------------
 
-Table Users {
+Table users {
   id Int [pk, increment]
   username String [unique, not null]
   password String [not null]
@@ -14,57 +14,57 @@ Table Users {
   otpExpiredAt DateTime
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-  groups Groups [not null]
-  refreshToken RefreshTokens [not null]
+  groups groups [not null]
+  refreshToken refreshTokens [not null]
 }
 
-Table RefreshTokens {
+Table refreshTokens {
   id Int [pk, increment]
   userId Int [not null]
-  user Users [not null]
+  user users [not null]
   refreshToken String [not null]
   createdAt DateTime [default: `now()`, not null]
   expiredAt DateTime [not null]
 }
 
-Table Schools {
+Table schools {
   id Int [pk, increment]
   name String [not null]
   email String [unique, not null]
   phone String [unique]
   address String
   isActive Boolean [not null, default: true]
-  classes Classes [not null]
+  classes classes [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Classes {
+Table classes {
   id Int [pk, increment]
   name String [not null]
   schoolId Int [not null]
-  school Schools [not null]
+  school schools [not null]
   isActive Boolean [not null, default: true]
-  students Students [not null]
-  videos Class_Videos [not null]
+  students students [not null]
+  videos class_Videos [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Students {
+Table students {
   id Int [pk, increment]
   fullName String [not null]
   studentCode String
   classId Int [not null]
-  class Classes [not null]
+  class classes [not null]
   isActive Boolean [not null, default: true]
-  contestants Contestants [not null]
-  match Matches [not null]
+  contestants contestants [not null]
+  match matches [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table About {
+Table about {
   id Int [pk, increment]
   schoolName String [not null]
   website String
@@ -79,26 +79,26 @@ Table About {
   updatedAt DateTime [not null]
 }
 
-Table Question_Topics {
+Table question_Topics {
   id Int [pk, increment]
   name String [not null]
   isActive Boolean [not null, default: true]
-  questions Questions [not null]
+  questions questions [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Question_Packages {
+Table question_Packages {
   id Int [pk, increment]
   name String [not null]
   isActive Boolean [not null, default: true]
-  questionDetails Question_Details [not null]
-  matches Matches [not null]
+  questionDetails question_Details [not null]
+  matches matches [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Questions {
+Table questions {
   id Int [pk, increment]
   intro String
   defaultTime Int [not null]
@@ -112,18 +112,18 @@ Table Questions {
   difficulty Difficulty [not null]
   explanation String
   questionTopicId Int [not null]
-  questionTopic Question_Topics [not null]
+  questionTopic question_Topics [not null]
   isActive Boolean [not null, default: true]
-  questionDetails Question_Details [not null]
+  questionDetails question_Details [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Question_Details {
+Table question_Details {
   questionId Int [not null]
   questionPackageId Int [not null]
-  question Questions [not null]
-  questionPackage Question_Packages [not null]
+  question questions [not null]
+  questionPackage question_Packages [not null]
   questionOrder Int [not null]
   isActive Boolean [not null]
   createdAt DateTime [default: `now()`, not null]
@@ -134,7 +134,7 @@ Table Question_Details {
   }
 }
 
-Table Contests {
+Table contests {
   id Int [pk, increment]
   name String [not null]
   slug String [unique, not null]
@@ -146,43 +146,43 @@ Table Contests {
   slogan String
   status ContestStatus [not null, default: 'upcoming']
   isActive Boolean [not null, default: true]
-  mediaFiles Media [not null]
-  matches Matches [not null]
-  contestants Contestants [not null]
-  awards Awards [not null]
-  round Rounds [not null]
-  ClassVideo Class_Videos [not null]
-  Sponsor Sponsors [not null]
+  mediaFiles media [not null]
+  matches matches [not null]
+  contestants contestants [not null]
+  awards awards [not null]
+  round rounds [not null]
+  ClassVideo class_Videos [not null]
+  Sponsor sponsors [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Media {
+Table media {
   id Int [pk, increment]
   url String [not null]
   type ContestMedia [not null]
-  contest Contests
+  contest contests
   contestId Int
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Rounds {
+Table rounds {
   id Int [pk, increment]
   name String [not null]
   index Int [not null]
   contestId Int [not null]
   startTime DateTime [default: `now()`, not null]
   endTime DateTime [default: `now()`, not null]
-  contest Contests [not null]
+  contest contests [not null]
   isActive Boolean [not null, default: true]
-  contestants Contestants [not null]
-  matches Matches [not null]
+  contestants contestants [not null]
+  matches matches [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Matches {
+Table matches {
   id Int [pk, increment]
   name String [not null]
   startTime DateTime [not null]
@@ -192,59 +192,59 @@ Table Matches {
   status ContestStatus [not null, default: 'upcoming']
   currentQuestion Int [not null]
   questionPackageId Int [not null]
-  questionPackage Question_Packages [not null]
+  questionPackage question_Packages [not null]
   contestId Int [not null]
-  contest Contests [not null]
+  contest contests [not null]
   roundId Int [not null]
-  round Rounds [not null]
+  round rounds [not null]
   isActive Boolean [not null, default: true]
   studentId Int
-  student Students
-  groups Groups [not null]
-  contestantMatches Contestant_Matches [not null]
-  results Results [not null]
-  rescues Rescues [not null]
-  screenControls Screen_Controls
+  student students
+  groups groups [not null]
+  contestantMatches contestant_Matches [not null]
+  results results [not null]
+  rescues rescues [not null]
+  screenControls screen_Controls
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Groups {
+Table groups {
   id Int [pk, increment]
   name String [not null]
   userId Int [not null]
-  user Users [not null]
+  user users [not null]
   matchId Int [not null]
-  match Matches [not null]
+  match matches [not null]
   confirmCurrentQuestion Int [not null]
-  contestantMatches Contestant_Matches [not null]
+  contestantMatches contestant_Matches [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Contestants {
+Table contestants {
   id Int [pk, increment]
   contestId Int [not null]
-  contest Contests [not null]
+  contest contests [not null]
   studentId Int [not null]
-  student Students [not null]
+  student students [not null]
   roundId Int [not null]
-  round Rounds [not null]
+  round rounds [not null]
   status ContestantStatus [not null, default: 'compete']
-  contestantMatches Contestant_Matches [not null]
-  results Results [not null]
-  awards Awards [not null]
+  contestantMatches contestant_Matches [not null]
+  results results [not null]
+  awards awards [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Contestant_Matches {
+Table contestant_Matches {
   contestantId Int [not null]
   matchId Int [not null]
   groupId Int [not null]
-  contestant Contestants [not null]
-  match Matches [not null]
-  group Groups [not null]
+  contestant contestants [not null]
+  match matches [not null]
+  group groups [not null]
   registrationNumber Int [not null]
   status ContestantMatchStatus [not null, default: 'not_started']
   eliminatedAtQuestionOrder Int
@@ -257,20 +257,20 @@ Table Contestant_Matches {
   }
 }
 
-Table Results {
+Table results {
   id Int [pk, increment]
   name String [not null]
   contestantId Int [not null]
   matchId Int [not null]
-  contestant Contestants [not null]
-  match Matches [not null]
+  contestant contestants [not null]
+  match matches [not null]
   isCorrect Boolean [not null, default: true]
   questionOrder Int [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Rescues {
+Table rescues {
   id Int [pk, increment]
   name String [not null]
   rescueType RescueType [not null]
@@ -283,54 +283,54 @@ Table Rescues {
   index Int [not null]
   status RescueStatus [not null]
   matchId Int [not null]
-  match Matches [not null]
+  match matches [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Awards {
+Table awards {
   id Int [pk, increment]
   name String [not null]
   contestId Int [not null]
-  contest Contests [not null]
+  contest contests [not null]
   contestantId Int
-  contestant Contestants
+  contestant contestants
   type AwardType [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Sponsors {
+Table sponsors {
   id Int [pk, increment]
   name String [not null]
   logo String
   images String
   videos String [not null]
   contestId Int
-  contest Contests
+  contest contests
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Class_Videos {
+Table class_Videos {
   id Int [pk, increment]
   name String [not null]
   slogan String
   classId Int [not null]
-  class Classes [not null]
+  class classes [not null]
   contestId Int
-  contest Contests
+  contest contests
   videos String [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
 }
 
-Table Screen_Controls {
+Table screen_Controls {
   id Int [pk, increment]
   controlKey ControlKey [not null, default: 'background']
   controlValue ControlValue
   matchId Int [unique, not null]
-  match Matches [not null]
+  match matches [not null]
   media String
   value String
   createdAt DateTime [default: `now()`, not null]
@@ -439,60 +439,60 @@ Enum ControlValue {
   zoomOut
 }
 
-Ref: RefreshTokens.userId > Users.id [delete: Cascade]
+Ref: refreshTokens.userId > users.id [delete: Cascade]
 
-Ref: Classes.schoolId > Schools.id [delete: Restrict]
+Ref: classes.schoolId > schools.id [delete: Restrict]
 
-Ref: Students.classId > Classes.id [delete: Restrict]
+Ref: students.classId > classes.id [delete: Restrict]
 
-Ref: Questions.questionTopicId > Question_Topics.id [delete: Restrict]
+Ref: questions.questionTopicId > question_Topics.id [delete: Restrict]
 
-Ref: Question_Details.questionId > Questions.id [delete: Restrict]
+Ref: question_Details.questionId > questions.id [delete: Restrict]
 
-Ref: Question_Details.questionPackageId > Question_Packages.id [delete: Restrict]
+Ref: question_Details.questionPackageId > question_Packages.id [delete: Restrict]
 
-Ref: Media.contestId > Contests.id
+Ref: media.contestId > contests.id
 
-Ref: Rounds.contestId > Contests.id [delete: Restrict]
+Ref: rounds.contestId > contests.id [delete: Restrict]
 
-Ref: Matches.questionPackageId > Question_Packages.id [delete: Restrict]
+Ref: matches.questionPackageId > question_Packages.id [delete: Restrict]
 
-Ref: Matches.contestId > Contests.id [delete: Restrict]
+Ref: matches.contestId > contests.id [delete: Restrict]
 
-Ref: Matches.roundId > Rounds.id [delete: Restrict]
+Ref: matches.roundId > rounds.id [delete: Restrict]
 
-Ref: Matches.studentId > Students.id [delete: Restrict]
+Ref: matches.studentId > students.id [delete: Restrict]
 
-Ref: Groups.userId > Users.id [delete: Restrict]
+Ref: groups.userId > users.id [delete: Restrict]
 
-Ref: Groups.matchId > Matches.id [delete: Restrict]
+Ref: groups.matchId > matches.id [delete: Restrict]
 
-Ref: Contestants.contestId > Contests.id [delete: Restrict]
+Ref: contestants.contestId > contests.id [delete: Restrict]
 
-Ref: Contestants.studentId > Students.id [delete: Restrict]
+Ref: contestants.studentId > students.id [delete: Restrict]
 
-Ref: Contestants.roundId > Rounds.id [delete: Restrict]
+Ref: contestants.roundId > rounds.id [delete: Restrict]
 
-Ref: Contestant_Matches.contestantId > Contestants.id [delete: Restrict]
+Ref: contestant_Matches.contestantId > contestants.id [delete: Restrict]
 
-Ref: Contestant_Matches.matchId > Matches.id [delete: Restrict]
+Ref: contestant_Matches.matchId > matches.id [delete: Restrict]
 
-Ref: Contestant_Matches.groupId > Groups.id [delete: Restrict]
+Ref: contestant_Matches.groupId > groups.id [delete: Restrict]
 
-Ref: Results.contestantId > Contestants.id [delete: Restrict]
+Ref: results.contestantId > contestants.id [delete: Restrict]
 
-Ref: Results.matchId > Matches.id [delete: Restrict]
+Ref: results.matchId > matches.id [delete: Restrict]
 
-Ref: Rescues.matchId > Matches.id [delete: Restrict]
+Ref: rescues.matchId > matches.id [delete: Restrict]
 
-Ref: Awards.contestId > Contests.id [delete: Restrict]
+Ref: awards.contestId > contests.id [delete: Restrict]
 
-Ref: Awards.contestantId > Contestants.id [delete: Restrict]
+Ref: awards.contestantId > contestants.id [delete: Restrict]
 
-Ref: Sponsors.contestId > Contests.id [delete: Restrict]
+Ref: sponsors.contestId > contests.id [delete: Restrict]
 
-Ref: Class_Videos.classId > Classes.id [delete: Restrict]
+Ref: class_Videos.classId > classes.id [delete: Restrict]
 
-Ref: Class_Videos.contestId > Contests.id [delete: Restrict]
+Ref: class_Videos.contestId > contests.id [delete: Restrict]
 
-Ref: Screen_Controls.matchId - Matches.id [delete: Restrict]
+Ref: screen_Controls.matchId - matches.id [delete: Restrict]

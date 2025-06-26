@@ -133,7 +133,7 @@ model User {
   updatedAt DateTime @updatedAt
   groups    Group[]
   refreshToken RefreshToken[]
-  @@map("Users")
+  @@map("users")
 }
 model RefreshToken {
   id        Int      @id @default(autoincrement())
@@ -143,7 +143,7 @@ model RefreshToken {
   createdAt DateTime @default(now())
   expiredAt DateTime 
   
-  @@map("RefreshTokens")
+  @@map("refreshTokens")
 }
 
 
@@ -158,7 +158,7 @@ model RefreshToken {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@map("Schools")
+    @@map("schools")
   }
 
   model Class {
@@ -172,7 +172,7 @@ model RefreshToken {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@map("Classes")
+    @@map("classes")
   }
 
 model Student {
@@ -187,7 +187,7 @@ model Student {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Students")
+  @@map("students")
 }
 
 model About {
@@ -204,7 +204,7 @@ model About {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("About")
+  @@map("about")
 }
 
 model QuestionTopic {
@@ -215,7 +215,7 @@ model QuestionTopic {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Question_Topics")
+  @@map("question_Topics")
 }
 
 model QuestionPackage {
@@ -227,7 +227,7 @@ model QuestionPackage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Question_Packages")
+  @@map("question_Packages")
 }
 
 model Question {
@@ -250,7 +250,7 @@ model Question {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Questions")
+  @@map("questions")
 }
 
 model QuestionDetail {
@@ -264,7 +264,7 @@ model QuestionDetail {
   updatedAt DateTime @updatedAt
 
   @@id([questionId, questionPackageId])
-  @@map("Question_Details")
+  @@map("question_Details")
 }
 
 model Contest {
@@ -293,7 +293,7 @@ model Contest {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
-  @@map("Contests")
+  @@map("contests")
 }
 
 
@@ -307,7 +307,7 @@ model Media {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
-  @@map("Media")
+  @@map("media")
 }
 
 model Round {
@@ -323,7 +323,7 @@ model Round {
   matches     Match[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("Rounds")
+  @@map("rounds")
 }
 
 model Match {
@@ -351,7 +351,7 @@ model Match {
   screenControls   ScreenControl?   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("Matches")
+  @@map("matches")
 }
 
 model Group {
@@ -366,7 +366,7 @@ model Group {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Groups")
+  @@map("groups")
 }
 
 model Contestant {
@@ -383,7 +383,7 @@ model Contestant {
   awards            Award[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("Contestants")
+  @@map("contestants")
 }
 
 model ContestantMatch {
@@ -401,7 +401,7 @@ model ContestantMatch {
   updatedAt DateTime @updatedAt
 
   @@id([contestantId, matchId])
-  @@map("Contestant_Matches")
+  @@map("contestant_Matches")
 }
 
 model Result {
@@ -415,7 +415,7 @@ model Result {
   questionOrder  Int       
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("Results")
+  @@map("results")
 }
 
 model Rescue {
@@ -435,7 +435,7 @@ model Rescue {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Rescues")
+  @@map("rescues")
 }
 
 model Award { 
@@ -449,7 +449,7 @@ model Award {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Awards")
+  @@map("awards")
 }
 
 model Sponsor {
@@ -465,7 +465,7 @@ model Sponsor {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@map("Sponsors")
+  @@map("sponsors")
 }
 
 model ClassVideo {
@@ -480,7 +480,7 @@ model ClassVideo {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  @@map("Class_Videos")
+  @@map("class_Videos")
 }
 
 
@@ -495,5 +495,5 @@ model ScreenControl {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Screen_Controls")
+  @@map("screen_Controls")
 }

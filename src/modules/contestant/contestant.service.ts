@@ -642,4 +642,181 @@ export default class ContestantService {
       },
     });
   }
+
+  // Lấy danh sách thí sinh trong trận đấu theo slug cuộc thi và id trận đấu
+  static async getContestantsInMatch(
+    slug: string,
+    matchId: number,
+    query: {
+      page: number;
+      limit: number;
+      search?: string;
+    }
+  ): Promise<{
+    contestants: Array<{
+      id: number;
+      fullName: string;
+      studentCode: string | null;
+      roundName: string;
+      status: string;
+      schoolId: number;
+      schoolName: string;
+      classId: number;
+      className: string;
+      groupId: number | null;
+      groupName: string | null;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search } = query;
+    const skip = (page - 1) * limit;
+
+    // Tìm cuộc thi theo slug
+    const contest = await prisma.contest.findFirst({
+      where: { slug: slug }
+    });
+    
+    if (!contest) {
+      throw new Error("Không tìm thấy cuộc thi");
+    }
+
+    // Tìm trận đấu
+    const match = await prisma.match.findFirst({
+      where: { 
+        id: matchId,
+        contest: {
+          slug: slug
+        }
+      }
+    });
+
+    if (!match) {
+      throw new Error("Không tìm thấy trận đấu trong cuộc thi này");
+    }
+
+    // Build where clause
+    const whereClause: any = {
+      contestId: contest.id,
+      contestantMatches: {
+        some: {
+          matchId: matchId
+        }
+      }
+    };
+
+    // Thêm search condition
+    if (search) {
+      whereClause.OR = [
+        {
+          student: {
+            fullName: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          }
+        },
+        {
+          student: {
+            studentCode: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          }
+        }
+      ];
+    }
+
+    // Đếm tổng số thí sinh
+    const total = await prisma.contestant.count({
+      where: whereClause
+    });
+
+    // Lấy danh sách thí sinh với thông tin nhóm trong trận đấu cụ thể
+    const contestants = await prisma.contestant.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      include: {
+        student: {
+          select: {
+            fullName: true,
+            studentCode: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        round: {
+          select: {
+            name: true,
+          },
+        },
+        contestantMatches: {
+          where: {
+            matchId: matchId
+          },
+          select: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { student: { fullName: 'asc' } }
+      ]
+    });
+
+    // Transform dữ liệu để trả về đúng format
+    const transformedContestants = contestants.map(contestant => {
+      const group = contestant.contestantMatches?.[0]?.group || null;
+      
+      return {
+        id: contestant.id,
+        fullName: contestant.student.fullName,
+        studentCode: contestant.student.studentCode,
+        roundName: contestant.round.name,
+        status: contestant.status,
+        schoolId: contestant.student.class.school.id,
+        schoolName: contestant.student.class.school.name,
+        classId: contestant.student.class.id,
+        className: contestant.student.class.name,
+        groupId: group?.id || null,
+        groupName: group?.name || null,
+      };
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      contestants: transformedContestants,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
 }

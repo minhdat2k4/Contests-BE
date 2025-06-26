@@ -247,3 +247,22 @@ export type ContestantType = z.infer<typeof ContestantSchema>;
 export type CreatesContestInput = z.infer<typeof CreatesContestShema>;
 export type ContestantMatchParams = z.infer<typeof ContestantMatchParamsSchema>;
 export type ContestantDetailParams = z.infer<typeof ContestantDetailParamsSchema>;
+
+// Schema cho query params của API getContestantsInMatch
+export const GetContestantsInMatchQuerySchema = z.object({
+  page: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
+    .optional()
+    .default("10"),
+  search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
+});
+
+export type GetContestantsInMatchQuery = z.infer<typeof GetContestantsInMatchQuerySchema>;

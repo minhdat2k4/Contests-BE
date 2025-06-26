@@ -607,4 +607,31 @@ export default class ContestantController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  // Lấy danh sách thí sinh trong trận đấu theo slug cuộc thi và id trận đấu
+  static async getContestantsInMatch(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+      const matchId = parseInt(req.params.matchId);
+      
+      const query = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: (req.query.search as string) || undefined,
+      };
+
+      const data = await ContestantService.getContestantsInMatch(slug, matchId, query);
+
+      logger.info(`Lấy danh sách thí sinh trong trận đấu ${matchId} thành công`);
+      res.json(
+        successResponse(
+          data,
+          "Lấy danh sách thí sinh trong trận đấu thành công"
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

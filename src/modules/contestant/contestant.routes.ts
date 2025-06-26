@@ -13,6 +13,7 @@ import {
   CreatesContestShema,
   ContestantMatchParamsSchema,
   ContestantDetailParamsSchema,
+  GetContestantsInMatchQuerySchema,
 } from "./contestant.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const contestantRouter = Router();
@@ -105,6 +106,15 @@ contestantRouter.get(
   role("Admin"),
   validateParams(ContestantDetailParamsSchema),
   ContestantController.getDetailWithGroups
+);
+
+// lấy danh sách thí sinh trong trận đấu theo slug cuộc thi và id trận đấu
+contestantRouter.get(
+  "/contest/:slug/match/:matchId/contestants",
+  authenticate,
+  role("Admin"),
+  validateQuery(GetContestantsInMatchQuerySchema),
+  ContestantController.getContestantsInMatch
 );
 
 export { contestantRouter };

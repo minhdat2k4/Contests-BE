@@ -1,12 +1,16 @@
 import { CreateRefreshTokenInput } from "./auth.schema";
 import { prisma } from "@/config/database";
 import bcrypt from "bcrypt";
-import { User } from "@prisma/client";
+import { User, Role } from "@prisma/client";
 import {
   generateAccessToken,
   generateRefreshToken,
   JwtPayload,
 } from "@/utils/jwt";
+import { StudentRegisterInput } from "./auth.schema";
+import StudentService from "../student/student.service";
+import UserService from "../user/user.service";
+
 export default class AuthService {
   static async findUserByIdentifier(identifier: string): Promise<User | null> {
     return await prisma.user.findFirst({
@@ -68,5 +72,99 @@ export default class AuthService {
   static async isOtpCode(otp: string, otpCode: string): Promise<Boolean> {
     if (!otpCode) return true;
     return otp !== otpCode;
+  }
+
+  /**
+   * Tự động sinh mã sinh viên duy nhất
+   * Format: SV + 2 chữ số năm + 6 chữ số timestamp
+   * Ví dụ: SV24123456, SV24123457, ... (tổng 10 ký tự)
+   */
+  static async generateStudentCode(): Promise<string> {
+    const currentYear = new Date().getFullYear().toString().slice(-2); // Lấy 2 chữ số cuối của năm
+    
+    // Sử dụng timestamp để đảm bảo unique
+    // Lấy 6 chữ số cuối của timestamp
+    const timestamp = Date.now().toString().slice(-6);
+    
+    const studentCode = `SV${currentYear}${timestamp}`;
+    
+    // Kiểm tra xem mã này đã tồn tại chưa (để đảm bảo 100% không trùng)
+    const existingStudent = await prisma.student.findFirst({
+      where: {
+        studentCode: studentCode,
+      },
+    });
+    
+    // Nếu vẫn trùng (rất hiếm), tạo lại với timestamp mới
+    if (existingStudent) {
+      // Đợi 1ms và tạo lại
+      await new Promise(resolve => setTimeout(resolve, 1));
+      return this.generateStudentCode();
+    }
+    
+    return studentCode;
+  }
+
+  static async registerStudent(input: StudentRegisterInput) {
+    // Kiểm tra username đã tồn tại chưa
+    const existingUserName = await UserService.existingUserName(input.username);
+    if (existingUserName) {
+      throw new Error("USERNAME_EXISTS");
+    }
+
+    // Kiểm tra email đã tồn tại chưa
+    const existingEmail = await UserService.existingEmail(input.email);
+    if (existingEmail) {
+      throw new Error("EMAIL_EXISTS");
+    }
+
+    // Kiểm tra lớp có tồn tại không
+    const existingClass = await prisma.class.findFirst({
+      where: { id: input.classId, isActive: true },
+    });
+    if (!existingClass) {
+      throw new Error("CLASS_NOT_EXISTS");
+    }
+
+    // Tự động sinh mã sinh viên
+    const studentCode = await this.generateStudentCode();
+
+    // Mã hóa mật khẩu
+    const { confirmPassword, fullName, classId, ...userInput } = input;
+    const hashedPassword = await bcrypt.hash(userInput.password, 10);
+
+    // Tạo transaction để đảm bảo tính nhất quán dữ liệu
+    const result = await prisma.$transaction(async (tx) => {
+      // Tạo User với role Student
+      const user = await tx.user.create({
+        data: {
+          ...userInput,
+          password: hashedPassword,
+          role: Role.Student,
+        },
+      });
+
+      // Tạo Student với mã sinh viên tự động sinh
+      const student = await tx.student.create({
+        data: {
+          fullName,
+          classId,
+          studentCode,
+          isActive: true,
+        },
+      });
+
+      return { user, student };
+    });
+
+    return {
+      user: {
+        id: result.user.id,
+        username: result.user.username,
+        email: result.user.email,
+        role: result.user.role,
+      },
+      student: result.student,
+    };
   }
 }

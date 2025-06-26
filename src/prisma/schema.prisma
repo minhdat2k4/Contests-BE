@@ -393,7 +393,7 @@ model ContestantMatch {
   contestant       Contestant           @relation(fields: [contestantId], references: [id] ,onDelete :Restrict , onUpdate :Restrict)
   match            Match               @relation(fields: [matchId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   group            Group               @relation(fields: [groupId], references: [id],onDelete :Restrict , onUpdate :Restrict)
-  registrationNumber Int              
+  registrationNumber Int                
   status           ContestantMatchStatus @default(not_started)
   eliminatedAtQuestionOrder Int?       
   isActive         Boolean              @default(true) 

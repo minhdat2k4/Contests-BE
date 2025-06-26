@@ -25,6 +25,10 @@ export default class ContestantController {
         search: (req.query.search as string) || undefined,
         studentId: parseInt(req.query.studentId as string) || undefined,
         roundId: parseInt(req.query.roundId as string) || undefined,
+        schoolId: parseInt(req.query.schoolId as string) || undefined,
+        classId: parseInt(req.query.classId as string) || undefined,
+        groupId: parseInt(req.query.groupId as string) || undefined,
+        matchId: parseInt(req.query.matchId as string) || undefined, // Thêm matchId
         status: Object.values(ContestantStatus).includes(
           statusQuery as ContestantStatus
         )

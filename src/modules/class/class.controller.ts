@@ -261,4 +261,18 @@ export default class ClassController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  static async listClassesWithSchool(req: Request, res: Response): Promise<void> {
+    try {
+      const search = req.query.search as string;
+
+      const classes = await ClassService.listClassesWithSchool(search);
+
+      logger.info(`Lấy danh sách lớp với thông tin trường thành công`);
+      res.json(successResponse(classes, "Lấy danh sách lớp thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

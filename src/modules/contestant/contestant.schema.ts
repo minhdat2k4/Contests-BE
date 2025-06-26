@@ -5,7 +5,12 @@ export const ContestantSchema = z.object({
   id: z.number().int().optional(), // do @default(autoincrement()
   roundName: z.string(),
   fullName: z.string(),
+  studentCode: z.string().nullable().optional(),
   status: z.nativeEnum(ContestantStatus),
+  schoolId: z.number().int(),
+  schoolName: z.string(),
+  classId: z.number().int(),
+  className: z.string(),
 });
 
 export const CreateContestantSchema = z.object({
@@ -75,6 +80,38 @@ export const ContestantQuerySchema = z.object({
     )
     .optional(),
   status: z.nativeEnum(ContestantStatus).optional(),
+  schoolId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trường học phải là số nguyên dương"
+    )
+    .optional(),
+  classId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id lớp học phải là số nguyên dương"
+    )
+    .optional(),
+  groupId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val),
+      "Id nhóm phải là số nguyên"
+    )
+    .optional(),
+  matchId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trận đấu phải là số nguyên dương"
+    )
+    .optional(),
 });
 
 export const ContestantByContestQuerySchema = z.object({
@@ -150,7 +187,18 @@ export type ContestantById = {
   roundId: number;
   studentId: number;
   round: { name: string };
-  student: { fullName: string };
+  student: { 
+    fullName: string;
+    studentCode: string | null;
+    class: {
+      id: number;
+      name: string;
+      school: {
+        id: number;
+        name: string;
+      };
+    };
+  };
   status: ContestantStatus;
 };
 

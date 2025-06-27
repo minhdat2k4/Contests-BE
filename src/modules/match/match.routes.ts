@@ -15,8 +15,9 @@ import {
 } from "./match.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const matchRouter = Router();
-// prive
+// private
 
+//lấy danh sách trận đấu theo slug cuộc thi
 matchRouter.get(
   "/contest/:slug",
   authenticate,

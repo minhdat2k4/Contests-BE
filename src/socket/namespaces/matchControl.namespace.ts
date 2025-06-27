@@ -35,6 +35,8 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
         
         const roomName = `match-${matchId}`;
         socket.join(roomName);
+
+        
         logger.info(`✅ Socket ${socket.id} joined room: ${roomName}`);
 
         const user = extractUserFromSocket(socket);

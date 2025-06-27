@@ -88,21 +88,42 @@ const resolveMatch = async (matchIdentifier: number | string) => {
 };
 
 export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocket) => {
+  console.log('📋 [BE STUDENT EVENTS] Bắt đầu đăng ký events cho student socket:', {
+    socketId: socket.id,
+    username: socket.user.username,
+    userId: socket.user.userId,
+    role: socket.user.role,
+    contestantId: socket.contestantId || 'KHÔNG CÓ'
+  });
+  
   // Only allow Student role to access these events
   if (socket.user.role !== "Student") {
+    console.log('🚫 [BE STUDENT EVENTS] Từ chối đăng ký events - user không phải Student:', {
+      socketId: socket.id,
+      role: socket.user.role,
+      username: socket.user.username
+    });
     return;
   }
+
+  console.log('✅ [BE STUDENT EVENTS] Xác nhận user là Student, tiếp tục đăng ký events');
 
   /**
    * MATCH CONTROL EVENTS FOR STUDENTS
    * These events allow students to also control matches (if they have permission)
    */
 
+  console.log('🎯 [BE STUDENT EVENTS] Đang đăng ký event: match:start');
   /**
    * Event: match:start
    * Start a match and notify all participants
    */
   socket.on("match:start", async (data, callback) => {
+    console.log('🚀 [BE STUDENT EVENTS] Nhận event match:start từ student:', {
+      data: data,
+      socketId: socket.id,
+      username: socket.user.username
+    });
     try {
       const validatedData = StartMatchSchema.parse(data);
       const { matchId: matchIdentifier } = validatedData;
@@ -494,18 +515,36 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
    */
   socket.on("student:joinMatch", async (data, callback) => {
     try {
+      console.log('📝 [STUDENT JOIN] Event nhận được:', data, 'từ socket:', socket.id);
+      console.log('📝 [STUDENT JOIN] Socket contestantId:', socket.contestantId);
+      
       // Validate input data
       const validatedData = JoinMatchSchema.parse(data);
       const { matchId } = validatedData;
+
+      // Check if contestant exists
+      if (!socket.contestantId) {
+        const error = "Contestant not found in socket";
+        console.log(`❌ [STUDENT JOIN] ${error} cho socket: ${socket.id}`);
+        logger.warn(`❌ ${error}: ${socket.id}`);
+        return callback?.({ success: false, message: error });
+      }
 
       // Check if contestant exists and has access to this match
       const contestant = await prisma.contestant.findUnique({
         where: { id: socket.contestantId },
         include: {
-          round: {
+          student: {
+            select: { fullName: true, studentCode: true }
+          },
+          contest: {
             include: {
-              matches: {
-                where: { id: matchId }
+              round: {
+                include: {
+                  matches: {
+                    where: { id: matchId }
+                  }
+                }
               }
             }
           }
@@ -513,15 +552,26 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       });
 
       if (!contestant) {
-        const error = "Contestant not found";
+        const error = "Contestant not found in database";
+        console.log(`❌ [STUDENT JOIN] ${error}: ${socket.contestantId}`);
         logger.warn(`❌ ${error}: ${socket.contestantId}`);
         return callback?.({ success: false, message: error });
       }
 
-      // Check if match exists in contestant's round
-      const hasAccess = contestant.round?.matches?.some((match: any) => match.id === matchId) || false;
+      console.log('✅ [STUDENT JOIN] Contestant found:', {
+        contestantId: contestant.id,
+        studentName: contestant.student?.fullName,
+        contestId: contestant.contestId
+      });
+
+      // Check if match exists in contestant's contest
+      const hasAccess = contestant.contest?.round?.some((round: any) => 
+        round.matches?.some((match: any) => match.id === matchId)
+      ) || false;
+      
       if (!hasAccess) {
         const error = "No access to this match";
+        console.log(`❌ [STUDENT JOIN] ${error}: Match ${matchId} for contestant ${socket.contestantId}`);
         logger.warn(`❌ ${error}: Match ${matchId} for contestant ${socket.contestantId}`);
         return callback?.({ success: false, message: error });
       }
@@ -531,14 +581,22 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       await socket.join(roomName);
       socket.matchId = matchId;
 
-      logger.info(
-        `✅ Student joined match: ${socket.id} | Contestant: ${socket.contestantId} | Match: ${matchId}`
-      );
+      // DEBUG: Kiểm tra room size sau khi join
+      const studentsInRoom = namespace.adapter.rooms.get(roomName);
+      console.log(`📊 [STUDENT JOIN ROOM] Room ${roomName} status after join:`, {
+        roomSize: studentsInRoom?.size || 0,
+        allSocketsInRoom: studentsInRoom ? Array.from(studentsInRoom) : [],
+        currentSocketId: socket.id
+      });
+      
+      console.log(`✅ [STUDENT JOIN ROOM] Socket ${socket.id} joined room: ${roomName}`);
+      logger.info(`Student socket ${socket.id} joined room: ${roomName} | Contestant: ${contestant.id} | Student: ${contestant.student?.fullName}`);
 
       // Notify other clients in the room
       socket.to(roomName).emit("student:joinedMatch", {
         contestantId: socket.contestantId,
-        studentName: socket.user.username,
+        studentName: contestant.student?.fullName,
+        studentCode: contestant.student?.studentCode,
         matchId: matchId,
         timestamp: new Date().toISOString()
       });
@@ -547,11 +605,13 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         success: true, 
         message: "Successfully joined match",
         matchId: matchId,
-        roomName: roomName
+        roomName: roomName,
+        contestantId: socket.contestantId
       });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error(`❌ [STUDENT JOIN] Error:`, errorMessage);
       logger.error(`❌ Error in student:joinMatch: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to join match" });
     }
@@ -563,9 +623,25 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
    */
   socket.on("student:submitAnswer", async (data, callback) => {
     try {
+      console.log('🚀 [STUDENT EVENTS - SUBMIT DEBUG] ===== XỬ LÝ SUBMIT ANSWER TRONG EVENTS =====');
+      console.log('📋 [STUDENT EVENTS - SUBMIT DEBUG] Socket info:', {
+        socketId: socket.id,
+        userId: socket.user.userId,
+        username: socket.user.username,
+        contestantId: socket.contestantId,
+        matchId: socket.matchId
+      });
+
       // Validate input data
+      console.log('🔍 [STUDENT EVENTS - SUBMIT DEBUG] Bắt đầu validate dữ liệu...');
       const validatedData = SubmitAnswerSchema.parse(data);
       const { matchId, questionOrder, answer } = validatedData;
+      console.log('✅ [STUDENT EVENTS - SUBMIT DEBUG] Validation thành công:', {
+        matchId,
+        questionOrder,
+        answer: answer.substring(0, 50) + '...',
+        answerLength: answer.length
+      });
 
       console.log(`📝 [SUBMIT] Thí sinh ${socket.contestantId} gửi câu trả lời:`, {
         matchId,
@@ -575,13 +651,20 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       });
 
       // Verify student is in this match
+      console.log('🔍 [STUDENT EVENTS - SUBMIT DEBUG] Kiểm tra match ID...');
       if (socket.matchId !== matchId) {
         const error = "Student not in this match";
+        console.log('❌ [STUDENT EVENTS - SUBMIT DEBUG] Match ID không khớp:', {
+          socketMatchId: socket.matchId,
+          submitMatchId: matchId
+        });
         logger.warn(`❌ ${error}: Socket match ${socket.matchId} vs submitted ${matchId}`);
         return callback?.({ success: false, message: error });
       }
+      console.log('✅ [STUDENT EVENTS - SUBMIT DEBUG] Match ID hợp lệ');
 
       // 🔥 NEW: Check if contestant is eliminated before allowing answer submission
+      console.log('🔍 [STUDENT EVENTS - SUBMIT DEBUG] Kiểm tra trạng thái contestant...');
       const contestant = await prisma.contestant.findUnique({
         where: { id: socket.contestantId },
         select: { 
@@ -595,13 +678,22 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
 
       if (!contestant) {
         const error = "Contestant not found";
+        console.log('❌ [STUDENT EVENTS - SUBMIT DEBUG] Không tìm thấy contestant:', socket.contestantId);
         logger.warn(`❌ ${error}: ${socket.contestantId}`);
         return callback?.({ success: false, message: error });
       }
 
+      console.log('✅ [STUDENT EVENTS - SUBMIT DEBUG] Thông tin contestant:', {
+        id: contestant.id,
+        status: contestant.status,
+        fullName: contestant.student?.fullName,
+        studentCode: contestant.student?.studentCode
+      });
+
       // 🔥 NEW: Block eliminated students from submitting answers
       if (contestant.status === "eliminate") {
         const error = "Bạn đã bị loại khỏi trận đấu và không thể trả lời thêm câu hỏi";
+        console.log('🚫 [STUDENT EVENTS - SUBMIT DEBUG] Contestant đã bị loại:', contestant.student?.fullName);
         logger.warn(`🚫 [BLOCKED] Eliminated student tried to submit: ${socket.contestantId} (${contestant.student?.fullName})`);
         return callback?.({ 
           success: false, 
@@ -611,6 +703,7 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       }
 
       // Check if match is active
+      console.log('🔍 [STUDENT EVENTS - SUBMIT DEBUG] Kiểm tra trạng thái match...');
       const match = await prisma.match.findUnique({
         where: { id: matchId },
         include: {
@@ -624,17 +717,28 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
 
       if (!match) {
         const error = "Match not found";
+        console.log('❌ [STUDENT EVENTS - SUBMIT DEBUG] Không tìm thấy match:', matchId);
         logger.warn(`❌ ${error}: ${matchId}`);
         return callback?.({ success: false, message: error });
       }
 
+      console.log('✅ [STUDENT EVENTS - SUBMIT DEBUG] Thông tin match:', {
+        id: match.id,
+        name: match.name,
+        status: match.status,
+        currentQuestion: match.currentQuestion,
+        questionPackageId: match.questionPackageId
+      });
+
       if (match.status !== "ongoing") {
         const error = "Match is not active";
+        console.log('❌ [STUDENT EVENTS - SUBMIT DEBUG] Match không active:', match.status);
         logger.warn(`❌ ${error}: Status ${match.status}`);
         return callback?.({ success: false, message: error });
       }
 
       // Get question from QuestionDetail table by questionPackage and order
+      console.log('🔍 [STUDENT EVENTS - SUBMIT DEBUG] Tìm kiếm câu hỏi...');
       const questionDetail = await prisma.questionDetail.findFirst({
         where: {
           questionPackageId: match.questionPackageId,
@@ -648,11 +752,23 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
 
       if (!questionDetail) {
         const error = "Question not found";
+        console.log('❌ [STUDENT EVENTS - SUBMIT DEBUG] Không tìm thấy câu hỏi:', {
+          questionPackageId: match.questionPackageId,
+          questionOrder: questionOrder
+        });
         logger.warn(`❌ [VALIDATION] Question not found for match ${matchId}, order ${questionOrder}`);
         return callback?.({ success: false, message: error });
       }
 
+      console.log('✅ [STUDENT EVENTS - SUBMIT DEBUG] Thông tin câu hỏi:', {
+        questionId: questionDetail.question.id,
+        questionType: questionDetail.question.questionType,
+        questionOrder: questionDetail.questionOrder,
+        correctAnswer: questionDetail.question.correctAnswer?.substring(0, 30) + '...'
+      });
+
       // Check if contestant already answered this question
+      console.log('🔍 [STUDENT EVENTS - SUBMIT DEBUG] Kiểm tra đã trả lời chưa...');
       const existingResult = await prisma.result.findFirst({
         where: {
           contestantId: socket.contestantId,
@@ -663,6 +779,11 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
 
       if (existingResult) {
         const error = "Already answered this question";
+        console.log('⚠️ [STUDENT EVENTS - SUBMIT DEBUG] Đã trả lời câu hỏi này rồi:', {
+          resultId: existingResult.id,
+          isCorrect: existingResult.isCorrect,
+          createdAt: existingResult.createdAt
+        });
         logger.warn(`❌ ${error}: Contestant ${socket.contestantId}, Question ${questionOrder}`);
         return callback?.({ 
           success: false, 
@@ -677,6 +798,7 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       }
 
       // Validate answer based on question type
+      console.log('🔍 [STUDENT EVENTS - SUBMIT DEBUG] Kiểm tra đáp án...');
       let isCorrect = false;
       const question = questionDetail.question;
       
@@ -695,8 +817,23 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       }
 
       console.log(`✅ [SUBMIT] Answer validation result:`, { isCorrect });
+      console.log('📊 [STUDENT EVENTS - SUBMIT DEBUG] Kết quả so sánh đáp án:', {
+        studentAnswer: answer.toLowerCase().trim(),
+        correctAnswer: question.correctAnswer?.toLowerCase().trim(),
+        isCorrect: isCorrect,
+        questionType: question.questionType
+      });
 
       // Save result to database
+      console.log('💾 [STUDENT EVENTS - SUBMIT DEBUG] Bắt đầu lưu kết quả vào database...');
+      console.log('💾 [STUDENT EVENTS - SUBMIT DEBUG] Dữ liệu sẽ lưu:', {
+        name: answer,
+        contestantId: socket.contestantId,
+        matchId: matchId,
+        isCorrect: isCorrect,
+        questionOrder: questionOrder
+      });
+
       const result = await prisma.result.create({
         data: {
           name: answer, // Store the actual answer
@@ -716,11 +853,20 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         }
       });
 
+      console.log('✅ [STUDENT EVENTS - SUBMIT DEBUG] Đã lưu kết quả thành công vào database:', {
+        resultId: result.id,
+        contestantId: result.contestantId,
+        isCorrect: result.isCorrect,
+        createdAt: result.createdAt,
+        studentName: result.contestant.student?.fullName
+      });
+
       logger.info(
         `✅ Answer submitted: Contestant ${socket.contestantId} (${result.contestant.student?.fullName}) | Question ${questionOrder} | Correct: ${isCorrect}`
       );
 
       // Get total questions for progress tracking
+      console.log('🔍 [STUDENT EVENTS - SUBMIT DEBUG] Tính toán progress...');
       const totalQuestions = await prisma.questionDetail.count({
         where: { 
           questionPackageId: match.questionPackageId,
@@ -728,7 +874,14 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         }
       });
 
+      console.log('📊 [STUDENT EVENTS - SUBMIT DEBUG] Progress info:', {
+        answeredQuestions: questionOrder,
+        totalQuestions: totalQuestions,
+        progress: `${questionOrder}/${totalQuestions}`
+      });
+
       // Broadcast result to all clients in the match room
+      console.log('📡 [STUDENT EVENTS - SUBMIT DEBUG] Bắt đầu broadcast kết quả...');
       const roomName = `match-${matchId}`;
       const io = namespace.server;
 
@@ -747,19 +900,25 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         }
       };
 
+      console.log('📡 [STUDENT EVENTS - SUBMIT DEBUG] Dữ liệu broadcast:', answerSubmissionData);
+
       // Broadcast to admin/judge namespace
       io.of("/match-control").to(roomName).emit("match:answerSubmitted", answerSubmissionData);
+      console.log('📡 [STUDENT EVENTS - SUBMIT DEBUG] Đã broadcast tới /match-control namespace');
 
       // Broadcast to students namespace
       io.of("/student").to(roomName).emit("match:answerSubmitted", answerSubmissionData);
+      console.log('📡 [STUDENT EVENTS - SUBMIT DEBUG] Đã broadcast tới /student namespace');
 
       // 🔥 IMPROVED: Handle incorrect answer - Auto-elimination Logic
       let isEliminated = false;
       if (!isCorrect) {
         console.log(`⚠️ [ELIMINATION] Thí sinh ${socket.contestantId} trả lời sai - bắt đầu elimination logic`);
+        console.log('🔥 [STUDENT EVENTS - SUBMIT DEBUG] Bắt đầu xử lý elimination...');
 
         try {
           // Update contestant status to eliminated
+          console.log('💾 [STUDENT EVENTS - SUBMIT DEBUG] Cập nhật trạng thái contestant thành eliminate...');
           const eliminatedContestant = await prisma.contestant.update({
             where: { id: socket.contestantId },
             data: { 
@@ -769,15 +928,19 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
 
           isEliminated = true;
           console.log(`🚫 [ELIMINATION] Thí sinh ${contestant.student?.fullName} đã bị loại`);
+          console.log('✅ [STUDENT EVENTS - SUBMIT DEBUG] Đã cập nhật trạng thái eliminate thành công');
 
           // 🔥 IMPROVED: Create elimination log with better error handling
           try {
+            console.log('💾 [STUDENT EVENTS - SUBMIT DEBUG] Tạo elimination log...');
             await prisma.$executeRaw`
               INSERT INTO elimination_logs (contestant_id, question_order, elimination_reason, eliminated_at)
               VALUES (${socket.contestantId}, ${questionOrder}, 'incorrect_answer', NOW())
             `;
+            console.log('✅ [STUDENT EVENTS - SUBMIT DEBUG] Đã tạo elimination log thành công');
           } catch (logError) {
             console.warn(`⚠️ [ELIMINATION] Could not create elimination log: ${logError}`);
+            console.warn('⚠️ [STUDENT EVENTS - SUBMIT DEBUG] Không thể tạo elimination log nhưng tiếp tục process');
             // Continue with elimination process even if logging fails
           }
 
@@ -792,11 +955,15 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
             matchId: socket.matchId
           };
 
+          console.log('📡 [STUDENT EVENTS - SUBMIT DEBUG] Dữ liệu elimination broadcast:', eliminationData);
+
           // Broadcast elimination to admin/judge namespace
           io.of("/match-control").to(roomName).emit("contestant:eliminated", eliminationData);
+          console.log('📡 [STUDENT EVENTS - SUBMIT DEBUG] Đã broadcast elimination tới /match-control');
 
           // Broadcast elimination to other students (but not to the eliminated student)
           socket.to(roomName).emit("contestant:eliminated", eliminationData);
+          console.log('📡 [STUDENT EVENTS - SUBMIT DEBUG] Đã broadcast elimination tới các student khác');
 
           // Send special elimination notification to the eliminated student
           socket.emit("student:eliminated", {
@@ -807,18 +974,21 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
             explanation: question.explanation || "Không có giải thích",
             redirectTo: "/student/dashboard" // Suggest redirect
           });
+          console.log('📡 [STUDENT EVENTS - SUBMIT DEBUG] Đã gửi thông báo elimination riêng cho thí sinh bị loại');
 
           logger.info(
             `🚫 Contestant eliminated: ${socket.contestantId} (${contestant.student?.fullName}) | Question ${questionOrder} | Reason: incorrect_answer`
           );
 
         } catch (eliminationError) {
+          console.error('💥 [STUDENT EVENTS - SUBMIT DEBUG] Lỗi trong quá trình elimination:', eliminationError);
           logger.error(`❌ Error in elimination logic: ${eliminationError}`);
           // Continue with normal flow even if elimination fails
         }
       }
 
       // Send confirmation to the submitting student
+      console.log('📤 [STUDENT EVENTS - SUBMIT DEBUG] Chuẩn bị response cho student...');
       const responseData = { 
         success: true, 
         message: isCorrect ? "Câu trả lời chính xác! 🎉" : "Câu trả lời không chính xác 😔",
@@ -833,9 +1003,19 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         }
       };
 
+      console.log('📤 [STUDENT EVENTS - SUBMIT DEBUG] Response data:', {
+        success: responseData.success,
+        message: responseData.message,
+        isCorrect: responseData.result.isCorrect,
+        eliminated: responseData.result.eliminated,
+        score: responseData.result.score
+      });
+
       callback?.(responseData);
+      console.log('📤 [STUDENT EVENTS - SUBMIT DEBUG] Đã gửi response callback');
 
       // Additional statistics logging - Fixed aggregate query
+      console.log('📊 [STUDENT EVENTS - SUBMIT DEBUG] Tính toán statistics...');
       const studentStats = await prisma.result.groupBy({
         by: ['contestantId'],
         where: {
@@ -869,9 +1049,15 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         eliminated: isEliminated
       });
 
+      console.log('🚀 [STUDENT EVENTS - SUBMIT DEBUG] ===== HOÀN THÀNH XỬ LÝ SUBMIT ANSWER =====');
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error(`❌ [SUBMIT] Error in student:submitAnswer:`, errorMessage);
+      console.error('💥 [STUDENT EVENTS - SUBMIT DEBUG] LỖI TRONG QUÁ TRÌNH XỬ LÝ:', {
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
       logger.error(`❌ Error in student:submitAnswer: ${errorMessage}`);
       callback?.({ 
         success: false, 
@@ -1042,15 +1228,31 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
   socket.on("joinMatchRoom", async (matchId: number, callback?: (response: any) => void) => {
     try {
       console.log(`🏠 [STUDENT JOIN ROOM] Socket ${socket.id} wants to join matchId: ${matchId}`);
+      console.log(`🏠 [STUDENT JOIN ROOM] Socket contestantId: ${socket.contestantId}`);
       
+      // Check if contestant exists
+      if (!socket.contestantId) {
+        const error = "Contestant not found in socket";
+        console.log(`❌ [STUDENT JOIN ROOM] ${error} cho socket: ${socket.id}`);
+        logger.warn(`❌ ${error}: ${socket.id}`);
+        return callback?.({ success: false, message: error });
+      }
+
       // Check if contestant exists and has access to this match
       const contestant = await prisma.contestant.findUnique({
         where: { id: socket.contestantId },
         include: {
-          round: {
+          student: {
+            select: { fullName: true, studentCode: true }
+          },
+          contest: {
             include: {
-              matches: {
-                where: { id: matchId }
+              round: {
+                include: {
+                  matches: {
+                    where: { id: matchId }
+                  }
+                }
               }
             }
           }
@@ -1058,24 +1260,52 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
       });
 
       if (!contestant) {
-        const error = "Contestant not found";
+        const error = "Contestant not found in database";
+        console.log(`❌ [STUDENT JOIN ROOM] ${error}: ${socket.contestantId}`);
         logger.warn(`❌ ${error}: ${socket.contestantId}`);
         return callback?.({ success: false, message: error });
       }
 
-      // Check if match exists in contestant's round
-      const hasAccess = contestant.round?.matches?.some((match: any) => match.id === matchId) || false;
+      console.log(`✅ [STUDENT JOIN ROOM] Contestant found:`, {
+        contestantId: contestant.id,
+        studentName: contestant.student?.fullName,
+        contestId: contestant.contestId
+      });
+
+      // Check if match exists in contestant's contest
+      const hasAccess = contestant.contest?.round?.some((round: any) => 
+        round.matches?.some((match: any) => match.id === matchId)
+      ) || false;
+      
       if (!hasAccess) {
         const error = "No access to this match";
+        console.log(`❌ [STUDENT JOIN ROOM] ${error}: Match ${matchId} for contestant ${socket.contestantId}`);
         logger.warn(`❌ ${error}: Match ${matchId} for contestant ${socket.contestantId}`);
         return callback?.({ success: false, message: error });
       }
 
       const roomName = `match-${matchId}`;
+      
+      // DEBUG: Trước khi join
+      const studentsInRoomBefore = namespace.adapter.rooms.get(roomName);
+      console.log(`📊 [STUDENT JOIN ROOM] Room ${roomName} trước khi join:`, {
+        roomSize: studentsInRoomBefore?.size || 0,
+        allSocketsInRoom: studentsInRoomBefore ? Array.from(studentsInRoomBefore) : []
+      });
+      
       socket.join(roomName);
       
+      // DEBUG: Sau khi join
+      const studentsInRoomAfter = namespace.adapter.rooms.get(roomName);
+      console.log(`📊 [STUDENT JOIN ROOM] Room ${roomName} sau khi join:`, {
+        roomSize: studentsInRoomAfter?.size || 0,
+        allSocketsInRoom: studentsInRoomAfter ? Array.from(studentsInRoomAfter) : [],
+        currentSocketId: socket.id,
+        socketJoined: studentsInRoomAfter ? studentsInRoomAfter.has(socket.id) : false
+      });
+      
       console.log(`✅ [STUDENT JOIN ROOM] Socket ${socket.id} joined room: ${roomName}`);
-      logger.info(`Student socket ${socket.id} joined room: ${roomName}`);
+      logger.info(`Student socket ${socket.id} joined room: ${roomName} | Contestant: ${contestant.id} | Student: ${contestant.student?.fullName}`);
 
       // Kiểm tra số lượng clients trong room
       const roomSize = namespace.adapter.rooms.get(roomName)?.size || 0;
@@ -1086,7 +1316,9 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         const response = {
           success: true,
           message: `Successfully joined room ${roomName}`,
-          roomSize: roomSize
+          roomSize: roomSize,
+          contestantId: socket.contestantId,
+          studentName: contestant.student?.fullName
         };
         console.log(`📨 [STUDENT JOIN ROOM] Sending response:`, response);
         callback(response);

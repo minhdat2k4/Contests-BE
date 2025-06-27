@@ -2,6 +2,7 @@ import { Server, Socket } from "socket.io";
 import { logger } from "@/utils/logger";
 import { verifyToken, JwtPayload } from "@/utils/jwt";
 import { registerMatchControlEvents } from "./namespaces/matchControl.namespace";
+import { registerStudentNamespaceEvents } from "./namespaces/student.namespace";
 import { ExtendedError } from "socket.io/dist/namespace";
 import { socketService } from "./SocketService";
 import cookie from "cookie";
@@ -27,43 +28,74 @@ export const authMiddleware = async (
   next: (err?: ExtendedError) => void
 ) => {
   try {
+    console.log('🔐 [BE] Bắt đầu xác thực socket ID:', socket.id);
+    
     const rawCookie = socket.handshake.headers.cookie;
+    console.log('🍪 [BE] Cookie raw nhận được từ FE:', rawCookie);
 
     if (!rawCookie) {
-      logger.warn(`❌ No cookie provided. Socket ID: ${socket.id}`);
+      console.log(`❌ [BE] Không có cookie từ socket ID: ${socket.id}`);
+      logger.warn(`❌ [BE] Không có cookie. Socket ID: ${socket.id}`);
       return next(new Error("Authentication error: No cookie"));
     }
 
     const parsed = cookie.parse(rawCookie);
+    console.log('📝 [BE] Cookie đã parse:', parsed);
+    
     const token = parsed.accessToken;
+    console.log('🔑 [BE] AccessToken tìm thấy trong cookie:', token ? `${token.substring(0, 30)}...` : 'KHÔNG TÌM THẤY');
 
     if (!token) {
-      logger.warn(`❌ No accessToken found in cookie. Socket ID: ${socket.id}`);
+      console.log(`❌ [BE] Không tìm thấy accessToken trong cookie. Socket ID: ${socket.id}`);
+      logger.warn(`❌ [BE] Không tìm thấy accessToken trong cookie. Socket ID: ${socket.id}`);
       return next(new Error("Authentication error: Token not found"));
     }
 
+    console.log(`✅ [BE] Đã nhận accessToken từ FE cho socket ${socket.id}:`, token.substring(0, 50) + '...');
+    logger.info(`[BE] Đã nhận accessToken từ FE: ${token}`);
+
+    console.log('🔍 [BE] Đang verify token...');
     const payload = verifyToken(token) as JwtPayload;
+    console.log(`✅ [BE] Payload giải mã thành công:`, {
+      userId: payload.userId,
+      username: payload.username,
+      role: payload.role,
+      email: payload.email
+    });
+    logger.info(`[BE] Payload giải mã từ token:`, payload);
     
+    console.log('👤 [BE] Đang kiểm tra user trong database...');
     // Validate user exists and is active
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       select: { id: true, role: true, isActive: true }
     });
 
+    console.log('🔍 [BE] Kết quả tìm user:', user);
+
     if (!user || !user.isActive) {
-      logger.warn(`❌ User not found or inactive: ${payload.userId}`);
+      console.log(`❌ [BE] User không tồn tại hoặc bị vô hiệu hóa. UserId: ${payload.userId}, User found:`, user);
+      logger.warn(`❌ [BE] Không tìm thấy user hoặc user bị vô hiệu hóa: ${payload.userId}`);
       return next(new Error("Authentication error: User not found or inactive"));
     }
 
+    console.log(`✅ [BE] User hợp lệ: ID=${user.id}, role=${user.role}, active=${user.isActive}`);
+
     // For Student role, validate contestant exists
     if (payload.role === "Student") {
+      console.log(`🎓 [BE] User là Student, tìm kiếm contestant cho userId: ${payload.userId}`);
+      console.log(`🔍 [BE] Tìm contestant cho Student userId: ${payload.userId}`);
+      
       const contestant = await prisma.contestant.findFirst({
         where: {
           student: {
-            id: payload.userId
+            userId: payload.userId
           }
         },
         include: {
+          student: {
+            select: { id: true, fullName: true, studentCode: true }
+          },
           contest: {
             include: {
               round: {
@@ -78,14 +110,25 @@ export const authMiddleware = async (
         }
       });
 
+      console.log('🔍 [BE] Kết quả tìm contestant:', contestant ? {
+        id: contestant.id,
+        studentName: contestant.student.fullName,
+        studentCode: contestant.student.studentCode,
+        contestId: contestant.contestId
+      } : 'KHÔNG TÌM THẤY');
+
       if (!contestant) {
-        logger.warn(`❌ Contestant not found for student: ${payload.userId}`);
+        console.log(`❌ [BE] Không tìm thấy contestant cho student với userId: ${payload.userId}`);
+        logger.warn(`❌ [BE] Không tìm thấy contestant cho student với userId: ${payload.userId}`);
         return next(new Error("Authentication error: Contestant not found"));
       }
+
+      console.log(`✅ [BE] Đã tìm thấy contestant: ID=${contestant.id} cho student: ${contestant.student.fullName} (${contestant.student.studentCode})`);
 
       // Attach contestant info to socket
       (socket as AuthenticatedSocket).contestantId = contestant.id;
       
+      console.log('🏆 [BE] Đang tìm trận đấu active cho contestant...');
       // Find active match for this contestant
       const activeMatch = await prisma.match.findFirst({
         where: {
@@ -98,17 +141,33 @@ export const authMiddleware = async (
       });
 
       if (activeMatch) {
+        console.log(`✅ [BE] Đã tìm thấy trận đấu active: ID=${activeMatch.id}, name=${activeMatch.name}`);
+        logger.info(`[BE] Đã tìm thấy trận đấu active cho contestant: ${activeMatch.id}`);
         (socket as AuthenticatedSocket).matchId = activeMatch.id;
+      } else {
+        console.log('ℹ️ [BE] Không có trận đấu active nào cho contestant này');
       }
 
+      console.log(`🎉 [BE] Student xác thực thành công:`, {
+        socketId: socket.id,
+        userId: payload.userId,
+        username: payload.username,
+        contestantId: contestant.id,
+        matchId: activeMatch?.id || 'none'
+      });
+      
       logger.info(
-        `✅ Student authenticated: ${socket.id} | Contestant: ${contestant.id} | Match: ${activeMatch?.id || 'none'}`
+        `✅ Student authenticated: ${socket.id} | UserId: ${payload.userId} | Contestant: ${contestant.id} | Match: ${activeMatch?.id || 'none'}`
       );
+    } else {
+      console.log(`✅ [BE] Non-student user xác thực thành công: ${payload.username} (${payload.role})`);
     }
 
     (socket as AuthenticatedSocket).user = payload;
+    console.log(`🎯 [BE] Hoàn thành xác thực cho socket ${socket.id}, chuyển tiếp connection...`);
     next();
   } catch (err) {
+    console.error(`💥 [BE] Lỗi xác thực token cho socket ${socket.id}:`, err);
     logger.error(`❌ Token verification failed: ${(err as Error).message}`);
     next(new Error("Authentication error"));
   }
@@ -157,74 +216,15 @@ export const initializeSocketIO = (io: Server) => {
     });
   });
 
-  // Initialize /student namespace
+  // Namespace dành riêng cho Student
   const studentNamespace = io.of("/student");
   studentNamespace.use(authMiddleware);
   
-  studentNamespace.on("connection", (socket: Socket) => {
+  studentNamespace.on("connection", async (socket: Socket) => {
     const authSocket = socket as AuthenticatedSocket;
-    const user = authSocket.user;
-
-    console.log(
-      `✅ [STUDENT] Client connected: ${socket.id} | User: ${user.username} (${user.role})`
-    );
-
-    // Only allow students to connect
-    if (user.role !== "Student") {
-      console.log(`❌ [STUDENT] Access denied for role: ${user.role}`);
-      socket.disconnect();
-      return;
-    }
-
-    // Student room management
-    socket.on("joinMatchRoom", (matchId: number, callback?: (response: any) => void) => {
-      try {
-        console.log(`🏠 [STUDENT] Socket ${socket.id} wants to join matchId: ${matchId}`);
-        
-        const roomName = `match-${matchId}`;
-        socket.join(roomName);
-        
-        console.log(`✅ [STUDENT] Socket ${socket.id} joined room: ${roomName}`);
-        logger.info(`[STUDENT] Socket ${socket.id} joined room: ${roomName}`);
-
-        // Check room size
-        const roomSize = studentNamespace.adapter.rooms.get(roomName)?.size || 0;
-        console.log(`📊 [STUDENT] Room ${roomName} now has ${roomSize} students`);
-
-        // Send acknowledgement
-        if (callback) {
-          const response = {
-            success: true,
-            message: `Successfully joined room ${roomName}`,
-            roomSize: roomSize
-          };
-          console.log(`📨 [STUDENT] Sending response:`, response);
-          callback(response);
-        }
-      } catch (error) {
-        console.error(`❌ [STUDENT] Error joining room for match ${matchId}:`, error);
-        logger.error(`[STUDENT] Error joining room for match ${matchId}`, error);
-        if (callback) {
-          callback({ success: false, message: "Failed to join room." });
-        }
-      }
-    });
-
-    socket.on("leaveMatchRoom", (matchId: number) => {
-      const roomName = `match-${matchId}`;
-      socket.leave(roomName);
-      console.log(`🚪 [STUDENT] Socket ${socket.id} left room: ${roomName}`);
-      logger.info(`[STUDENT] Socket ${socket.id} left room: ${roomName}`);
-    });
-
-    // Register student-specific events
-    registerStudentEvents(studentNamespace, authSocket);
-
-    socket.on("disconnect", (reason) => {
-      console.log(
-        `❌ [STUDENT] Client disconnected: ${socket.id} | Reason: ${reason}`
-      );
-    });
+    
+    // Register all student namespace events using the dedicated namespace handler
+    await registerStudentNamespaceEvents(io, authSocket);
   });
 
   logger.info("✅ Socket.IO server initialized with /match-control and /student namespaces.");

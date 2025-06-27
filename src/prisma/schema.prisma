@@ -5,16 +5,15 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
-}
 generator dbml {
   provider = "prisma-dbml-generator"
   output   = "./dbml"
 }
 
-
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
 
 enum Role {
   Admin
@@ -65,7 +64,6 @@ enum ContestMedia {
   background
   images
 }
-
 
 enum RescueType {
   resurrected
@@ -133,8 +131,10 @@ model User {
   updatedAt DateTime @updatedAt
   groups    Group[]
   refreshToken RefreshToken[]
-  @@map("Users")
+  student   Student?
+  @@map("users")
 }
+
 model RefreshToken {
   id        Int      @id @default(autoincrement())
   userId    Int     
@@ -143,37 +143,36 @@ model RefreshToken {
   createdAt DateTime @default(now())
   expiredAt DateTime 
   
-  @@map("RefreshTokens")
+  @@map("refreshtokens")
 }
 
+model School {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  phone     String?  @unique @db.VarChar(10)
+  address   String?  @db.VarChar(255)
+  isActive  Boolean  @default(true)
+  classes   Class[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  model School {
-    id        Int      @id @default(autoincrement())
-    name      String   @db.VarChar(255)
-    email     String   @unique @db.VarChar(255)
-    phone     String?  @unique @db.VarChar(10)
-    address   String?  @db.VarChar(255)
-    isActive  Boolean  @default(true)
-    classes   Class[]
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  @@map("schools")
+}
 
-    @@map("Schools")
-  }
+model Class {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(255)
+  schoolId  Int     
+  school    School    @relation(fields: [schoolId], references: [id],onUpdate:Restrict, onDelete:Restrict)
+  isActive  Boolean   @default(true) 
+  students  Student[]
+  videos    ClassVideo[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  model Class {
-    id        Int       @id @default(autoincrement())
-    name      String    @db.VarChar(255)
-    schoolId  Int     
-    school    School    @relation(fields: [schoolId], references: [id],onUpdate:Restrict, onDelete:Restrict)
-    isActive  Boolean   @default(true) 
-    students  Student[]
-    videos    ClassVideo[]
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@map("Classes")
-  }
+  @@map("classes")
+}
 
 model Student {
   id           Int      @id @default(autoincrement())
@@ -181,13 +180,15 @@ model Student {
   studentCode  String?  @db.VarChar(12) @map("student_code")
   classId      Int     
   class        Class    @relation(fields: [classId], references: [id],onUpdate:Restrict, onDelete:Restrict)
+  userId       Int      @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   isActive     Boolean  @default(true) 
   contestants  Contestant[]
   match        Match[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Students")
+  @@map("students")
 }
 
 model About {
@@ -204,7 +205,7 @@ model About {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("About")
+  @@map("about")
 }
 
 model QuestionTopic {
@@ -215,7 +216,7 @@ model QuestionTopic {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Question_Topics")
+  @@map("question_topics")
 }
 
 model QuestionPackage {
@@ -227,7 +228,7 @@ model QuestionPackage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Question_Packages")
+  @@map("question_packages")
 }
 
 model Question {
@@ -250,7 +251,7 @@ model Question {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Questions")
+  @@map("questions")
 }
 
 model QuestionDetail {
@@ -264,7 +265,7 @@ model QuestionDetail {
   updatedAt DateTime @updatedAt
 
   @@id([questionId, questionPackageId])
-  @@map("Question_Details")
+  @@map("question_details")
 }
 
 model Contest {
@@ -293,9 +294,8 @@ model Contest {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
-  @@map("Contests")
+  @@map("contests")
 }
-
 
 model Media {
   id         Int        @id @default(autoincrement())
@@ -307,7 +307,7 @@ model Media {
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
-  @@map("Media")
+  @@map("media")
 }
 
 model Round {
@@ -323,7 +323,7 @@ model Round {
   matches     Match[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("Rounds")
+  @@map("rounds")
 }
 
 model Match {
@@ -351,7 +351,7 @@ model Match {
   screenControls   ScreenControl?   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("Matches")
+  @@map("matches")
 }
 
 model Group {
@@ -366,7 +366,7 @@ model Group {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Groups")
+  @@map("groups")
 }
 
 model Contestant {
@@ -383,7 +383,7 @@ model Contestant {
   awards            Award[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("Contestants")
+  @@map("contestants")
 }
 
 model ContestantMatch {
@@ -401,7 +401,7 @@ model ContestantMatch {
   updatedAt DateTime @updatedAt
 
   @@id([contestantId, matchId])
-  @@map("Contestant_Matches")
+  @@map("contestant_matches")
 }
 
 model Result {
@@ -415,7 +415,7 @@ model Result {
   questionOrder  Int       
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@map("Results")
+  @@map("results")
 }
 
 model Rescue {
@@ -435,7 +435,7 @@ model Rescue {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Rescues")
+  @@map("rescues")
 }
 
 model Award { 
@@ -449,7 +449,7 @@ model Award {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Awards")
+  @@map("awards")
 }
 
 model Sponsor {
@@ -465,7 +465,7 @@ model Sponsor {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@map("Sponsors")
+  @@map("sponsors")
 }
 
 model ClassVideo {
@@ -480,9 +480,8 @@ model ClassVideo {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  @@map("Class_Videos")
+  @@map("class_videos")
 }
-
 
 model ScreenControl {
   id           Int          @id @default(autoincrement())
@@ -495,5 +494,5 @@ model ScreenControl {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("Screen_Controls")
+  @@map("screen_controls")
 }

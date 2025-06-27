@@ -157,6 +157,13 @@ export default class GroupService {
     });
   }
 
+  static async updateName(id: number, name: string): Promise<Group | null> {
+    return prisma.group.update({
+      where: { id: id },
+      data: { name: name },
+    });
+  }
+
   static async delete(id: number): Promise<Group> {
     return prisma.group.delete({
       where: {

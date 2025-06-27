@@ -388,4 +388,435 @@ export default class ContestantService {
       },
     };
   }
+
+  static async getContestantByIdAndMatch(
+    contestantId: number, 
+    matchId: number
+  ): Promise<any> {
+    return prisma.contestant.findFirst({
+      where: {
+        id: contestantId,
+        contestantMatches: {
+          some: {
+            matchId: matchId
+          }
+        }
+      },
+      select: {
+        id: true,
+        roundId: true,
+        studentId: true,
+        status: true,
+        student: { 
+          select: { 
+            fullName: true,
+            studentCode: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          } 
+        },
+        round: { select: { name: true } },
+        contest: {
+          select: {
+            name: true,
+          },
+        },
+        contestantMatches: {
+          select: {
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          where: {
+            matchId: matchId
+          }
+        },
+      },
+    });
+  }
+
+  static async getAllWithMatchGroups(
+    query: ContestantQueryInput,
+    contestId: number,
+    matchId?: number
+  ): Promise<{
+    contestantes: any[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search, roundId, status, schoolId, classId } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+
+    if (contestId !== undefined) {
+      whereClause.contestId = contestId;
+    }
+
+    if (roundId !== undefined) {
+      whereClause.roundId = roundId;
+    }
+
+    if (status !== undefined) {
+      whereClause.status = status;
+    }
+
+    // Filter by school ID
+    if (schoolId !== undefined) {
+      whereClause.student = {
+        ...whereClause.student,
+        class: {
+          ...whereClause.student?.class,
+          schoolId: schoolId
+        }
+      };
+    }
+
+    // Filter by class ID
+    if (classId !== undefined) {
+      whereClause.student = {
+        ...whereClause.student,
+        classId: classId
+      };
+    }
+
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { contest: { is: { name: { contains: keyword } } } },
+        { student: { is: { fullName: { contains: keyword } } } },
+        { round: { is: { name: { contains: keyword } } } },
+        { student: { is: { class: { is: { school: { is: { name: { contains: keyword } } } } } } } },
+        { student: { is: { class: { is: { name: { contains: keyword } } } } } },
+      ]);
+    }
+
+    const ContestantRaw = await prisma.contestant.findMany({
+      where: whereClause,
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        student: { 
+          select: { 
+            fullName: true,
+            studentCode: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          } 
+        },
+        round: { select: { name: true } },
+        contest: {
+          select: {
+            name: true,
+          },
+        },
+        contestantMatches: {
+          select: {
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          where: matchId ? {
+            matchId: matchId
+          } : undefined
+        },
+      },
+    });
+
+    const Contestantes = ContestantRaw.map(key => ({
+      id: key.id,
+      fullName: key.student.fullName,
+      studentCode: key.student.studentCode,
+      roundName: key.round.name,
+      status: key.status,
+      schoolId: key.student.class.school.id,
+      schoolName: key.student.class.school.name,
+      classId: key.student.class.id,
+      className: key.student.class.name,
+      group: key.contestantMatches[0]?.group || null,
+    }));
+
+    const total = await prisma.contestant.count({ where: whereClause });
+    const totalPages = Math.ceil(total / limit);
+    return {
+      contestantes: Contestantes,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
+
+  static async getContestantDetailWithGroups(
+    contestantId: number,
+    contestSlug: string,
+    matchId: number
+  ): Promise<any> {
+    return prisma.contestant.findFirst({
+      where: {
+        id: contestantId,
+        contest: {
+          slug: contestSlug
+        }
+      },
+      select: {
+        id: true,
+        roundId: true,
+        studentId: true,
+        status: true,
+        student: { 
+          select: { 
+            fullName: true,
+            studentCode: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            }
+          } 
+        },
+        round: { select: { name: true } },
+        contest: {
+          select: {
+            name: true,
+          },
+        },
+        contestantMatches: {
+          select: {
+            group: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          },
+          where: {
+            matchId: matchId
+          }
+        },
+      },
+    });
+  }
+
+  // Lấy danh sách thí sinh trong trận đấu theo slug cuộc thi và id trận đấu
+  static async getContestantsInMatch(
+    slug: string,
+    matchId: number,
+    query: {
+      page: number;
+      limit: number;
+      search?: string;
+    }
+  ): Promise<{
+    contestants: Array<{
+      id: number;
+      fullName: string;
+      studentCode: string | null;
+      roundName: string;
+      status: string;
+      schoolId: number;
+      schoolName: string;
+      classId: number;
+      className: string;
+      groupId: number | null;
+      groupName: string | null;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search } = query;
+    const skip = (page - 1) * limit;
+
+    // Tìm cuộc thi theo slug
+    const contest = await prisma.contest.findFirst({
+      where: { slug: slug }
+    });
+    
+    if (!contest) {
+      throw new Error("Không tìm thấy cuộc thi");
+    }
+
+    // Tìm trận đấu
+    const match = await prisma.match.findFirst({
+      where: { 
+        id: matchId,
+        contest: {
+          slug: slug
+        }
+      }
+    });
+
+    if (!match) {
+      throw new Error("Không tìm thấy trận đấu trong cuộc thi này");
+    }
+
+    // Build where clause
+    const whereClause: any = {
+      contestId: contest.id,
+      contestantMatches: {
+        some: {
+          matchId: matchId
+        }
+      }
+    };
+
+    // Thêm search condition
+    if (search) {
+      whereClause.OR = [
+        {
+          student: {
+            fullName: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          }
+        },
+        {
+          student: {
+            studentCode: {
+              contains: search,
+              mode: 'insensitive'
+            }
+          }
+        }
+      ];
+    }
+
+    // Đếm tổng số thí sinh
+    const total = await prisma.contestant.count({
+      where: whereClause
+    });
+
+    // Lấy danh sách thí sinh với thông tin nhóm trong trận đấu cụ thể
+    const contestants = await prisma.contestant.findMany({
+      where: whereClause,
+      skip,
+      take: limit,
+      include: {
+        student: {
+          select: {
+            fullName: true,
+            studentCode: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                school: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        round: {
+          select: {
+            name: true,
+          },
+        },
+        contestantMatches: {
+          where: {
+            matchId: matchId
+          },
+          select: {
+            group: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { student: { fullName: 'asc' } }
+      ]
+    });
+
+    // Transform dữ liệu để trả về đúng format
+    const transformedContestants = contestants.map(contestant => {
+      const group = contestant.contestantMatches?.[0]?.group || null;
+      
+      return {
+        id: contestant.id,
+        fullName: contestant.student.fullName,
+        studentCode: contestant.student.studentCode,
+        roundName: contestant.round.name,
+        status: contestant.status,
+        schoolId: contestant.student.class.school.id,
+        schoolName: contestant.student.class.school.name,
+        classId: contestant.student.class.id,
+        className: contestant.student.class.name,
+        groupId: group?.id || null,
+        groupName: group?.name || null,
+      };
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      contestants: transformedContestants,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
 }

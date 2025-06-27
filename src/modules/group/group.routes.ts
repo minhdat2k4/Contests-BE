@@ -11,6 +11,7 @@ import {
   GroupsQuerySchema,
   UpdateGroupsSchema,
   deleteGroupsesSchema,
+  CreateBulkGroupsSchema,
 } from "./group.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const groupRouter = Router();
@@ -44,6 +45,14 @@ groupRouter.post(
   role("Admin"),
   validateBody(CreateGroupsSchema),
   GroupController.create
+);
+
+groupRouter.post(
+  "/bulk",
+  authenticate,
+  role("Admin"),
+  validateBody(CreateBulkGroupsSchema),
+  GroupController.createBulkGroups
 );
 
 groupRouter.patch(

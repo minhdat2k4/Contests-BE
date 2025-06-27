@@ -62,12 +62,12 @@ export interface JudgeInfo {
 export interface GroupInfo {
   id: number;
   name: string;
-  userId: number;
+  userId: number | null;
   judge: {
     id: number;
     username: string;
     email: string;
-  };
+  } | null;
   contestantMatches: Array<{
     contestant: {
       id: number;

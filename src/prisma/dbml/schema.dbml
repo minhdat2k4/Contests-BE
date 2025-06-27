@@ -212,8 +212,8 @@ Table Matches {
 Table Groups {
   id Int [pk, increment]
   name String [not null]
-  userId Int [not null]
-  user Users [not null]
+  userId Int
+  user Users
   matchId Int [not null]
   match Matches [not null]
   confirmCurrentQuestion Int [not null]

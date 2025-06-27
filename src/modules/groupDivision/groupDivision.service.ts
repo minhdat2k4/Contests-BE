@@ -187,11 +187,11 @@ export default class GroupDivisionService {
       id: group.id,
       name: group.name,
       userId: group.userId,
-      judge: {
+      judge: group.user ? {
         id: group.user.id,
         username: group.user.username,
         email: group.user.email,
-      },
+      } : null,
       contestantMatches: group.contestantMatches.map((cm: any) => ({
         contestant: {
           id: cm.contestant.id,
@@ -255,11 +255,11 @@ export default class GroupDivisionService {
       id: group.id,
       name: group.name,
       userId: group.userId,
-      judge: {
+      judge: group.user ? {
         id: group.user.id,
         username: group.user.username,
         email: group.user.email,
-      },
+      } : null,
       contestantMatches: group.contestantMatches.map((cm: any) => ({
         contestant: {
           id: cm.contestant.id,

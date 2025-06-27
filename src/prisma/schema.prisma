@@ -357,8 +357,8 @@ model Match {
 model Group {
   id                   Int               @id @default(autoincrement())
   name                 String            @db.VarChar(255)
-  userId               Int          
-  user                 User              @relation(fields: [userId], references: [id],onDelete:Restrict, onUpdate:Restrict)
+  userId               Int?          
+  user                 User?             @relation(fields: [userId], references: [id],onDelete:Restrict, onUpdate:Restrict)
   matchId              Int              
   match                Match             @relation(fields: [matchId], references: [id],onDelete:Restrict ,onUpdate:Restrict)
   confirmCurrentQuestion Int              

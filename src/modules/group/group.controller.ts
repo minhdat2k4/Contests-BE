@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { CreateGroupInput, GroupQueryInput } from "./group.schema";
+import { CreateGroupInput, GroupQueryInput, CreateBulkGroupsInput } from "./group.schema";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
@@ -341,6 +341,38 @@ export default class GroupController {
         successResponse(
           updatedGroup, 
           `Cập nhật tên nhóm từ "${group.name}" thành "${name}" thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async createBulkGroups(req: Request, res: Response): Promise<void> {
+    try {
+      const input: CreateBulkGroupsInput = req.body;
+      
+      // Validate match exists
+      const match = await prisma.match.findFirst({
+        where: { id: input.matchId },
+      });
+      if (!match) {
+        res.status(404).json(errorResponse("Không tìm thấy trận đấu"));
+        return;
+      }
+
+      // Create bulk groups (empty groups without contestants or judges)
+      const createdGroups = await GroupService.createBulkGroups(input);
+
+      logger.info(`Tạo ${createdGroups.length} nhóm trống thành công cho trận ${match.name}`);
+      res.status(201).json(
+        successResponse(
+          { 
+            groups: createdGroups,
+            createdCount: createdGroups.length 
+          }, 
+          `Tạo thành công ${createdGroups.length} nhóm trống`
         )
       );
     } catch (error) {

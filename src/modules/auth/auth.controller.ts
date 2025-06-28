@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import AuthService from "./auth.service";
 import {
   LoginInput,
@@ -170,6 +173,7 @@ export default class AuthController {
   static async login(req: Request, res: Response): Promise<void> {
     try {
       const input: LoginInput = req.body;
+
       const user = await AuthService.findUserByIdentifier(input.identifier);
       if (!user) {
         logger.error(`Tài khoản ${input.identifier} không tồn tại`);
@@ -214,7 +218,7 @@ export default class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 1000 * 60 * 60,
+        maxAge: 7 * 60 * 60 * 1000, // 7 ngày
       });
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
@@ -355,7 +359,7 @@ export default class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 1000 * 60 * 60, // 1 hour
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
       res.cookie("refreshToken", refreshToken, {
@@ -447,7 +451,7 @@ export default class AuthController {
       res.cookie("accessToken", newAccessToken, {
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 60 * 1000 * 60,
+        maxAge: 7 * 60 * 60 * 1000, // 7 ngày
         secure: process.env.NODE_ENV === "production",
       });
       logger.info(`${payload.username} lấy token mới thành công`);
@@ -457,7 +461,7 @@ export default class AuthController {
       });
     } catch (error) {
       logger.error((error as Error).message);
-      res.status(401).json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async forgotPassword(req: Request, res: Response): Promise<void> {

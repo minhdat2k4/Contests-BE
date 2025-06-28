@@ -45,21 +45,23 @@ app.use(helmet());
 app.use(cookieParser());
 
 // CORS configuration - must be before static files
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+
+const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
+  "http://localhost:5173",
+];
+cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+});
 
 // Static file serving với explicit CORS headers
 app.use(
   "/uploads",
   (req, res, next) => {
     // Set CORS headers for static files
-    res.header("Access-Control-Allow-Origin", process.env.CORS_ORIGIN || "");
+    res.header("Access-Control-Allow-Origin", allowedOrigins);
     res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.header(
       "Access-Control-Allow-Headers",

@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE `about` ADD COLUMN `banner` VARCHAR(255) NULL,
-    ADD COLUMN `logo` VARCHAR(255) NULL;

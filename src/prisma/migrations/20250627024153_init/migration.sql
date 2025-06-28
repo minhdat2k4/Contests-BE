@@ -1,22 +1,35 @@
 -- CreateTable
-CREATE TABLE `Users` (
+CREATE TABLE `users` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `username` CHAR(255) NOT NULL,
     `password` CHAR(255) NOT NULL,
     `email` VARCHAR(255) NOT NULL,
-    `role` ENUM('Admin', 'Judge') NOT NULL,
+    `role` ENUM('Admin', 'Judge', 'Student') NOT NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `token` TEXT NULL,
+    `otpCode` VARCHAR(6) NULL,
+    `otpExpiredAt` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `Users_username_key`(`username`),
-    UNIQUE INDEX `Users_email_key`(`email`),
+    UNIQUE INDEX `users_username_key`(`username`),
+    UNIQUE INDEX `users_email_key`(`email`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Schools` (
+CREATE TABLE `refreshTokens` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `userId` INTEGER NOT NULL,
+    `refreshToken` TEXT NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `expiredAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `schools` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `email` VARCHAR(255) NOT NULL,
@@ -26,13 +39,13 @@ CREATE TABLE `Schools` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `Schools_email_key`(`email`),
-    UNIQUE INDEX `Schools_phone_key`(`phone`),
+    UNIQUE INDEX `schools_email_key`(`email`),
+    UNIQUE INDEX `schools_phone_key`(`phone`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Classes` (
+CREATE TABLE `classes` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `schoolId` INTEGER NOT NULL,
@@ -44,7 +57,7 @@ CREATE TABLE `Classes` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Students` (
+CREATE TABLE `students` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `full_name` VARCHAR(255) NOT NULL,
     `student_code` VARCHAR(12) NULL,
@@ -57,7 +70,7 @@ CREATE TABLE `Students` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `About` (
+CREATE TABLE `about` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `schoolName` VARCHAR(255) NOT NULL,
     `website` VARCHAR(255) NULL,
@@ -65,6 +78,8 @@ CREATE TABLE `About` (
     `email` VARCHAR(255) NULL,
     `fanpage` VARCHAR(255) NULL,
     `mapEmbedCode` TEXT NULL,
+    `logo` JSON NULL,
+    `banner` JSON NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -73,7 +88,7 @@ CREATE TABLE `About` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Question_Topics` (
+CREATE TABLE `question_Topics` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
@@ -84,7 +99,7 @@ CREATE TABLE `Question_Topics` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Question_Packages` (
+CREATE TABLE `question_Packages` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
@@ -95,17 +110,15 @@ CREATE TABLE `Question_Packages` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Questions` (
+CREATE TABLE `questions` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `intro` VARCHAR(255) NULL,
     `defaultTime` INTEGER NOT NULL,
-    `remainingTime` INTEGER NULL,
-    `questionType` ENUM('multiple_choice', 'essay') NOT NULL,
-    `plainText` TEXT NOT NULL,
+    `questionType` ENUM('multiple_choice', 'essay', 'image', 'audio', 'video') NOT NULL,
     `content` TEXT NOT NULL,
     `questionMedia` JSON NULL,
     `options` JSON NULL,
-    `correct_answer` TEXT NOT NULL,
+    `correctAnswer` TEXT NOT NULL,
     `mediaAnswer` JSON NULL,
     `score` INTEGER NOT NULL DEFAULT 1,
     `difficulty` ENUM('Alpha', 'Beta', 'Rc', 'Gold') NOT NULL,
@@ -119,7 +132,7 @@ CREATE TABLE `Questions` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Question_Details` (
+CREATE TABLE `question_Details` (
     `questionId` INTEGER NOT NULL,
     `questionPackageId` INTEGER NOT NULL,
     `questionOrder` INTEGER NOT NULL,
@@ -131,7 +144,7 @@ CREATE TABLE `Question_Details` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Contests` (
+CREATE TABLE `contests` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `slug` VARCHAR(255) NOT NULL,
@@ -140,25 +153,36 @@ CREATE TABLE `Contests` (
     `location` VARCHAR(255) NOT NULL,
     `startTime` DATETIME(3) NOT NULL,
     `endTime` DATETIME(3) NOT NULL,
-    `logo` VARCHAR(255) NULL,
-    `background` VARCHAR(255) NULL,
-    `media` VARCHAR(255) NULL,
     `slogan` VARCHAR(255) NULL,
     `status` ENUM('upcoming', 'ongoing', 'finished') NOT NULL DEFAULT 'upcoming',
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `Contests_slug_key`(`slug`),
+    UNIQUE INDEX `contests_slug_key`(`slug`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Rounds` (
+CREATE TABLE `media` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `url` VARCHAR(255) NOT NULL,
+    `type` ENUM('logo', 'background', 'images') NOT NULL,
+    `contestId` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `rounds` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `index` INTEGER NOT NULL,
     `contestId` INTEGER NOT NULL,
+    `startTime` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `endTime` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -167,25 +191,29 @@ CREATE TABLE `Rounds` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Matches` (
+CREATE TABLE `matches` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `startTime` DATETIME(3) NOT NULL,
     `endTime` DATETIME(3) NOT NULL,
+    `slug` VARCHAR(191) NULL,
+    `remainingTime` INTEGER NULL,
     `status` ENUM('upcoming', 'ongoing', 'finished') NOT NULL DEFAULT 'upcoming',
     `currentQuestion` INTEGER NOT NULL,
     `questionPackageId` INTEGER NOT NULL,
     `contestId` INTEGER NOT NULL,
     `roundId` INTEGER NOT NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
+    `studentId` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    UNIQUE INDEX `matches_slug_key`(`slug`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Groups` (
+CREATE TABLE `groups` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `userId` INTEGER NOT NULL,
@@ -198,9 +226,8 @@ CREATE TABLE `Groups` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Contestants` (
+CREATE TABLE `contestants` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(255) NOT NULL,
     `contestId` INTEGER NOT NULL,
     `studentId` INTEGER NOT NULL,
     `roundId` INTEGER NOT NULL,
@@ -212,12 +239,13 @@ CREATE TABLE `Contestants` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Contestant_Matches` (
+CREATE TABLE `contestant_Matches` (
     `contestantId` INTEGER NOT NULL,
     `matchId` INTEGER NOT NULL,
     `groupId` INTEGER NOT NULL,
     `registrationNumber` INTEGER NOT NULL,
     `status` ENUM('not_started', 'in_progress', 'confirmed1', 'confirmed2', 'eliminated', 'rescued', 'banned', 'completed') NOT NULL DEFAULT 'not_started',
+    `eliminatedAtQuestionOrder` INTEGER NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -226,7 +254,7 @@ CREATE TABLE `Contestant_Matches` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Results` (
+CREATE TABLE `results` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `contestant_id` INTEGER NOT NULL,
@@ -240,16 +268,16 @@ CREATE TABLE `Results` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Rescues` (
+CREATE TABLE `rescues` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `rescueType` ENUM('resurrected', 'lifelineUsed') NOT NULL,
     `questionFrom` INTEGER NOT NULL,
     `questionTo` INTEGER NOT NULL,
-    `studentIds` JSON NOT NULL,
-    `supportAnswers` JSON NOT NULL,
-    `remainingContestants` INTEGER NULL,
-    `maxStudent` INTEGER NULL,
+    `studentIds` JSON NULL,
+    `supportAnswers` JSON NULL,
+    `remainingContestants` INTEGER NOT NULL,
+    `questionOrder` INTEGER NULL,
     `index` INTEGER NOT NULL,
     `status` ENUM('notUsed', 'used', 'passed') NOT NULL,
     `match_id` INTEGER NOT NULL,
@@ -260,7 +288,7 @@ CREATE TABLE `Rescues` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Awards` (
+CREATE TABLE `awards` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `contest_id` INTEGER NOT NULL,
@@ -269,17 +297,17 @@ CREATE TABLE `Awards` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `Awards_type_key`(`type`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Sponsors` (
+CREATE TABLE `sponsors` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `logo` VARCHAR(255) NULL,
     `images` VARCHAR(255) NULL,
     `videos` VARCHAR(255) NOT NULL,
+    `contestId` INTEGER NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -287,11 +315,12 @@ CREATE TABLE `Sponsors` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Class_Videos` (
+CREATE TABLE `class_Videos` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
     `slogan` VARCHAR(255) NULL,
     `classId` INTEGER NOT NULL,
+    `contestId` INTEGER NULL,
     `videos` VARCHAR(191) NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -300,87 +329,103 @@ CREATE TABLE `Class_Videos` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Screen_Controls` (
+CREATE TABLE `screen_Controls` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `controlKey` ENUM('background', 'question', 'questionInfo', 'answer', 'matchDiagram', 'explanation', 'firstPrize', 'secondPrize', 'thirdPrize', 'fourthPrize', 'impressiveVideo', 'excellentVideo', 'allPrize', 'topWin', 'listEliminated', 'listRescued', 'video', 'audio', 'image') NOT NULL,
-    `controlValue` ENUM('start', 'pause', 'reset', 'zoomIn', 'zoomOut') NOT NULL,
+    `controlKey` ENUM('qrcode', 'background', 'question', 'questionIntro', 'questionInfo', 'answer', 'matchDiagram', 'explanation', 'firstPrize', 'secondPrize', 'thirdPrize', 'fourthPrize', 'impressiveVideo', 'excellentVideo', 'allPrize', 'topWin', 'listEliminated', 'listRescued', 'video', 'audio', 'image') NOT NULL DEFAULT 'background',
+    `controlValue` ENUM('start', 'pause', 'reset', 'zoomIn', 'zoomOut') NULL,
     `matchId` INTEGER NOT NULL,
-    `media` VARCHAR(255) NOT NULL,
+    `media` VARCHAR(255) NULL,
+    `value` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `Screen_Controls_matchId_key`(`matchId`),
+    UNIQUE INDEX `screen_Controls_matchId_key`(`matchId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `Classes` ADD CONSTRAINT `Classes_schoolId_fkey` FOREIGN KEY (`schoolId`) REFERENCES `Schools`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `refreshTokens` ADD CONSTRAINT `refreshTokens_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Students` ADD CONSTRAINT `Students_classId_fkey` FOREIGN KEY (`classId`) REFERENCES `Classes`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `classes` ADD CONSTRAINT `classes_schoolId_fkey` FOREIGN KEY (`schoolId`) REFERENCES `schools`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Questions` ADD CONSTRAINT `Questions_questionTopicId_fkey` FOREIGN KEY (`questionTopicId`) REFERENCES `Question_Topics`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `students` ADD CONSTRAINT `students_classId_fkey` FOREIGN KEY (`classId`) REFERENCES `classes`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Question_Details` ADD CONSTRAINT `Question_Details_questionId_fkey` FOREIGN KEY (`questionId`) REFERENCES `Questions`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `questions` ADD CONSTRAINT `questions_questionTopicId_fkey` FOREIGN KEY (`questionTopicId`) REFERENCES `question_Topics`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Question_Details` ADD CONSTRAINT `Question_Details_questionPackageId_fkey` FOREIGN KEY (`questionPackageId`) REFERENCES `Question_Packages`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `question_Details` ADD CONSTRAINT `question_Details_questionId_fkey` FOREIGN KEY (`questionId`) REFERENCES `questions`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Rounds` ADD CONSTRAINT `Rounds_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `Contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `question_Details` ADD CONSTRAINT `question_Details_questionPackageId_fkey` FOREIGN KEY (`questionPackageId`) REFERENCES `question_Packages`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Matches` ADD CONSTRAINT `Matches_questionPackageId_fkey` FOREIGN KEY (`questionPackageId`) REFERENCES `Question_Packages`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `media` ADD CONSTRAINT `media_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `contests`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Matches` ADD CONSTRAINT `Matches_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `Contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `rounds` ADD CONSTRAINT `rounds_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Matches` ADD CONSTRAINT `Matches_roundId_fkey` FOREIGN KEY (`roundId`) REFERENCES `Rounds`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `matches` ADD CONSTRAINT `matches_questionPackageId_fkey` FOREIGN KEY (`questionPackageId`) REFERENCES `question_Packages`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Groups` ADD CONSTRAINT `Groups_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `Users`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `matches` ADD CONSTRAINT `matches_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Groups` ADD CONSTRAINT `Groups_matchId_fkey` FOREIGN KEY (`matchId`) REFERENCES `Matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `matches` ADD CONSTRAINT `matches_roundId_fkey` FOREIGN KEY (`roundId`) REFERENCES `rounds`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Contestants` ADD CONSTRAINT `Contestants_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `Contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `matches` ADD CONSTRAINT `matches_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Contestants` ADD CONSTRAINT `Contestants_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `Students`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `groups` ADD CONSTRAINT `groups_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Contestants` ADD CONSTRAINT `Contestants_roundId_fkey` FOREIGN KEY (`roundId`) REFERENCES `Rounds`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `groups` ADD CONSTRAINT `groups_matchId_fkey` FOREIGN KEY (`matchId`) REFERENCES `matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Contestant_Matches` ADD CONSTRAINT `Contestant_Matches_contestantId_fkey` FOREIGN KEY (`contestantId`) REFERENCES `Contestants`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `contestants` ADD CONSTRAINT `contestants_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Contestant_Matches` ADD CONSTRAINT `Contestant_Matches_matchId_fkey` FOREIGN KEY (`matchId`) REFERENCES `Matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `contestants` ADD CONSTRAINT `contestants_studentId_fkey` FOREIGN KEY (`studentId`) REFERENCES `students`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Contestant_Matches` ADD CONSTRAINT `Contestant_Matches_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `Groups`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `contestants` ADD CONSTRAINT `contestants_roundId_fkey` FOREIGN KEY (`roundId`) REFERENCES `rounds`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Results` ADD CONSTRAINT `Results_contestant_id_fkey` FOREIGN KEY (`contestant_id`) REFERENCES `Contestants`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `contestant_Matches` ADD CONSTRAINT `contestant_Matches_contestantId_fkey` FOREIGN KEY (`contestantId`) REFERENCES `contestants`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Results` ADD CONSTRAINT `Results_match_id_fkey` FOREIGN KEY (`match_id`) REFERENCES `Matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `contestant_Matches` ADD CONSTRAINT `contestant_Matches_matchId_fkey` FOREIGN KEY (`matchId`) REFERENCES `matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Rescues` ADD CONSTRAINT `Rescues_match_id_fkey` FOREIGN KEY (`match_id`) REFERENCES `Matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `contestant_Matches` ADD CONSTRAINT `contestant_Matches_groupId_fkey` FOREIGN KEY (`groupId`) REFERENCES `groups`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Awards` ADD CONSTRAINT `Awards_contest_id_fkey` FOREIGN KEY (`contest_id`) REFERENCES `Contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `results` ADD CONSTRAINT `results_contestant_id_fkey` FOREIGN KEY (`contestant_id`) REFERENCES `contestants`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Awards` ADD CONSTRAINT `Awards_contestant_id_fkey` FOREIGN KEY (`contestant_id`) REFERENCES `Contestants`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `results` ADD CONSTRAINT `results_match_id_fkey` FOREIGN KEY (`match_id`) REFERENCES `matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Class_Videos` ADD CONSTRAINT `Class_Videos_classId_fkey` FOREIGN KEY (`classId`) REFERENCES `Classes`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `rescues` ADD CONSTRAINT `rescues_match_id_fkey` FOREIGN KEY (`match_id`) REFERENCES `matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `Screen_Controls` ADD CONSTRAINT `Screen_Controls_matchId_fkey` FOREIGN KEY (`matchId`) REFERENCES `Matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `awards` ADD CONSTRAINT `awards_contest_id_fkey` FOREIGN KEY (`contest_id`) REFERENCES `contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE `awards` ADD CONSTRAINT `awards_contestant_id_fkey` FOREIGN KEY (`contestant_id`) REFERENCES `contestants`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE `sponsors` ADD CONSTRAINT `sponsors_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE `class_Videos` ADD CONSTRAINT `class_Videos_classId_fkey` FOREIGN KEY (`classId`) REFERENCES `classes`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE `class_Videos` ADD CONSTRAINT `class_Videos_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE `screen_Controls` ADD CONSTRAINT `screen_Controls_matchId_fkey` FOREIGN KEY (`matchId`) REFERENCES `matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;

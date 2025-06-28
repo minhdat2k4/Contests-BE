@@ -22,6 +22,11 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
 };
 
 // Start server
+
+const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
+  "http://localhost:5173",
+];
+
 const startServer = async (): Promise<void> => {
   try {
     // Connect to database
@@ -29,12 +34,12 @@ const startServer = async (): Promise<void> => {
 
     // Tạo server HTTP từ app Express
     const httpServer = http.createServer(app);
-    // sss
+    // Socket.IO initialization
     // Khởi tạo Socket.IO và gắn vào server
     initializeSocketIO(
       new Server(httpServer, {
         cors: {
-          origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+          origin: allowedOrigins,
           methods: ["GET", "POST"],
           credentials: true,
         },

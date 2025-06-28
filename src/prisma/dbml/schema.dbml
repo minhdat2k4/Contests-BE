@@ -213,7 +213,7 @@ Table groups {
   id Int [pk, increment]
   name String [not null]
   userId Int
-  user Users
+  user users
   matchId Int [not null]
   match matches [not null]
   confirmCurrentQuestion Int [not null]

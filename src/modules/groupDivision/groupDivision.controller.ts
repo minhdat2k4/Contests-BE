@@ -235,14 +235,15 @@ export default class GroupDivisionController {
         throw new Error("Match ID không hợp lệ");
       }
 
-      if (!groupName || !judgeId) {
-        throw new Error("Tên nhóm và ID trọng tài là bắt buộc");
+      if (!groupName) {
+        throw new Error("Tên nhóm là bắt buộc");
       }
 
+      // judgeId có thể undefined
       const newGroup = await GroupDivisionService.createGroup(
         matchId,
         groupName,
-        judgeId
+        judgeId // có thể undefined
       );
 
       logger.info(`Tạo nhóm ${groupName} cho trận đấu ${matchId} thành công`);
@@ -266,7 +267,7 @@ export default class GroupDivisionController {
 
       const result = await GroupDivisionService.deleteGroup(groupId);
 
-      const message = result.deletedContestantsCount > 0 
+      const message = result.deletedContestantsCount > 0
         ? `Xóa nhóm và ${result.deletedContestantsCount} thí sinh thành công`
         : "Xóa nhóm thành công";
 

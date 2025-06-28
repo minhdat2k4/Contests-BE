@@ -372,7 +372,7 @@ export default class GroupDivisionService {
   static async createGroup(
     matchId: number,
     groupName: string,
-    judgeId: number
+    judgeId?: number
   ): Promise<any> {
     return await prisma.$transaction(async tx => {
       // 1. Kiểm tra trận đấu có tồn tại không
@@ -384,59 +384,62 @@ export default class GroupDivisionService {
         throw new Error("Không tìm thấy trận đấu");
       }
 
-      // 2. Kiểm tra trọng tài có tồn tại và có role Judge không
-      const judge = await tx.user.findFirst({
-        where: {
-          id: judgeId,
-          role: Role.Judge,
-          isActive: true,
-        },
-      });
-
-      if (!judge) {
-        throw new Error(`Không tìm thấy trọng tài với ID ${judgeId}`);
-      }
-
-      // 3. Kiểm tra trọng tài có bị trùng trong cùng trận đấu không
-      const existingGroupInMatch = await tx.group.findFirst({
-        where: {
-          userId: judgeId,
-          matchId: matchId,
-        },
-      });
-
-      if (existingGroupInMatch) {
-        throw new Error(
-          `Trọng tài ${judge.username} đã được phân vào nhóm ${existingGroupInMatch.name} trong trận đấu này`
-        );
-      }
-
-      // 4. Kiểm tra trọng tài có bị trùng thời gian với trận khác không
-      const conflictGroup = await tx.group.findFirst({
-        where: {
-          userId: judgeId,
-          NOT: { matchId: matchId },
-          match: {
-            AND: [
-              { startTime: { lt: match.endTime } },
-              { endTime: { gt: match.startTime } },
-            ],
+      // Nếu có judgeId thì kiểm tra, nếu không thì bỏ qua
+      let judge = null;
+      if (judgeId) {
+        judge = await tx.user.findFirst({
+          where: {
+            id: judgeId,
+            role: Role.Judge,
+            isActive: true,
           },
-        },
-        include: { match: true },
-      });
+        });
 
-      if (conflictGroup) {
-        throw new Error(
-          `Trọng tài ${judge.username} đang có nhóm khác ở trận '${conflictGroup.match.name}' trùng thời gian`
-        );
+        if (!judge) {
+          throw new Error(`Không tìm thấy trọng tài với ID ${judgeId}`);
+        }
+
+        // Kiểm tra trọng tài có bị trùng trong cùng trận đấu không
+        const existingGroupInMatch = await tx.group.findFirst({
+          where: {
+            userId: judgeId,
+            matchId: matchId,
+          },
+        });
+
+        if (existingGroupInMatch) {
+          throw new Error(
+            `Trọng tài ${judge.username} đã được phân vào nhóm ${existingGroupInMatch.name} trong trận đấu này`
+          );
+        }
+
+        // Kiểm tra trọng tài có bị trùng thời gian với trận khác không
+        const conflictGroup = await tx.group.findFirst({
+          where: {
+            userId: judgeId,
+            NOT: { matchId: matchId },
+            match: {
+              AND: [
+                { startTime: { lt: match.endTime } },
+                { endTime: { gt: match.startTime } },
+              ],
+            },
+          },
+          include: { match: true },
+        });
+
+        if (conflictGroup) {
+          throw new Error(
+            `Trọng tài ${judge.username} đang có nhóm khác ở trận '${conflictGroup.match.name}' trùng thời gian`
+          );
+        }
       }
 
-      // 5. Tạo nhóm mới
+      // 5. Tạo nhóm mới (userId có thể là undefined)
       const newGroup = await tx.group.create({
         data: {
           name: groupName,
-          userId: judgeId,
+          userId: judgeId ?? null, // <-- nếu không có thì null
           matchId: matchId,
           confirmCurrentQuestion: 0,
         },

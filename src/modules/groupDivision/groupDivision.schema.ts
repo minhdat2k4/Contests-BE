@@ -39,10 +39,18 @@ export const assignContestantsToGroupsSchema = z.object({
   ).min(1, "Phải có ít nhất 1 nhóm")
 });
 
+export const CreateGroupsSchema = z.object({
+  name: z.string().min(1, "Vui lòng nhập tên nhóm"),
+  userId: z.number().optional(), // <-- sửa thành optional
+  matchId: z.number(),
+  confirmCurrentQuestion: z.number(),
+});
+
 export type DivideGroupsInput = z.infer<typeof divideGroupsSchema>;
 export type GetAvailableContestantsInput = z.infer<typeof getAvailableContestantsSchema>;
 export type GetAvailableJudgesInput = z.infer<typeof getAvailableJudgesSchema>;
 export type AssignContestantsToGroupsInput = z.infer<typeof assignContestantsToGroupsSchema>;
+export type CreateGroupsInput = z.infer<typeof CreateGroupsSchema>;
 
 // Types cho response
 export interface ContestantInfo {

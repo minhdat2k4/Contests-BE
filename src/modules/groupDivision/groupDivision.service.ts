@@ -621,4 +621,32 @@ export default class GroupDivisionService {
       data: { status },
     });
   }
+
+  /**
+   * Phân bổ thí sinh vào các nhóm đã có sẵn (theo groupId, contestantIds)
+   */
+  static async assignContestantsToGroups(matchId: number, input: import("./groupDivision.schema").AssignContestantsToGroupsInput) {
+    return await prisma.$transaction(async tx => {
+      // Xóa contestantMatch cũ của các groupId này
+      const groupIds = input.groups.map(g => g.groupId);
+      await tx.contestantMatch.deleteMany({
+        where: { groupId: { in: groupIds } }
+      });
+
+      // Tạo lại contestantMatch mới
+      for (const group of input.groups) {
+        for (let i = 0; i < group.contestantIds.length; i++) {
+          await tx.contestantMatch.create({
+            data: {
+              groupId: group.groupId,
+              contestantId: group.contestantIds[i],
+              matchId,
+              registrationNumber: i + 1
+            }
+          });
+        }
+      }
+      return { success: true };
+    });
+  }
 }

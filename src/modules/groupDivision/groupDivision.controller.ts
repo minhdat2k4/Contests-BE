@@ -7,6 +7,7 @@ import {
   divideGroupsSchema,
   getAvailableContestantsSchema,
   getAvailableJudgesSchema,
+  assignContestantsToGroupsSchema,
 } from "./groupDivision.schema";
 
 export default class GroupDivisionController {
@@ -323,6 +324,22 @@ export default class GroupDivisionController {
 
       logger.info(`Cập nhật tên nhóm ${groupId} thành công`);
       res.json(successResponse(updatedGroup, "Cập nhật tên nhóm thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  /**
+   * Phân bổ thí sinh vào các nhóm đã có sẵn (theo groupId, contestantIds)
+   */
+  static async assignContestantsToGroups(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      if (!matchId) throw new Error("Match ID không hợp lệ");
+      const input = assignContestantsToGroupsSchema.parse(req.body);
+      await GroupDivisionService.assignContestantsToGroups(matchId, input);
+      res.json(successResponse(null, "Phân bổ thí sinh vào nhóm thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

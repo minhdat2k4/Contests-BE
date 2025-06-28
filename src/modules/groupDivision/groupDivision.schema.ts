@@ -29,9 +29,20 @@ export const getAvailableJudgesSchema = z.object({
   limit: z.number().positive().max(100).default(50)
 });
 
+// Schema cho việc phân bổ thí sinh vào nhóm đã có sẵn
+export const assignContestantsToGroupsSchema = z.object({
+  groups: z.array(
+    z.object({
+      groupId: z.number().positive("Group ID phải là số dương"),
+      contestantIds: z.array(z.number().positive("Contestant ID phải là số dương"))
+    })
+  ).min(1, "Phải có ít nhất 1 nhóm")
+});
+
 export type DivideGroupsInput = z.infer<typeof divideGroupsSchema>;
 export type GetAvailableContestantsInput = z.infer<typeof getAvailableContestantsSchema>;
 export type GetAvailableJudgesInput = z.infer<typeof getAvailableJudgesSchema>;
+export type AssignContestantsToGroupsInput = z.infer<typeof assignContestantsToGroupsSchema>;
 
 // Types cho response
 export interface ContestantInfo {

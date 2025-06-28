@@ -23,7 +23,7 @@ export const confirmCurrentQuestion = z.object({
 
 export type StatusUpdateData = z.infer<typeof statusUpdateSchema>;
 
-export const registerUpdateStatusByAdminEvents = (
+export const registerUpdateStatusByJudgeEvents = (
   io: Server,
   socket: Socket
 ) => {

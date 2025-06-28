@@ -12,6 +12,7 @@ import { registerMatchEvents } from "./events/match.events";
 import { registerAudienceEvents } from "./events/audience.events";
 import { timerService } from "./services/timer.service";
 import { prisma } from "@/config/database";
+import { registerOnlineControlNamespaceEvents } from "./namespaces/onlineControl.namespace";
 
 // Extend Socket interface to include user and contestant info
 interface AuthenticatedSocket extends Socket {
@@ -227,5 +228,16 @@ export const initializeSocketIO = (io: Server) => {
     await registerStudentNamespaceEvents(io, authSocket);
   });
 
-  logger.info("✅ Socket.IO server initialized with /match-control and /student namespaces.");
+  // Namespace mới /online-control
+  const onlineControlNamespace = io.of("/online-control");
+  onlineControlNamespace.use(authMiddleware);
+  
+  onlineControlNamespace.on("connection", async (socket: Socket) => {
+    const authSocket = socket as AuthenticatedSocket;
+    
+    // Register all online control namespace events using the dedicated namespace handler
+    await registerOnlineControlNamespaceEvents(io, authSocket);
+  });
+
+  logger.info("✅ Socket.IO server initialized with /match-control, /student, and /online-control namespaces.");
 };

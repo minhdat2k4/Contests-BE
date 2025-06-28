@@ -55,13 +55,33 @@ export const GroupsQuerySchema = z.object({
     .optional(),
 });
 
+export const CreateBulkGroupsSchema = z.object({
+  matchId: z.number({
+    required_error: "Match ID là bắt buộc",
+    invalid_type_error: "Match ID phải là số",
+  }).int().positive("Match ID phải là số nguyên dương"),
+  groupNames: z.array(z.string().min(1, "Tên nhóm không được rỗng"))
+    .min(1, "Phải có ít nhất 1 tên nhóm")
+    .max(50, "Không thể tạo quá 50 nhóm cùng lúc")
+    .refine(
+      (names) => {
+        const trimmedNames = names.map(name => name.trim());
+        const uniqueNames = new Set(trimmedNames);
+        return uniqueNames.size === trimmedNames.length;
+      },
+      {
+        message: "Không được có tên nhóm trùng lặp"
+      }
+    )
+});
+
 export type GroupByIdType = {
   id: number;
   name: string;
   confirmCurrentQuestion: number;
   matchId: number;
-  userId: number;
-  user: { username: string };
+  userId: number | null;
+  user: { username: string } | null;
   match: { name: string };
 };
 
@@ -75,4 +95,5 @@ export type GroupsIdParams = z.infer<typeof GroupsIdShema>;
 export type UpdateGroupInput = z.infer<typeof UpdateGroupsSchema>;
 export type GroupQueryInput = z.infer<typeof GroupsQuerySchema>;
 export type CreateGroupInput = z.infer<typeof CreateGroupsSchema>;
+export type CreateBulkGroupsInput = z.infer<typeof CreateBulkGroupsSchema>;
 export type GrouType = z.infer<typeof GroupShema>;

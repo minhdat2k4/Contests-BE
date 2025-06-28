@@ -5,6 +5,7 @@ import {
   GroupQueryInput,
   GrouType,
   GroupByIdType,
+  CreateBulkGroupsInput,
 } from "./group.schema";
 import { Group } from "@prisma/client";
 
@@ -125,6 +126,55 @@ export default class GroupService {
       data: {
         ...data,
       },
+    });
+  }
+
+  static async createBulkGroups(data: CreateBulkGroupsInput): Promise<Group[]> {
+    const { matchId, groupNames } = data;
+    
+    // Kiểm tra match có tồn tại không
+    const match = await prisma.match.findUnique({
+      where: { id: matchId }
+    });
+    
+    if (!match) {
+      throw new Error("Trận đấu không tồn tại");
+    }
+
+    // Kiểm tra trùng tên nhóm trong cùng trận đấu
+    const existingGroups = await prisma.group.findMany({
+      where: {
+        matchId: matchId,
+        name: {
+          in: groupNames.map(name => name.trim())
+        }
+      }
+    });
+
+    if (existingGroups.length > 0) {
+      const duplicateNames = existingGroups.map(g => g.name);
+      throw new Error(`Các tên nhóm sau đã tồn tại trong trận đấu: ${duplicateNames.join(', ')}`);
+    }
+
+    // Tạo groups hàng loạt (chỉ tạo nhóm trống, không gán judge)
+    const groupsData = groupNames.map(name => ({
+      name: name.trim(),
+      matchId: matchId,
+      confirmCurrentQuestion: 0,
+      // Không gán userId (judge) để để trống
+    }));
+
+    return await prisma.$transaction(async (tx) => {
+      const createdGroups: Group[] = [];
+      
+      for (const groupData of groupsData) {
+        const group = await tx.group.create({
+          data: groupData
+        });
+        createdGroups.push(group);
+      }
+      
+      return createdGroups;
     });
   }
 

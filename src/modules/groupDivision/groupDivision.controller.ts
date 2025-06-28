@@ -7,6 +7,7 @@ import {
   divideGroupsSchema,
   getAvailableContestantsSchema,
   getAvailableJudgesSchema,
+  assignContestantsToGroupsSchema,
 } from "./groupDivision.schema";
 
 export default class GroupDivisionController {
@@ -234,14 +235,15 @@ export default class GroupDivisionController {
         throw new Error("Match ID không hợp lệ");
       }
 
-      if (!groupName || !judgeId) {
-        throw new Error("Tên nhóm và ID trọng tài là bắt buộc");
+      if (!groupName) {
+        throw new Error("Tên nhóm là bắt buộc");
       }
 
+      // judgeId có thể undefined
       const newGroup = await GroupDivisionService.createGroup(
         matchId,
         groupName,
-        judgeId
+        judgeId // có thể undefined
       );
 
       logger.info(`Tạo nhóm ${groupName} cho trận đấu ${matchId} thành công`);
@@ -265,7 +267,7 @@ export default class GroupDivisionController {
 
       const result = await GroupDivisionService.deleteGroup(groupId);
 
-      const message = result.deletedContestantsCount > 0 
+      const message = result.deletedContestantsCount > 0
         ? `Xóa nhóm và ${result.deletedContestantsCount} thí sinh thành công`
         : "Xóa nhóm thành công";
 
@@ -323,6 +325,22 @@ export default class GroupDivisionController {
 
       logger.info(`Cập nhật tên nhóm ${groupId} thành công`);
       res.json(successResponse(updatedGroup, "Cập nhật tên nhóm thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  /**
+   * Phân bổ thí sinh vào các nhóm đã có sẵn (theo groupId, contestantIds)
+   */
+  static async assignContestantsToGroups(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      if (!matchId) throw new Error("Match ID không hợp lệ");
+      const input = assignContestantsToGroupsSchema.parse(req.body);
+      await GroupDivisionService.assignContestantsToGroups(matchId, input);
+      res.json(successResponse(null, "Phân bổ thí sinh vào nhóm thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

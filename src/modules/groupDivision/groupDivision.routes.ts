@@ -84,4 +84,10 @@ router.get(
   GroupDivisionController.getClassesBySchool
 );
 
+// Phân bổ thí sinh vào các nhóm đã có sẵn (theo groupId, contestantIds)
+router.post(
+  "/matches/:matchId/assign-contestants-to-groups",
+  GroupDivisionController.assignContestantsToGroups
+);
+
 export default router;

@@ -22,6 +22,7 @@ import { sendOtp } from "@/utils/email";
 import bcrypt from "bcrypt";
 
 import { prisma } from "@/config/database";
+import { ContestStatus } from "@prisma/client";
 
 export default class AuthController {
   static async register(req: Request, res: Response): Promise<void> {
@@ -271,45 +272,38 @@ export default class AuthController {
         return;
       }
 
-      // Get contestant information
+      // Get student information using the direct relationship
+      const student = await prisma.student.findUnique({
+        where: { userId: user.id },
+        include: { class: true },
+      });
+
+      if (!student) {
+        logger.error(`Không tìm thấy thông tin Student cho User ID: ${user.id}`);
+        res.status(400).json(errorResponse("Không tìm thấy thông tin thí sinh"));
+        return;
+      }
+
+      if (!student.isActive) {
+        logger.error(`Student ID ${student.id} đã bị vô hiệu hóa`);
+        res.status(400).json(errorResponse("Tài khoản thí sinh đã bị vô hiệu hóa"));
+        return;
+      }
+
+      // Tìm thông tin thí sinh trong cuộc thi
       const contestant = await prisma.contestant.findFirst({
         where: {
-          student: {
-            id: user.id,
-          },
+          studentId: student.id,
+          contest: { status: { in: [ContestStatus.ongoing, ContestStatus.upcoming, ContestStatus.finished] } },
         },
         include: {
-          contest: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              status: true,
-            },
-          },
-          student: {
-            select: {
-              id: true,
-              fullName: true,
-              studentCode: true,
-            },
-          },
-          round: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
+          contest: true,
         },
       });
 
       if (!contestant) {
-        logger.error(`Không tìm thấy thông tin thí sinh cho user ${user.id}`);
-        res
-          .status(400)
-          .json(
-            validateData("identifier", "Không tìm thấy thông tin thí sinh")
-          );
+        logger.error(`Không tìm thấy thông tin Contestant cho Student ID: ${student.id}`);
+        res.status(400).json(errorResponse("Không tìm thấy thông tin thí sinh trong cuộc thi"));
         return;
       }
 
@@ -372,18 +366,20 @@ export default class AuthController {
       const responseData = {
         role: user.role,
         accessToken,
-        contestantInfo: {
+        contestant: {
           id: contestant.id,
-          status: contestant.status,
-          student: contestant.student,
-          contest: contestant.contest,
-          round: contestant.round,
-          activeMatches: activeMatches,
+          fullName: student.fullName,
+          studentCode: student.studentCode,
+          class: student.class?.name || null,
+          contestId: contestant.contestId,
         },
-        socketInfo: {
-          namespace: "/match-control",
-          instructions: "Use this token to connect to Socket.IO",
+        contest: {
+          id: contestant.contest.id,
+          name: contestant.contest.name,
+          slug: contestant.contest.slug,
         },
+        matches: activeMatches,
+        socket: `student-${student.id}`,
       };
 
       res.json(successResponse(responseData, "Đăng nhập thí sinh thành công"));

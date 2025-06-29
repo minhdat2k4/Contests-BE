@@ -10,6 +10,8 @@ import {
   ResultListResponse,
   BatchDeleteResult,
   GetResultsByContestSlugQuery,
+  SubmitAnswerData,
+  SubmitAnswerResponse,
 } from "./result.schema";
 
 export class ResultService {
@@ -810,6 +812,287 @@ export class ResultService {
       }
       throw new CustomError(
         "Lỗi khi lấy danh sách kết quả theo cuộc thi",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Submit answer for student (API version of socket submit)
+   */
+  async submitAnswer(
+    contestantId: number,
+    data: SubmitAnswerData
+  ): Promise<SubmitAnswerResponse> {
+    try {
+      console.log('🚀 [API SUBMIT] ===== XỬ LÝ SUBMIT ANSWER QUA API =====');
+      console.log('📋 [API SUBMIT] Thông tin submit:', {
+        contestantId,
+        matchId: data.matchId,
+        questionOrder: data.questionOrder,
+        answer: data.answer.substring(0, 50) + '...',
+        submittedAt: data.submittedAt
+      });
+
+      // 1. Kiểm tra contestant tồn tại và trạng thái
+      const contestant = await this.prisma.contestant.findUnique({
+        where: { id: contestantId },
+        select: { 
+          id: true, 
+          status: true,
+          student: {
+            select: { fullName: true, studentCode: true }
+          }
+        }
+      });
+
+      if (!contestant) {
+        throw new CustomError(
+          "Thí sinh không tồn tại",
+          404,
+          ERROR_CODES.CONTESTANT_NOT_FOUND
+        );
+      }
+
+      console.log('✅ [API SUBMIT] Thông tin contestant:', {
+        id: contestant.id,
+        status: contestant.status,
+        fullName: contestant.student?.fullName
+      });
+
+      // 2. Kiểm tra nếu thí sinh đã bị loại - CHỈ CẢNH BÁO, KHÔNG CHẶN
+      if (contestant.status === "eliminate") {
+        console.log('⚠️ [API SUBMIT] Contestant đã bị eliminate, nhưng vẫn cho phép xem kết quả câu đã trả lời');
+      }
+
+      // 3. Kiểm tra match tồn tại và active
+      const match = await this.prisma.match.findUnique({
+        where: { id: data.matchId },
+        include: {
+          round: {
+            include: {
+              contest: true
+            }
+          }
+        }
+      });
+
+      if (!match) {
+        throw new CustomError(
+          "Trận đấu không tồn tại",
+          404,
+          ERROR_CODES.MATCH_NOT_FOUND
+        );
+      }
+
+      console.log('✅ [API SUBMIT] Thông tin match:', {
+        id: match.id,
+        name: match.name,
+        status: match.status,
+        currentQuestion: match.currentQuestion
+      });
+
+      if (match.status !== "ongoing") {
+        return {
+          success: false,
+          message: "Trận đấu không đang diễn ra"
+        };
+      }
+
+      // 4. Lấy thông tin câu hỏi từ QuestionDetail
+      const questionDetail = await this.prisma.questionDetail.findFirst({
+        where: {
+          questionPackageId: match.questionPackageId,
+          questionOrder: data.questionOrder,
+          isActive: true
+        },
+        include: {
+          question: true
+        }
+      });
+
+      if (!questionDetail) {
+        throw new CustomError(
+          "Câu hỏi không tồn tại",
+          404,
+          ERROR_CODES.QUESTION_NOT_FOUND
+        );
+      }
+
+      console.log('✅ [API SUBMIT] Thông tin câu hỏi:', {
+        questionId: questionDetail.question.id,
+        questionType: questionDetail.question.questionType,
+        correctAnswer: questionDetail.question.correctAnswer?.substring(0, 30) + '...'
+      });
+
+      // 5. Kiểm tra đã trả lời chưa
+      const existingResult = await this.prisma.result.findFirst({
+        where: {
+          contestantId: contestantId,
+          matchId: data.matchId,
+          questionOrder: data.questionOrder
+        }
+      });
+
+      if (existingResult) {
+        console.log('⚠️ [API SUBMIT] Đã trả lời câu hỏi này rồi');
+        return {
+          success: false,
+          message: "Bạn đã trả lời câu hỏi này rồi",
+          alreadyAnswered: true,
+          result: {
+            isCorrect: existingResult.isCorrect,
+            questionOrder: existingResult.questionOrder,
+            submittedAt: existingResult.createdAt.toISOString(),
+            eliminated: (contestant.status as string) === "eliminate"
+          }
+        };
+      }
+
+      // 6. Kiểm tra đáp án đúng/sai
+      let isCorrect = false;
+      const question = questionDetail.question;
+
+      // 🔧 XỬ LÝ: Trường hợp không chọn đáp án nào
+      if (data.answer === "[KHÔNG CHỌN ĐÁP ÁN]") {
+        console.log('⚠️ [API SUBMIT] Trường hợp đặc biệt: Không chọn đáp án nào - coi như sai');
+        isCorrect = false; // Luôn coi như sai
+      } else {
+        // Logic kiểm tra bình thường
+        if (question.questionType === "multiple_choice") {
+          isCorrect = data.answer.toLowerCase() === question.correctAnswer?.toLowerCase();
+        } else {
+          isCorrect = data.answer.toLowerCase() === question.correctAnswer?.toLowerCase();
+        }
+      }
+
+      console.log('📊 [API SUBMIT] Kết quả kiểm tra đáp án:', {
+        studentAnswer: data.answer.toLowerCase(),
+        correctAnswer: question.correctAnswer?.toLowerCase(),
+        isCorrect,
+        isNoAnswerCase: data.answer === "[KHÔNG CHỌN ĐÁP ÁN]" // 🔧 Log trường hợp đặc biệt
+      });
+
+      // 7. Lưu kết quả vào database
+      const result = await this.prisma.result.create({
+        data: {
+          name: data.answer,
+          contestantId: contestantId,
+          matchId: data.matchId,
+          isCorrect: isCorrect,
+          questionOrder: data.questionOrder
+        },
+        include: {
+          contestant: {
+            include: {
+              student: {
+                select: { fullName: true, studentCode: true }
+              }
+            }
+          }
+        }
+      });
+
+      console.log('✅ [API SUBMIT] Đã lưu kết quả thành công:', {
+        resultId: result.id,
+        isCorrect: result.isCorrect,
+        studentName: result.contestant.student?.fullName,
+        isNoAnswerCase: data.answer === "[KHÔNG CHỌN ĐÁP ÁN]" // 🔧 Log
+      });
+
+      // 8. Xử lý elimination nếu trả lời sai
+      let isEliminated = false;
+      if (!isCorrect) {
+        const eliminationReason = data.answer === "[KHÔNG CHỌN ĐÁP ÁN]" 
+          ? "no_answer_selected" 
+          : "incorrect_answer"; // 🔧 Phân biệt lý do elimination
+
+        console.log('🔥 [API SUBMIT] Trả lời sai - bắt đầu elimination logic:', {
+          reason: eliminationReason,
+          answer: data.answer
+        });
+        
+        try {
+          // Cập nhật trạng thái contestant thành eliminate
+          await this.prisma.contestant.update({
+            where: { id: contestantId },
+            data: { status: "eliminate" }
+          });
+
+          // Cập nhật trạng thái contestant_match thành eliminated
+          await this.prisma.contestantMatch.updateMany({
+            where: {
+              contestantId: contestantId,
+              matchId: data.matchId
+            },
+            data: { 
+              status: "eliminated",
+              eliminatedAtQuestionOrder: data.questionOrder
+            }
+          });
+
+          isEliminated = true;
+          console.log('🚫 [API SUBMIT] Đã cập nhật trạng thái eliminate cho contestant và contestant_match');
+
+          // Tạo elimination log với lý do cụ thể
+          try {
+            await this.prisma.$executeRaw`
+              INSERT INTO elimination_logs (contestant_id, question_order, elimination_reason, eliminated_at)
+              VALUES (${contestantId}, ${data.questionOrder}, ${eliminationReason}, NOW())
+            `;
+            console.log('✅ [API SUBMIT] Đã tạo elimination log với lý do:', eliminationReason);
+          } catch (logError) {
+            console.warn('⚠️ [API SUBMIT] Không thể tạo elimination log:', logError);
+          }
+        } catch (eliminationError) {
+          console.error('💥 [API SUBMIT] Lỗi trong elimination logic:', eliminationError);
+        }
+      }
+
+      // 9. Chuẩn bị response với thông báo phù hợp
+      let responseMessage = "";
+      if (isCorrect) {
+        responseMessage = "Câu trả lời chính xác! 🎉";
+      } else if (data.answer === "[KHÔNG CHỌN ĐÁP ÁN]") {
+        responseMessage = "Bạn không chọn đáp án nào và đã bị loại! 😔";
+      } else {
+        responseMessage = "Câu trả lời không chính xác 😔";
+      }
+
+      const response: SubmitAnswerResponse = {
+        success: true,
+        message: responseMessage, // 🔧 Thông báo phù hợp với từng trường hợp
+        result: {
+          isCorrect: isCorrect,
+          questionOrder: data.questionOrder,
+          submittedAt: result.createdAt.toISOString(),
+          eliminated: isEliminated,
+          score: isCorrect ? question.score : 0,
+          correctAnswer: !isCorrect ? question.correctAnswer : undefined,
+          explanation: !isCorrect ? question.explanation || undefined : undefined
+        }
+      };
+
+      console.log('📤 [API SUBMIT] Chuẩn bị response:', {
+        success: response.success,
+        isCorrect: response.result?.isCorrect,
+        eliminated: response.result?.eliminated
+      });
+
+      console.log('🚀 [API SUBMIT] ===== HOÀN THÀNH XỬ LÝ SUBMIT ANSWER =====');
+      return response;
+
+    } catch (error) {
+      console.error('💥 [API SUBMIT] Lỗi trong quá trình submit:', error);
+      logger.error("Error in submitAnswer API:", error);
+      
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      
+      throw new CustomError(
+        "Lỗi khi xử lý câu trả lời",
         500,
         ERROR_CODES.INTERNAL_SERVER_ERROR
       );

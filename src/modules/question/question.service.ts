@@ -586,10 +586,10 @@ export class QuestionService {
     try {
       console.log("=== DEBUG: Bắt đầu updateQuestion ===");
       console.log("Question ID:", id);
-      console.log("Data:", data);
+      console.log("Data:", JSON.stringify(data, null, 2));
       console.log("Uploaded files:", {
-        questionMedia: uploadedFiles?.questionMedia?.length || 0,
-        mediaAnswer: uploadedFiles?.mediaAnswer?.length || 0,
+        questionMedia: uploadedFiles?.questionMedia?.map(f => ({ name: f.originalname, size: f.size })) || [],
+        mediaAnswer: uploadedFiles?.mediaAnswer?.map(f => ({ name: f.originalname, size: f.size })) || [],
       });
 
       // Check if question exists
@@ -604,6 +604,8 @@ export class QuestionService {
         );
       }
       console.log("Existing question found:", existingQuestion.id);
+      console.log("Existing questionMedia:", existingQuestion.questionMedia);
+      console.log("Existing mediaAnswer:", existingQuestion.mediaAnswer);
 
       // Validate question topic if provided
       if (data.questionTopicId) {
@@ -627,7 +629,7 @@ export class QuestionService {
       // Xử lý xóa media khi có deleteQuestionMedia hoặc deleteMediaAnswer
       if (data.deleteQuestionMedia && Array.isArray(data.deleteQuestionMedia)) {
         console.log(
-          "Deleting specified questionMedia files:",
+          "=== Processing deleteQuestionMedia ===",
           data.deleteQuestionMedia
         );
 
@@ -645,24 +647,28 @@ export class QuestionService {
             size: 0,
             mimeType: ''
           }));
+          console.log('Files to delete:', filesToDelete);
           await this.deleteMediaFiles(filesToDelete);
           
           // Cập nhật questionMedia bằng cách loại bỏ các file đã xóa
           if (existingQuestion.questionMedia) {
             const existingMedia = existingQuestion.questionMedia as MediaFile[];
+            console.log('Existing media before filter:', existingMedia);
             questionMedia = existingMedia.filter(media => 
               !normalizedFilenames.includes(media.filename)
             );
+            console.log('Remaining media after deletion:', questionMedia);
           }
         }
-      } else {
-        // Nếu không có deleteQuestionMedia, giữ nguyên questionMedia hiện có
+      } else if (!data.questionMedia) {
+        // Chỉ nếu controller KHÔNG gửi questionMedia, thì giữ nguyên questionMedia hiện có
         questionMedia = existingQuestion.questionMedia as MediaFile[] || [];
+        console.log('No deletion and no controller data, keeping existing questionMedia:', questionMedia.length);
       }
 
       if (data.deleteMediaAnswer && Array.isArray(data.deleteMediaAnswer)) {
         console.log(
-          "Deleting specified mediaAnswer files:",
+          "=== Processing deleteMediaAnswer ===",
           data.deleteMediaAnswer
         );
 
@@ -680,41 +686,46 @@ export class QuestionService {
             size: 0,
             mimeType: ''
           }));
+          console.log('Files to delete:', filesToDelete);
           await this.deleteMediaFiles(filesToDelete);
           
           // Cập nhật mediaAnswer bằng cách loại bỏ các file đã xóa
           if (existingQuestion.mediaAnswer) {
             const existingMedia = existingQuestion.mediaAnswer as MediaFile[];
+            console.log('Existing media before filter:', existingMedia);
             mediaAnswer = existingMedia.filter(media => 
               !normalizedFilenames.includes(media.filename)
             );
+            console.log('Remaining media after deletion:', mediaAnswer);
           }
         }
-      } else {
-        // Nếu không có deleteMediaAnswer, giữ nguyên mediaAnswer hiện có
+      } else if (!data.mediaAnswer) {
+        // Chỉ nếu controller KHÔNG gửi mediaAnswer, thì giữ nguyên mediaAnswer hiện có
         mediaAnswer = existingQuestion.mediaAnswer as MediaFile[] || [];
+        console.log('No deletion and no controller data, keeping existing mediaAnswer:', mediaAnswer.length);
       }
 
       // Xử lý merge questionMedia từ frontend với questionMedia hiện có (sau khi xóa)
       if (data.questionMedia && Array.isArray(data.questionMedia)) {
-        console.log('Merging questionMedia from frontend:', data.questionMedia.length);
-        // Merge questionMedia hiện có với questionMedia từ frontend
-        const frontendMedia = data.questionMedia as MediaFile[];
-        questionMedia = [...(questionMedia || []), ...frontendMedia];
-        console.log('Total questionMedia after merge:', questionMedia.length);
+        console.log('=== Using questionMedia from controller (already processed) ===');
+        console.log('Received questionMedia:', data.questionMedia.length);
+        // Sử dụng trực tiếp questionMedia từ controller (đã được xử lý)
+        questionMedia = data.questionMedia as MediaFile[];
+        console.log(`QuestionMedia set directly from controller: ${questionMedia.length} files`);
       }
 
       // Xử lý merge mediaAnswer từ frontend với mediaAnswer hiện có (sau khi xóa)
       if (data.mediaAnswer && Array.isArray(data.mediaAnswer)) {
-        console.log('Merging mediaAnswer from frontend:', data.mediaAnswer.length);
-        // Merge mediaAnswer hiện có với mediaAnswer từ frontend
-        const frontendMediaAnswer = data.mediaAnswer as MediaFile[];
-        mediaAnswer = [...(mediaAnswer || []), ...frontendMediaAnswer];
-        console.log('Total mediaAnswer after merge:', mediaAnswer.length);
+        console.log('=== Using mediaAnswer from controller (already processed) ===');
+        console.log('Received mediaAnswer:', data.mediaAnswer.length);
+        // Sử dụng trực tiếp mediaAnswer từ controller (đã được xử lý)
+        mediaAnswer = data.mediaAnswer as MediaFile[];
+        console.log(`MediaAnswer set directly from controller: ${mediaAnswer.length} files`);
       }
 
       // Xử lý xóa media khi data.questionMedia hoặc data.mediaAnswer được set thành null
       if (data.questionMedia === null) {
+        console.log('=== Setting questionMedia to null ===');
         if (existingQuestion.questionMedia) {
           const oldQuestionMedia =
             existingQuestion.questionMedia as MediaFile[];
@@ -728,6 +739,7 @@ export class QuestionService {
       }
 
       if (data.mediaAnswer === null) {
+        console.log('=== Setting mediaAnswer to null ===');
         if (existingQuestion.mediaAnswer) {
           const oldMediaAnswer = existingQuestion.mediaAnswer as MediaFile[];
           console.log("Deleting all mediaAnswer files:", oldMediaAnswer.length);
@@ -736,30 +748,41 @@ export class QuestionService {
         mediaAnswer = null;
       }
 
-      // Chỉ xử lý file nếu có uploadedFiles
+      // Chỉ xử lý file nếu có uploadedFiles VÀ controller chưa xử lý
       if (uploadedFiles) {
-        if (uploadedFiles.questionMedia) {
-          console.log('Processing questionMedia files...');
+        console.log('=== Processing uploaded files ===');
+        // Chỉ xử lý questionMedia nếu controller chưa xử lý (không có data.questionMedia)
+        if (uploadedFiles.questionMedia && !data.questionMedia) {
+          console.log('Processing uploaded questionMedia files...');
           const newQuestionMedia = await this.processMediaFiles(uploadedFiles.questionMedia);
-          console.log('New questionMedia files processed:', newQuestionMedia.length);
+          console.log('New questionMedia files processed:', newQuestionMedia);
           // Merge với questionMedia hiện có
+          const beforeUpload = questionMedia?.length || 0;
           questionMedia = [...(questionMedia || []), ...newQuestionMedia];
-          console.log('Total questionMedia after adding new files:', questionMedia.length);
+          console.log(`QuestionMedia after upload: ${beforeUpload} existing + ${newQuestionMedia.length} new = ${questionMedia.length} total`);
+        } else if (uploadedFiles.questionMedia && data.questionMedia) {
+          console.log('Skipping questionMedia processing - already handled by controller');
         }
 
-        if (uploadedFiles.mediaAnswer) {
-          console.log('Processing mediaAnswer files...');
+        // Chỉ xử lý mediaAnswer nếu controller chưa xử lý (không có data.mediaAnswer)
+        if (uploadedFiles.mediaAnswer && !data.mediaAnswer) {
+          console.log('Processing uploaded mediaAnswer files...');
           const newMediaAnswer = await this.processMediaFiles(uploadedFiles.mediaAnswer);
-          console.log('New mediaAnswer files processed:', newMediaAnswer.length);
+          console.log('New mediaAnswer files processed:', newMediaAnswer);
           // Merge với mediaAnswer hiện có
+          const beforeUpload = mediaAnswer?.length || 0;
           mediaAnswer = [...(mediaAnswer || []), ...newMediaAnswer];
-          console.log('Total mediaAnswer after adding new files:', mediaAnswer.length);
+          console.log(`MediaAnswer after upload: ${beforeUpload} existing + ${newMediaAnswer.length} new = ${mediaAnswer.length} total`);
+        } else if (uploadedFiles.mediaAnswer && data.mediaAnswer) {
+          console.log('Skipping mediaAnswer processing - already handled by controller');
         }
+      } else {
+        console.log('No uploaded files to process');
       }
 
       // Prepare update data
       const updateData: any = {};
-      console.log("Preparing update data...");
+      console.log("=== Preparing update data ===");
 
       if (data.intro !== undefined) updateData.intro = data.intro;
       if (data.defaultTime !== undefined)
@@ -786,8 +809,11 @@ export class QuestionService {
         fields: Object.keys(updateData),
         hasQuestionMedia: !!updateData.questionMedia,
         hasMediaAnswer: !!updateData.mediaAnswer,
+        questionMediaCount: updateData.questionMedia?.length || 0,
+        mediaAnswerCount: updateData.mediaAnswer?.length || 0,
       });
 
+      console.log("=== DEBUG: Calling Prisma update ===");
       const updatedQuestion = await this.prisma.question.update({
         where: { id },
         data: updateData,
@@ -811,6 +837,15 @@ export class QuestionService {
             },
           },
         },
+      });
+
+      console.log("=== DEBUG: Prisma update completed ===");
+      console.log("Updated question response:", {
+        id: updatedQuestion.id,
+        questionMediaCount: (updatedQuestion.questionMedia as MediaFile[])?.length || 0,
+        mediaAnswerCount: (updatedQuestion.mediaAnswer as MediaFile[])?.length || 0,
+        questionMedia: updatedQuestion.questionMedia,
+        mediaAnswer: updatedQuestion.mediaAnswer,
       });
 
       console.log("=== DEBUG: Kết thúc updateQuestion ===");

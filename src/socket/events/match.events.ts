@@ -124,6 +124,18 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
       const roomName = `match-${match.id}`;
       console.log('🔍 [DEBUG] About to emit match:started to room:', roomName);
 
+      // Debug: Check who is in the room
+      const studentsInRoom = io.of("/student").adapter.rooms.get(roomName);
+      const adminInRoom = io.of("/match-control").adapter.rooms.get(roomName);
+      
+      console.log('🔍 [DEBUG] Room population before emit:', {
+        roomName,
+        studentsCount: studentsInRoom?.size || 0,
+        studentIds: studentsInRoom ? Array.from(studentsInRoom) : [],
+        adminCount: adminInRoom?.size || 0,
+        adminIds: adminInRoom ? Array.from(adminInRoom) : []
+      });
+
       // Broadcast to all clients in the match room
       io.of("/match-control").to(roomName).emit("match:started", {
         matchId: match.id,
@@ -146,7 +158,20 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         startedAt: new Date().toISOString()
       });
 
-      console.log('🔍 [DEBUG] Event emitted successfully');
+      console.log('🔍 [DEBUG] Event emitted successfully to', studentsInRoom?.size || 0, 'students and', adminInRoom?.size || 0, 'admins');
+
+      // Fallback: Also emit globally to all students in the namespace as backup
+      io.of("/student").emit("match:globalStarted", {
+        matchId: match.id,
+        matchSlug: match.slug,
+        matchName: match.name,
+        contestName: match.round.contest.name,
+        status: "ongoing",
+        startedBy: socket.user.username,
+        startedAt: new Date().toISOString()
+      });
+      
+      console.log('🌍 [DEBUG] Global match:globalStarted event emitted to all students');
 
       logger.info(
         `✅ Match started: ${match.id} (${match.slug}) by ${socket.user.username} (${socket.user.role})`
@@ -283,7 +308,21 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         }
       });
 
-      // Emit to student namespace (for students)
+      // Emit to student namespace (for students) - DEBUG ADDED
+      const studentNamespace = io.of('/student');
+      const studentsInRoom = studentNamespace.adapter.rooms.get(roomName);
+      console.log(`📊 [DEBUG] Students in room ${roomName}:`, {
+        roomSize: studentsInRoom?.size || 0,
+        studentIds: studentsInRoom ? Array.from(studentsInRoom) : []
+      });
+
+      // Debug: Liệt kê tất cả rooms trong student namespace
+      console.log(`🔍 [DEBUG] All rooms in student namespace:`, Array.from(studentNamespace.adapter.rooms.keys()));
+      
+      // Debug: Liệt kê tất cả sockets trong student namespace
+      const allStudentSockets = Array.from(studentNamespace.sockets.keys());
+      console.log(`👥 [DEBUG] All connected student sockets:`, allStudentSockets);
+
       io.of('/student').to(roomName).emit('match:questionChanged', {
         matchId: match.id,
         matchSlug: match.slug,
@@ -294,6 +333,22 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
           question: questionData
         }
       });
+
+      console.log(`✅ [DEBUG] Event match:questionChanged emitted to room ${roomName} for ${studentsInRoom?.size || 0} students`);
+      
+      // Debug: Thêm global emit cho tất cả students
+      console.log(`🌍 [DEBUG] Emitting global questionChanged to all students...`);
+      io.of('/student').emit('match:globalQuestionChanged', {
+        matchId: match.id,
+        matchSlug: match.slug,
+        currentQuestion: nextQuestionOrder,
+        remainingTime: questionDetailWithRelation.question.defaultTime,
+        currentQuestionData: {
+          order: nextQuestionOrder,
+          question: questionData
+        }
+      });
+      console.log(`🌍 [DEBUG] Global questionChanged emitted to ${allStudentSockets.length} total students`);
 
       // Send event to all students in /student namespace (global notification)
       io.of('/student').emit('match:globalUpdate', {

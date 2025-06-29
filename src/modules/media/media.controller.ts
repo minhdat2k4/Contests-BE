@@ -184,7 +184,7 @@ export default class mediaController {
         const info = prepareFileInfoCustom(req.file, folderPath);
         await moveUploadedFile(info.tempPath!, info.destPath!);
         newUrl = `/uploads/media/${info.fileName}`;
-      f
+      }
 
       const data: Partial<Media> = {
         type: input.type,

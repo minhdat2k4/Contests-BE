@@ -13,6 +13,7 @@ import {
 } from "@/utils/uploadFile";
 
 import { Media } from "@prisma/client";
+import path from "path";
 
 export default class mediaController {
   static async getAlls(req: Request, res: Response): Promise<void> {
@@ -102,7 +103,8 @@ export default class mediaController {
       if (!req.file) throw new Error(`Vui lòng upload file`);
       const file = req.file;
 
-      const folderPath = "uploads/media";
+      const folderPath = path.resolve(process.cwd(), "uploads", "media");
+
       await ensureFolderExists(folderPath);
       const info = prepareFileInfoCustom(file, folderPath);
       console.log(info);
@@ -178,7 +180,7 @@ export default class mediaController {
       let newUrl: string | undefined;
 
       if (req.file) {
-        const folderPath = "uploads/media";
+        const folderPath = path.resolve(process.cwd(), "uploads", "media");
         const info = prepareFileInfoCustom(req.file, folderPath);
         await moveUploadedFile(info.tempPath!, info.destPath!);
         newUrl = `/uploads/media/${info.fileName}`;

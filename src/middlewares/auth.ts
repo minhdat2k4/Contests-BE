@@ -36,7 +36,7 @@ export const authenticate = async (
       res.status(401).json(errorResponse("Access token is required"));
       return;
     }
-    // Verify token
+
     const payload: JwtPayload = verifyToken(token);
 
     if (payload.type !== "access") {
@@ -44,17 +44,27 @@ export const authenticate = async (
       return;
     }
 
-    // Get user from database to ensure they still exist and are active
     const user = await UserService.getUserById(payload.userId);
 
     if (!user || !user.isActive) {
-      res.status(401).json(errorResponse("Account is deactivated"));
+      res.status(401).json({
+        message: "Tai khoản đã bị khóa",
+        error: "User not found or inactive",
+        success: false,
+        code: "USER_NOT_FOUND_OR_INACTIVE",
+        timestamp: new Date().toISOString(),
+      });
       return;
     }
 
-    //  Kiểm tra token hiện tại với token ở database
     if (user.token !== token) {
-      res.status(401).json(errorResponse("Vui lòng đăng nhập lại"));
+      res.status(401).json({
+        message: "Tài khoản đã đăng nhập thiết bị khác",
+        error: "Invalid or expired token",
+        success: false,
+        code: "INVALID_OR_EXPIRED_TOKEN",
+        timestamp: new Date().toISOString(),
+      });
       return;
     }
 

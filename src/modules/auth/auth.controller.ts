@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import AuthService from "./auth.service";
 import {
   LoginInput,
@@ -53,46 +56,125 @@ export default class AuthController {
     }
   }
 
-  static async registerStudent(req: Request, res: Response): Promise<void> {
-    try {
-      const input: StudentRegisterInput = req.body;
-      
-      const result = await AuthService.registerStudent(input);
+  //   static async registerStudent(req: Request, res: Response): Promise<void> {
+  //     try {
+  //       const input: StudentRegisterInput = req.body;
+  // <<<<<<< HEAD
 
-      res.json(
-        successResponse(result, "Đăng ký tài khoản sinh viên thành công")
-      );
-      logger.info(`Đăng ký tài khoản sinh viên thành công cho ${input.username}`);
-    } catch (error) {
-      const errorMessage = (error as Error).message;
-      
-      // Xử lý các lỗi cụ thể
-      switch (errorMessage) {
-        case "USERNAME_EXISTS":
-          logger.error(`Tên tài khoản ${req.body.username} đã tồn tại`);
-          res
-            .status(400)
-            .json(validateData("username", "Tên tài khoản đã tồn tại"));
-          break;
-        case "EMAIL_EXISTS":
-          logger.error(`Email ${req.body.email} đã tồn tại`);
-          res.status(400).json(validateData("email", "Email đã tồn tại"));
-          break;
-        case "CLASS_NOT_EXISTS":
-          logger.error(`Lớp với ID ${req.body.classId} không tồn tại`);
-          res.status(400).json(validateData("classId", "Lớp không tồn tại"));
-          break;
-        default:
-          logger.error((error as Error).message);
-          res.status(400).json(errorResponse((error as Error).message));
-          break;
-      }
-    }
-  }
+  //       // Kiểm tra username đã tồn tại chưa
+  //       const existingUserName = await UserService.existingUserName(
+  //         input.username
+  //       );
+  //       if (existingUserName) {
+  //         logger.error(`Tên tài khoản ${input.username} đã tồn tại`);
+  //         res
+  //           .status(400)
+  //           .json(validateData("username", "Tên tài khoản đã tồn tại"));
+  //         return;
+  //       }
+
+  //       // Kiểm tra email đã tồn tại chưa
+  //       const existingEmail = await UserService.existingEmail(input.email);
+  //       if (existingEmail) {
+  //         logger.error(`Email ${input.email} đã tồn tại`);
+  //         res.status(400).json(validateData("email", "Email đã tồn tại"));
+  //         return;
+  //       }
+
+  //       // Kiểm tra mã sinh viên đã tồn tại chưa (nếu có)
+  //       if (input.studentCode) {
+  //         const existingStudentCode = await StudentService.getStudentBy({
+  //           studentCode: input.studentCode,
+  //         });
+  //         if (existingStudentCode) {
+  //           logger.error(`Mã sinh viên ${input.studentCode} đã tồn tại`);
+  //           res
+  //             .status(400)
+  //             .json(validateData("studentCode", "Mã sinh viên đã tồn tại"));
+  //           return;
+  //         }
+  //       }
+
+  //       // Kiểm tra lớp có tồn tại không
+  //       const existingClass = await prisma.class.findFirst({
+  //         where: { id: input.classId, isActive: true },
+  //       });
+  //       if (!existingClass) {
+  //         logger.error(`Lớp với ID ${input.classId} không tồn tại`);
+  //         res.status(400).json(validateData("classId", "Lớp không tồn tại"));
+  //         return;
+  //       }
+
+  //       // Mã hóa mật khẩu
+  //       const { confirmPassword, fullName, classId, studentCode, ...userInput } =
+  //         input;
+  //       const hashedPassword = await bcrypt.hash(userInput.password, 10);
+
+  //       // Tạo transaction để đảm bảo tính nhất quán dữ liệu
+  //       const result = await prisma.$transaction(async tx => {
+  //         // Tạo User với role Student
+  //         const user = await tx.user.create({
+  //           data: {
+  //             ...userInput,
+  //             password: hashedPassword,
+  //             role: "Student",
+  //           },
+  //         });
+
+  //         // Tạo Student
+  //         const student = await tx.student.create({
+  //           data: {
+  //             fullName,
+  //             classId,
+  //             studentCode: studentCode || null,
+  //             isActive: true,
+  //           },
+  //         });
+
+  //         return { user, student };
+  //       });
+  // =======
+
+  //       const result = await AuthService.registerStudent(input);
+  // >>>>>>> 273f4e23f2706bcb5a19973aa3419b9133a563fd
+
+  //       res.json(
+  //         successResponse(result, "Đăng ký tài khoản sinh viên thành công")
+  //       );
+  //       logger.info(
+  //         `Đăng ký tài khoản sinh viên thành công cho ${input.username}`
+  //       );
+  //     } catch (error) {
+  //       const errorMessage = (error as Error).message;
+
+  //       // Xử lý các lỗi cụ thể
+  //       switch (errorMessage) {
+  //         case "USERNAME_EXISTS":
+  //           logger.error(`Tên tài khoản ${req.body.username} đã tồn tại`);
+  //           res
+  //             .status(400)
+  //             .json(validateData("username", "Tên tài khoản đã tồn tại"));
+  //           break;
+  //         case "EMAIL_EXISTS":
+  //           logger.error(`Email ${req.body.email} đã tồn tại`);
+  //           res.status(400).json(validateData("email", "Email đã tồn tại"));
+  //           break;
+  //         case "CLASS_NOT_EXISTS":
+  //           logger.error(`Lớp với ID ${req.body.classId} không tồn tại`);
+  //           res.status(400).json(validateData("classId", "Lớp không tồn tại"));
+  //           break;
+  //         default:
+  //           logger.error((error as Error).message);
+  //           res.status(400).json(errorResponse((error as Error).message));
+  //           break;
+  //       }
+  //     }
+  //   }
 
   static async login(req: Request, res: Response): Promise<void> {
     try {
       const input: LoginInput = req.body;
+
       const user = await AuthService.findUserByIdentifier(input.identifier);
       if (!user) {
         logger.error(`Tài khoản ${input.identifier} không tồn tại`);
@@ -137,7 +219,7 @@ export default class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 1000 * 60 * 60,
+        maxAge: 7 * 60 * 60 * 1000, // 7 ngày
       });
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
@@ -162,7 +244,7 @@ export default class AuthController {
     try {
       const input: LoginInput = req.body;
       const user = await AuthService.findUserByIdentifier(input.identifier);
-      
+
       if (!user) {
         logger.error(`Tài khoản ${input.identifier} không tồn tại`);
         res
@@ -229,17 +311,17 @@ export default class AuthController {
       const activeMatches = await prisma.match.findMany({
         where: {
           round: {
-            contestId: contestant.contestId
-          }
+            contestId: contestant.contestId,
+          },
         },
         select: {
           id: true,
           name: true,
           status: true,
           currentQuestion: true,
-          remainingTime: true
+          remainingTime: true,
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       });
 
       const tokenData = {
@@ -248,18 +330,18 @@ export default class AuthController {
         email: user.email,
         role: user.role,
       };
-      
+
       const accessToken = await AuthService.accessToken(tokenData);
       const refreshToken = await AuthService.refreshToken(tokenData);
-      
+
       // Update user token
       await UserService.UpdateUser(user.id, { token: accessToken });
-      
+
       // Delete old refresh tokens
       await prisma.refreshToken.deleteMany({
-        where: { userId: user.id }
+        where: { userId: user.id },
       });
-      
+
       // Create new refresh token
       await AuthService.CreateRefreshToken({
         userId: user.id,
@@ -271,9 +353,9 @@ export default class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 1000 * 60 * 60, // 1 hour
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
-      
+
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -300,14 +382,11 @@ export default class AuthController {
         socket: `student-${student.id}`,
       };
 
-      res.json(
-        successResponse(
-          responseData,
-          "Đăng nhập thí sinh thành công"
-        )
+      res.json(successResponse(responseData, "Đăng nhập thí sinh thành công"));
+
+      logger.info(
+        `Thí sinh ${input.identifier} đăng nhập thành công | Contestant ID: ${contestant.id}`
       );
-      
-      logger.info(`Thí sinh ${input.identifier} đăng nhập thành công | Student ID: ${student.id} | Contestant ID: ${contestant.id}`);
     } catch (error) {
       logger.error((error as Error).message);
       res.status(500).json(errorResponse((error as Error).message));
@@ -368,7 +447,7 @@ export default class AuthController {
       res.cookie("accessToken", newAccessToken, {
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 60 * 1000 * 60,
+        maxAge: 7 * 60 * 60 * 1000, // 7 ngày
         secure: process.env.NODE_ENV === "production",
       });
       logger.info(`${payload.username} lấy token mới thành công`);
@@ -378,7 +457,7 @@ export default class AuthController {
       });
     } catch (error) {
       logger.error((error as Error).message);
-      res.status(401).json(errorResponse((error as Error).message));
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
   static async forgotPassword(req: Request, res: Response): Promise<void> {
@@ -481,6 +560,7 @@ export default class AuthController {
       logger.info(`Truy cập hồ sơ ${req.user.username} thành công`);
       res.json(
         successResponse({
+          id: user.userId,
           username: user.username,
           email: user.email,
           isActive: user.isActive,

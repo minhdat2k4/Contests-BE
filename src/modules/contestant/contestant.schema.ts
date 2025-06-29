@@ -5,7 +5,12 @@ export const ContestantSchema = z.object({
   id: z.number().int().optional(), // do @default(autoincrement()
   roundName: z.string(),
   fullName: z.string(),
+  studentCode: z.string().nullable().optional(),
   status: z.nativeEnum(ContestantStatus),
+  schoolId: z.number().int(),
+  schoolName: z.string(),
+  classId: z.number().int(),
+  className: z.string(),
 });
 
 export const CreateContestantSchema = z.object({
@@ -75,6 +80,38 @@ export const ContestantQuerySchema = z.object({
     )
     .optional(),
   status: z.nativeEnum(ContestantStatus).optional(),
+  schoolId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trường học phải là số nguyên dương"
+    )
+    .optional(),
+  classId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id lớp học phải là số nguyên dương"
+    )
+    .optional(),
+  groupId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val),
+      "Id nhóm phải là số nguyên"
+    )
+    .optional(),
+  matchId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trận đấu phải là số nguyên dương"
+    )
+    .optional(),
 });
 
 export const ContestantByContestQuerySchema = z.object({
@@ -145,12 +182,60 @@ export const CreatesContestShema = z.object({
   }),
 });
 
+export const ContestantMatchParamsSchema = z.object({
+  id: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id thí sinh phải là số nguyên dương"
+    ),
+  matchId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trận đấu phải là số nguyên dương"
+    ),
+});
+
+export const ContestantDetailParamsSchema = z.object({
+  id: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id thí sinh phải là số nguyên dương"
+    ),
+  slug: z
+    .string()
+    .min(1, "Slug cuộc thi không được để trống"),
+  matchId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trận đấu phải là số nguyên dương"
+    ),
+});
+
 export type ContestantById = {
   id: number;
   roundId: number;
   studentId: number;
   round: { name: string };
-  student: { fullName: string };
+  student: { 
+    fullName: string;
+    studentCode: string | null;
+    class: {
+      id: number;
+      name: string;
+      school: {
+        id: number;
+        name: string;
+      };
+    };
+  };
   status: ContestantStatus;
 };
 
@@ -160,3 +245,24 @@ export type UpdateContestantInput = z.infer<typeof UpdateContestantSchema>;
 export type ContestantQueryInput = z.infer<typeof ContestantQuerySchema>;
 export type ContestantType = z.infer<typeof ContestantSchema>;
 export type CreatesContestInput = z.infer<typeof CreatesContestShema>;
+export type ContestantMatchParams = z.infer<typeof ContestantMatchParamsSchema>;
+export type ContestantDetailParams = z.infer<typeof ContestantDetailParamsSchema>;
+
+// Schema cho query params của API getContestantsInMatch
+export const GetContestantsInMatchQuerySchema = z.object({
+  page: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
+    .optional()
+    .default("10"),
+  search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
+});
+
+export type GetContestantsInMatchQuery = z.infer<typeof GetContestantsInMatchQuerySchema>;

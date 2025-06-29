@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import path from "path";
 import {
   ClassVideoService,
   CreateClassVideoInput,
@@ -61,7 +62,6 @@ export default class ClassVideoController {
       const input: Omit<CreateClassVideoInput, "videos" | "contestId"> =
         req.body;
 
-      console.log("input", input);
       const slug = await req.params.slug;
       const contest = await prisma.contest.findFirst({
         where: { slug: slug },
@@ -79,7 +79,7 @@ export default class ClassVideoController {
 
       if (!req.file) throw new Error(`Vui lòng upload file`);
       const file = req.file;
-      const folderPath = "uploads/ClassVideo";
+      const folderPath = path.resolve(process.cwd(), "uploads", "ClassVideo");
       await ensureFolderExists(folderPath);
       const info = prepareFileInfoCustom(file, folderPath);
       const data = {
@@ -139,7 +139,8 @@ export default class ClassVideoController {
       let newUrl: string | undefined;
 
       if (req.file) {
-        const folderPath = "uploads/ClassVideo";
+        const folderPath = path.resolve(process.cwd(), "uploads", "ClassVideo");
+        await ensureFolderExists(folderPath);
         const info = prepareFileInfoCustom(req.file, folderPath);
         await moveUploadedFile(info.tempPath!, info.destPath!);
         newUrl = `/uploads/ClassVideo/${info.fileName}`;

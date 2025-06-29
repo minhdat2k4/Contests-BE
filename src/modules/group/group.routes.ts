@@ -11,6 +11,7 @@ import {
   GroupsQuerySchema,
   UpdateGroupsSchema,
   deleteGroupsesSchema,
+  CreateBulkGroupsSchema,
 } from "./group.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const groupRouter = Router();
@@ -46,6 +47,14 @@ groupRouter.post(
   GroupController.create
 );
 
+groupRouter.post(
+  "/bulk",
+  authenticate,
+  role("Admin"),
+  validateBody(CreateBulkGroupsSchema),
+  GroupController.createBulkGroups
+);
+
 groupRouter.patch(
   "/:id",
   authenticate,
@@ -53,6 +62,16 @@ groupRouter.patch(
   validateBody(UpdateGroupsSchema),
   validateParams(GroupsIdShema),
   GroupController.update
+);
+
+// api đổi tên nhóm
+groupRouter.patch(
+  "/:id/name",
+  authenticate,
+  role("Admin"),
+  validateParams(GroupsIdShema),
+  validateBody(UpdateGroupsSchema.pick({ name: true })),
+  GroupController.updateName
 );
 
 groupRouter.delete(

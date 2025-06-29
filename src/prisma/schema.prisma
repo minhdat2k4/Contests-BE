@@ -160,19 +160,20 @@ model School {
   @@map("schools")
 }
 
-model Class {
-  id        Int       @id @default(autoincrement())
-  name      String    @db.VarChar(255)
-  schoolId  Int     
-  school    School    @relation(fields: [schoolId], references: [id],onUpdate:Restrict, onDelete:Restrict)
-  isActive  Boolean   @default(true) 
-  students  Student[]
-  videos    ClassVideo[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  @@map("classes")
-}
+  model Class {
+    id        Int       @id @default(autoincrement())
+    name      String    @db.VarChar(255)
+    schoolId  Int     
+    school    School    @relation(fields: [schoolId], references: [id],onUpdate:Restrict, onDelete:Restrict)
+    isActive  Boolean   @default(true) 
+    students  Student[]
+    videos    ClassVideo[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("classes")
+  }
 
 model Student {
   id           Int      @id @default(autoincrement())
@@ -216,7 +217,7 @@ model QuestionTopic {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("question_topics")
+  @@map("question_Topics")
 }
 
 model QuestionPackage {
@@ -228,7 +229,7 @@ model QuestionPackage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("question_packages")
+  @@map("question_Packages")
 }
 
 model Question {
@@ -265,7 +266,7 @@ model QuestionDetail {
   updatedAt DateTime @updatedAt
 
   @@id([questionId, questionPackageId])
-  @@map("question_details")
+  @@map("question_Details")
 }
 
 model Contest {
@@ -357,8 +358,8 @@ model Match {
 model Group {
   id                   Int               @id @default(autoincrement())
   name                 String            @db.VarChar(255)
-  userId               Int          
-  user                 User              @relation(fields: [userId], references: [id],onDelete:Restrict, onUpdate:Restrict)
+  userId               Int?          
+  user                 User?             @relation(fields: [userId], references: [id],onDelete:Restrict, onUpdate:Restrict)
   matchId              Int              
   match                Match             @relation(fields: [matchId], references: [id],onDelete:Restrict ,onUpdate:Restrict)
   confirmCurrentQuestion Int              
@@ -401,7 +402,7 @@ model ContestantMatch {
   updatedAt DateTime @updatedAt
 
   @@id([contestantId, matchId])
-  @@map("contestant_matches")
+  @@map("contestant_Matches")
 }
 
 model Result {
@@ -480,7 +481,7 @@ model ClassVideo {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  @@map("class_videos")
+  @@map("class_Videos")
 }
 
 model ScreenControl {
@@ -494,5 +495,5 @@ model ScreenControl {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("screen_controls")
+  @@map("screen_Controls")
 }

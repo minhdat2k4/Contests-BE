@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { CreateGroupInput, GroupQueryInput } from "./group.schema";
+import { CreateGroupInput, GroupQueryInput, CreateBulkGroupsInput } from "./group.schema";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
@@ -199,21 +199,23 @@ export default class GroupController {
         throw new Error("Không tìm thấy nhóm ");
       }
 
+      // Lấy số lượng thí sinh trong nhóm để thông báo
       const countContestant = await prisma.contestantMatch.count({
         where: { groupId: group.id },
       });
 
-      if (countContestant > 0)
-        throw new Error(
-          ` Nhóm này ${countContestant} thí sinh nên không thể xóa`
-        );
-
-      const deleteGroup = await GroupService.delete(group.id);
+      // Xóa nhóm cùng với tất cả thí sinh trong nhóm (cascade delete)
+      const deleteGroup = await GroupService.deleteWithContestants(group.id);
       if (!deleteGroup) {
         throw new Error(`Xóa nhóm ${group.name} thất bại `);
       }
-      logger.info(`Xóa nhóm ${group.name} thành công`);
-      res.json(successResponse(null, `Xóa nhóm ${group.name} thành công`));
+
+      const message = countContestant > 0 
+        ? `Xóa nhóm "${group.name}" và ${countContestant} thí sinh thành công`
+        : `Xóa nhóm "${group.name}" thành công`;
+
+      logger.info(message);
+      res.json(successResponse(null, message));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -244,15 +246,8 @@ export default class GroupController {
           where: { groupId: group.id },
         });
 
-        if (countContestant > 0) {
-          messages.push({
-            status: "error",
-            msg: ` Nhóm này ${countContestant} thí sinh nên không thể xóa`,
-          });
-          continue;
-        }
-
-        const deleted = await GroupService.delete(group.id);
+        // Xóa nhóm cùng với thí sinh (nếu có)
+        const deleted = await GroupService.deleteWithContestants(group.id);
 
         if (!deleted) {
           messages.push({
@@ -261,11 +256,16 @@ export default class GroupController {
           });
           continue;
         }
+
+        const successMessage = countContestant > 0 
+          ? `Xóa nhóm "${group.name}" và ${countContestant} thí sinh thành công`
+          : `Xóa nhóm "${group.name}" thành công`;
+
         messages.push({
           status: "success",
-          msg: `Xóa nhóm "${group.name}" thành công`,
+          msg: successMessage,
         });
-        logger.info(`Xóa nhóm "${group.name}" thành công`);
+        logger.info(successMessage);
       }
 
       res.json({
@@ -280,7 +280,7 @@ export default class GroupController {
 
   static async getByMatchSlug(req: Request, res: Response): Promise<void> {
     try {
-      const slug = req.params.slug;
+      const slug = req.params.match;
 
       const match = await prisma.match.findFirst({
         where: { slug: slug },
@@ -295,6 +295,86 @@ export default class GroupController {
         throw new Error("Không tìm thấy nhóm trong trận đấu này");
       }
       res.json(successResponse(groups));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async updateName(req: Request, res: Response): Promise<void> {
+    try {
+      const id = Number(req.params.id);
+      const { name } = req.body;
+
+      if (!name || name.trim() === '') {
+        throw new Error("Tên nhóm không được để trống");
+      }
+
+      // Kiểm tra nhóm có tồn tại không
+      const group = await GroupService.getBy({ id: id });
+      if (!group) {
+        throw new Error("Không tìm thấy nhóm");
+      }
+
+      // Kiểm tra trùng tên trong cùng trận đấu
+      const existingGroup = await prisma.group.findFirst({
+        where: {
+          name: name.trim(),
+          matchId: group.matchId,
+          id: { not: id } // Loại trừ chính nhóm này
+        }
+      });
+
+      if (existingGroup) {
+        throw new Error(`Tên nhóm "${name}" đã tồn tại trong trận đấu này`);
+      }
+
+      // Cập nhật chỉ tên nhóm
+      const updatedGroup = await GroupService.updateName(id, name.trim());
+
+      if (!updatedGroup) {
+        throw new Error("Cập nhật tên nhóm thất bại");
+      }
+
+      logger.info(`Cập nhật tên nhóm từ "${group.name}" thành "${name}" thành công`);
+      res.json(
+        successResponse(
+          updatedGroup, 
+          `Cập nhật tên nhóm từ "${group.name}" thành "${name}" thành công`
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async createBulkGroups(req: Request, res: Response): Promise<void> {
+    try {
+      const input: CreateBulkGroupsInput = req.body;
+      
+      // Validate match exists
+      const match = await prisma.match.findFirst({
+        where: { id: input.matchId },
+      });
+      if (!match) {
+        res.status(404).json(errorResponse("Không tìm thấy trận đấu"));
+        return;
+      }
+
+      // Create bulk groups (empty groups without contestants or judges)
+      const createdGroups = await GroupService.createBulkGroups(input);
+
+      logger.info(`Tạo ${createdGroups.length} nhóm trống thành công cho trận ${match.name}`);
+      res.status(201).json(
+        successResponse(
+          { 
+            groups: createdGroups,
+            createdCount: createdGroups.length 
+          }, 
+          `Tạo thành công ${createdGroups.length} nhóm trống`
+        )
+      );
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

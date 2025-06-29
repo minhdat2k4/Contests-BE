@@ -187,11 +187,79 @@ export default class GroupDivisionService {
       id: group.id,
       name: group.name,
       userId: group.userId,
-      judge: {
+      judge: group.user ? {
         id: group.user.id,
         username: group.user.username,
         email: group.user.email,
+      } : null,
+      contestantMatches: group.contestantMatches.map((cm: any) => ({
+        contestant: {
+          id: cm.contestant.id,
+          student: {
+            id: cm.contestant.student.id,
+            fullName: cm.contestant.student.fullName,
+            studentCode: cm.contestant.student.studentCode,
+          },
+          round: {
+            id: cm.contestant.round.id,
+            name: cm.contestant.round.name,
+          },
+        },
+        registrationNumber: cm.registrationNumber,
+      })),
+    }));
+  }
+
+  /**
+   * Lấy danh sách nhóm hiện tại của trận đấu (không sắp xếp - dành cho frontend)
+   * Trả về theo thứ tự tự nhiên của database để frontend tự quản lý thứ tự
+   */
+  static async getCurrentGroupsUnsorted(matchId: number): Promise<GroupInfo[]> {
+    const groups = await prisma.group.findMany({
+      where: { matchId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+        contestantMatches: {
+          include: {
+            contestant: {
+              include: {
+                student: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    studentCode: true,
+                  },
+                },
+                round: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { registrationNumber: "asc" },
+        },
       },
+      // Không có orderBy - trả về theo thứ tự tự nhiên của database (tăng dần theo id/createdAt)
+    });
+
+    return groups.map(group => ({
+      id: group.id,
+      name: group.name,
+      userId: group.userId,
+      judge: group.user ? {
+        id: group.user.id,
+        username: group.user.username,
+        email: group.user.email,
+      } : null,
       contestantMatches: group.contestantMatches.map((cm: any) => ({
         contestant: {
           id: cm.contestant.id,
@@ -299,6 +367,197 @@ export default class GroupDivisionService {
   }
 
   /**
+   * Tạo nhóm mới trong trận đấu
+   */
+  static async createGroup(
+    matchId: number,
+    groupName: string,
+    judgeId?: number
+  ): Promise<any> {
+    return await prisma.$transaction(async tx => {
+      // 1. Kiểm tra trận đấu có tồn tại không
+      const match = await tx.match.findUnique({
+        where: { id: matchId },
+      });
+
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu");
+      }
+
+      // Nếu có judgeId thì kiểm tra, nếu không thì bỏ qua
+      let judge = null;
+      if (judgeId) {
+        judge = await tx.user.findFirst({
+          where: {
+            id: judgeId,
+            role: Role.Judge,
+            isActive: true,
+          },
+        });
+
+        if (!judge) {
+          throw new Error(`Không tìm thấy trọng tài với ID ${judgeId}`);
+        }
+
+        // Kiểm tra trọng tài có bị trùng trong cùng trận đấu không
+        const existingGroupInMatch = await tx.group.findFirst({
+          where: {
+            userId: judgeId,
+            matchId: matchId,
+          },
+        });
+
+        if (existingGroupInMatch) {
+          throw new Error(
+            `Trọng tài ${judge.username} đã được phân vào nhóm ${existingGroupInMatch.name} trong trận đấu này`
+          );
+        }
+
+        // Kiểm tra trọng tài có bị trùng thời gian với trận khác không
+        const conflictGroup = await tx.group.findFirst({
+          where: {
+            userId: judgeId,
+            NOT: { matchId: matchId },
+            match: {
+              AND: [
+                { startTime: { lt: match.endTime } },
+                { endTime: { gt: match.startTime } },
+              ],
+            },
+          },
+          include: { match: true },
+        });
+
+        if (conflictGroup) {
+          throw new Error(
+            `Trọng tài ${judge.username} đang có nhóm khác ở trận '${conflictGroup.match.name}' trùng thời gian`
+          );
+        }
+      }
+
+      // 5. Tạo nhóm mới (userId có thể là undefined)
+      const newGroup = await tx.group.create({
+        data: {
+          name: groupName,
+          userId: judgeId ?? null, // <-- nếu không có thì null
+          matchId: matchId,
+          confirmCurrentQuestion: 0,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return newGroup;
+    });
+  }
+
+  /**
+   * Xóa nhóm và tất cả thí sinh trong nhóm
+   */
+  static async deleteGroup(groupId: number): Promise<any> {
+    return await prisma.$transaction(async tx => {
+      // 1. Kiểm tra nhóm có tồn tại không
+      const group = await tx.group.findUnique({
+        where: { id: groupId },
+        include: {
+          contestantMatches: true,
+        },
+      });
+
+      if (!group) {
+        throw new Error("Không tìm thấy nhóm");
+      }
+
+      // 2. Xóa tất cả thí sinh trong nhóm trước
+      await tx.contestantMatch.deleteMany({
+        where: { groupId: groupId },
+      });
+
+      // 3. Xóa nhóm
+      const deletedGroup = await tx.group.delete({
+        where: { id: groupId },
+      });
+
+      return {
+        deletedGroup,
+        deletedContestantsCount: group.contestantMatches.length,
+      };
+    });
+  }
+
+  /**
+   * Xóa nhiều nhóm cùng lúc
+   */
+  static async deleteAllGroups(groupIds: number[]): Promise<any> {
+    return await prisma.$transaction(async tx => {
+      // 1. Kiểm tra tất cả nhóm có tồn tại không
+      const groups = await tx.group.findMany({
+        where: { id: { in: groupIds } },
+        include: {
+          contestantMatches: true,
+        },
+      });
+
+      if (groups.length !== groupIds.length) {
+        throw new Error("Một số nhóm không tồn tại");
+      }
+
+      // 2. Xóa tất cả thí sinh trong các nhóm
+      const totalContestants = await tx.contestantMatch.deleteMany({
+        where: { groupId: { in: groupIds } },
+      });
+
+      // 3. Xóa tất cả nhóm
+      const deletedGroups = await tx.group.deleteMany({
+        where: { id: { in: groupIds } },
+      });
+
+      return {
+        deletedGroupsCount: deletedGroups.count,
+        deletedContestantsCount: totalContestants.count,
+      };
+    });
+  }
+
+  /**
+   * Cập nhật tên nhóm
+   */
+  static async updateGroupName(groupId: number, newName: string): Promise<any> {
+    // Kiểm tra nhóm có tồn tại không
+    const existingGroup = await prisma.group.findUnique({
+      where: { id: groupId },
+    });
+
+    if (!existingGroup) {
+      throw new Error("Không tìm thấy nhóm");
+    }
+
+    // Cập nhật tên nhóm
+    const updatedGroup = await prisma.group.update({
+      where: { id: groupId },
+      data: { name: newName },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return updatedGroup;
+  }
+
+  /**
    * Lấy danh sách trường học để lọc
    */
   static async getSchools() {
@@ -363,6 +622,34 @@ export default class GroupDivisionService {
     return await prisma.contestantMatch.updateMany({
       where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
       data: { status },
+    });
+  }
+
+  /**
+   * Phân bổ thí sinh vào các nhóm đã có sẵn (theo groupId, contestantIds)
+   */
+  static async assignContestantsToGroups(matchId: number, input: import("./groupDivision.schema").AssignContestantsToGroupsInput) {
+    return await prisma.$transaction(async tx => {
+      // Xóa contestantMatch cũ của các groupId này
+      const groupIds = input.groups.map(g => g.groupId);
+      await tx.contestantMatch.deleteMany({
+        where: { groupId: { in: groupIds } }
+      });
+
+      // Tạo lại contestantMatch mới
+      for (const group of input.groups) {
+        for (let i = 0; i < group.contestantIds.length; i++) {
+          await tx.contestantMatch.create({
+            data: {
+              groupId: group.groupId,
+              contestantId: group.contestantIds[i],
+              matchId,
+              registrationNumber: i + 1
+            }
+          });
+        }
+      }
+      return { success: true };
     });
   }
 }

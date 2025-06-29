@@ -18,8 +18,8 @@ const authRouter = Router();
 // public
 authRouter.post("/login", validateBody(LoginSchema), AuthController.login);
 authRouter.post(
-  "/student-login", 
-  validateBody(LoginSchema), 
+  "/student-login",
+  validateBody(LoginSchema),
   AuthController.studentLogin
 );
 authRouter.post(
@@ -42,11 +42,11 @@ authRouter.post(
   validateBody(RegisterSchema),
   AuthController.register
 );
-authRouter.post(
-  "/register-student",
-  validateBody(StudentRegisterSchema),
-  AuthController.registerStudent
-);
+// authRouter.post(
+//   "/register-student",
+//   validateBody(StudentRegisterSchema),
+//   AuthController.registerStudent
+// );
 // private
 authRouter.post("/logout", authenticate, AuthController.logout);
 authRouter.get("/refresh-token", AuthController.refreshAccToken);
@@ -76,10 +76,10 @@ authRouter.get("/judge", authenticate, role("Judge"), (req, res) => {
 });
 // Student - for socket connection testing
 authRouter.get("/student", authenticate, role("Student"), (req, res) => {
-  res.json({ 
+  res.json({
     message: "Chào thí sinh",
     user: req.user,
-    socketNamespace: "/match-control"
+    socketNamespace: "/match-control",
   });
 });
 export { authRouter };

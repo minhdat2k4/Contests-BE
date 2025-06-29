@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { verifyToken, extractTokenFromHeader, JwtPayload } from "@/utils/jwt";
 import { errorResponse } from "@/utils/response";
 import UserService from "@/modules/user/user.service";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 // Extend Express Request interface to include user property
 declare global {
@@ -13,6 +16,7 @@ declare global {
       role: string;
       isActive: boolean;
       password: string;
+      contestantId?: number; // Thêm contestantId cho Student
     }
     interface Request {
       user?: User;
@@ -53,8 +57,9 @@ export const authenticate = async (
       res.status(401).json(errorResponse("Vui lòng đăng nhập lại"));
       return;
     }
-    // Attach user to request
-    req.user = {
+
+    // Base user info
+    const userInfo: Express.User = {
       userId: user.id,
       username: user.username,
       email: user.email,
@@ -62,6 +67,40 @@ export const authenticate = async (
       isActive: user.isActive,
       password: user.password,
     };
+
+    // If user is Student, find and attach contestantId
+    if (user.role === "Student") {
+      try {
+        console.log('🔍 [AUTH MIDDLEWARE] Tìm contestant cho Student userId:', user.id);
+        
+        const contestant = await prisma.contestant.findFirst({
+          where: {
+            student: {
+              userId: user.id
+            }
+          },
+          include: {
+            student: {
+              select: { id: true, fullName: true, studentCode: true }
+            }
+          }
+        });
+
+        if (contestant) {
+          console.log('✅ [AUTH MIDDLEWARE] Đã tìm thấy contestant:', contestant.id, 'cho student:', contestant.student.fullName);
+          userInfo.contestantId = contestant.id;
+        } else {
+          console.log('❌ [AUTH MIDDLEWARE] Không tìm thấy contestant cho userId:', user.id);
+          // Không throw error vì có thể Student chưa được assign vào contest nào
+        }
+      } catch (error) {
+        console.error('💥 [AUTH MIDDLEWARE] Lỗi khi tìm contestant:', error);
+        // Không throw error, chỉ log để debug
+      }
+    }
+
+    // Attach user to request
+    req.user = userInfo;
 
     next();
   } catch (error) {

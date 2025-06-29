@@ -161,6 +161,23 @@ export const batchDeleteResultsSchema = z.object({
     .max(100, "Không thể xóa quá 100 kết quả cùng lúc")
 });
 
+// Submit Answer Schema (for students)
+export const submitAnswerSchema = z.object({
+  matchId: z.number()
+    .int("Match ID phải là số nguyên")
+    .positive("Match ID phải là số dương"),
+  questionOrder: z.number()
+    .int("Question order phải là số nguyên")
+    .positive("Question order phải là số dương"),
+  answer: z.string()
+    .min(1, "Câu trả lời không được để trống")
+    .max(500, "Câu trả lời không được quá 500 ký tự")
+    .transform(val => val.trim()),
+  submittedAt: z.string()
+    .datetime("Thời gian submit không hợp lệ")
+    .optional()
+});
+
 // TypeScript Types
 export type CreateResultData = z.infer<typeof createResultSchema>;
 export type UpdateResultData = z.infer<typeof updateResultSchema>;
@@ -172,6 +189,7 @@ export type GetResultsByContestSlugQuery = z.infer<typeof getResultsByContestSlu
 export type DeleteResultParams = z.infer<typeof deleteResultSchema>;
 export type GetResultsQuery = z.infer<typeof getResultsQuerySchema>;
 export type BatchDeleteResultsData = z.infer<typeof batchDeleteResultsSchema>;
+export type SubmitAnswerData = z.infer<typeof submitAnswerSchema>;
 
 // Response Types
 export interface ResultResponse {
@@ -228,4 +246,19 @@ export interface BatchDeleteResult {
     success: number;
     failed: number;
   };
+}
+
+export interface SubmitAnswerResponse {
+  success: boolean;
+  message: string;
+  result?: {
+    isCorrect: boolean;
+    questionOrder: number;
+    submittedAt: string;
+    eliminated?: boolean;
+    score?: number;
+    correctAnswer?: string;
+    explanation?: string;
+  };
+  alreadyAnswered?: boolean;
 }

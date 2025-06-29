@@ -11,10 +11,11 @@ import {
 } from "./classVideo.schema";
 import { ClassVideoController } from "@/modules/classVideo";
 import { authenticate, role } from "@/middlewares/auth";
-import multer from "multer";
+import { createMulter } from "@/utils/multer";
 const classVideoRouter = Router();
-const uploads = multer({ dest: "tmp/" });
-// prive
+const uploads = createMulter("ClassVideo");
+
+// private
 
 classVideoRouter.get(
   "/contest/list-video/:slug",

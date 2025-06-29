@@ -62,9 +62,9 @@ export default class ClassVideoController {
       const input: Omit<CreateClassVideoInput, "videos" | "contestId"> =
         req.body;
 
-      const slug = await req.params.slug;
+      const slug = req.params.slug;
       const contest = await prisma.contest.findFirst({
-        where: { slug: slug },
+        where: { slug },
       });
 
       if (!contest) {
@@ -80,9 +80,12 @@ export default class ClassVideoController {
       if (!req.file) throw new Error(`Vui lòng upload file`);
       const file = req.file;
 
-      const folderPath = path.resolve(__dirname, "../uploads/ClassVideo");
-      await ensureFolderExists(folderPath);
+      // Đường dẫn đích (nơi lưu file sau khi move)
+      const folderPath = path.resolve(process.cwd(), "uploads", "ClassVideo");
+
+      // Thông tin file sau khi upload tạm
       const info = prepareFileInfoCustom(file, folderPath);
+
       const data = {
         videos: `/uploads/ClassVideo/${info.fileName}`,
         name: input.name,
@@ -91,14 +94,16 @@ export default class ClassVideoController {
         contestId: contest.id,
       };
 
-      const ClassVideo = await ClassVideoService.create(data);
-      if (!ClassVideo) {
+      const classVideo = await ClassVideoService.create(data);
+      if (!classVideo) {
         throw new Error(`Thêm video lớp học thất bại`);
       }
 
+      // Di chuyển file từ thư mục tạm sang thư mục chính
       await moveUploadedFile(info.tempPath!, info.destPath!);
+
       logger.info(`Thêm video lớp học thành công`);
-      res.json(successResponse(ClassVideo, `Thêm video lớp học thành công`));
+      res.json(successResponse(classVideo, `Thêm video lớp học thành công`));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

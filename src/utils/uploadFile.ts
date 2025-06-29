@@ -31,7 +31,8 @@ export function prepareFileInfoCustom(
 
 export async function moveUploadedFile(tempPath: string, destPath: string) {
   try {
-    await fs.rename(tempPath, destPath);
+    await fs.copyFile(tempPath, destPath);
+    await fs.unlink(tempPath);
   } catch (error) {
     throw error;
   }

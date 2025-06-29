@@ -79,7 +79,8 @@ export default class ClassVideoController {
 
       if (!req.file) throw new Error(`Vui lòng upload file`);
       const file = req.file;
-      const folderPath = path.resolve(__dirname, "uploads", "ClassVideo");
+
+      const folderPath = path.resolve(__dirname, "/uploads/ClassVideo");
       await ensureFolderExists(folderPath);
       const info = prepareFileInfoCustom(file, folderPath);
       const data = {

@@ -79,7 +79,7 @@ export default class ClassVideoController {
 
       if (!req.file) throw new Error(`Vui lòng upload file`);
       const file = req.file;
-      const folderPath = path.resolve(__dirname, "../../uploads/ClassVideo");
+      const folderPath = path.resolve(process.cwd(), "uploads", "ClassVideo");
       await ensureFolderExists(folderPath);
       const info = prepareFileInfoCustom(file, folderPath);
       const data = {
@@ -139,7 +139,7 @@ export default class ClassVideoController {
       let newUrl: string | undefined;
 
       if (req.file) {
-        const folderPath = path.resolve(__dirname, "../../uploads/ClassVideo");
+        const folderPath = path.resolve(process.cwd(), "uploads", "ClassVideo");
         await ensureFolderExists(folderPath);
         const info = prepareFileInfoCustom(req.file, folderPath);
         await moveUploadedFile(info.tempPath!, info.destPath!);

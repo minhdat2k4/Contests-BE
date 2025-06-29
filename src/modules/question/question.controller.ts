@@ -145,6 +145,11 @@ export class QuestionController {
       const { id } = req.params;
       const data: UpdateQuestionData = req.body;
       
+      console.log("=== DEBUG: updateQuestion Controller Started ===");
+      console.log("Question ID:", id);
+      console.log("Request body data:", JSON.stringify(data, null, 2));
+      console.log("Request files:", req.files ? "Yes" : "No");
+      
       // Get current question to merge with existing files
       const currentQuestion = await this.questionService.getQuestionById(Number(id));
       
@@ -338,12 +343,23 @@ export class QuestionController {
       }
 
       // Gọi updateQuestion không có uploadedFiles để tránh xử lý file hai lần
+      console.log("=== DEBUG: Calling questionService.updateQuestion ===");
       const question = await this.questionService.updateQuestion(Number(id), cleanData);
+
+      console.log("=== DEBUG: Service updateQuestion completed ===");
+      console.log("Final response data:", {
+        id: question.id,
+        questionMediaCount: (question.questionMedia as any)?.length || 0,
+        mediaAnswerCount: (question.mediaAnswer as any)?.length || 0,
+        hasQuestionMedia: !!(question.questionMedia as any),
+        hasMediaAnswer: !!(question.mediaAnswer as any),
+      });
 
       logger.info(`Question updated successfully with auto-merge and delete: ${question.id}`);
       logger.info(`QuestionMedia: ${filesToDeleteFromQuestionMedia.length} deleted, ${uploadedFiles.questionMedia?.length || 0} added`);
       logger.info(`MediaAnswer: ${filesToDeleteFromMediaAnswer.length} deleted, ${uploadedFiles.mediaAnswer?.length || 0} added`);
       
+      console.log("=== DEBUG: Sending response to frontend ===");
       res.json(successResponse(question, "Cập nhật câu hỏi thành công"));
     } catch (error) {
       logger.error("Error in updateQuestion controller:", error);

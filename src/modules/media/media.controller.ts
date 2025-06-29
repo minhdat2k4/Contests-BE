@@ -103,7 +103,8 @@ export default class mediaController {
       if (!req.file) throw new Error(`Vui lòng upload file`);
       const file = req.file;
 
-      const folderPath = path.resolve("uploads", "media");
+      const folderPath = path.resolve(__dirname, "../../uploads/media");
+
       await ensureFolderExists(folderPath);
       const info = prepareFileInfoCustom(file, folderPath);
       console.log(info);
@@ -179,11 +180,11 @@ export default class mediaController {
       let newUrl: string | undefined;
 
       if (req.file) {
-        const folderPath = path.resolve("uploads", "media");
+        const folderPath = path.resolve(__dirname, "../../uploads/media");
         const info = prepareFileInfoCustom(req.file, folderPath);
         await moveUploadedFile(info.tempPath!, info.destPath!);
         newUrl = `/uploads/media/${info.fileName}`;
-      }
+      f
 
       const data: Partial<Media> = {
         type: input.type,

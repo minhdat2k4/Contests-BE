@@ -553,6 +553,14 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         updatedAt: new Date().toISOString()
       });
 
+      // 🔥 NEW: Also broadcast to online-control namespace
+      io.of("/online-control").to(roomName).emit("match:timerUpdated", {
+        matchId: match.id,
+        matchSlug: match.slug,
+        remainingTime: remainingTime,
+        updatedAt: new Date().toISOString()
+      });
+
       // If time is up, emit time up event
       if (remainingTime <= 0) {
         io.of("/match-control").to(roomName).emit("match:timeUp", {
@@ -564,6 +572,14 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
 
         // Also to students
         io.of("/student").to(roomName).emit("match:timeUp", {
+          matchId: match.id,
+          matchSlug: match.slug,
+          questionOrder: updatedMatch.currentQuestion,
+          timeUpAt: new Date().toISOString()
+        });
+
+        // 🔥 NEW: Also to online-control
+        io.of("/online-control").to(roomName).emit("match:timeUp", {
           matchId: match.id,
           matchSlug: match.slug,
           questionOrder: updatedMatch.currentQuestion,

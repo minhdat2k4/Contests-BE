@@ -131,19 +131,23 @@ export default class ClassVideoController {
   }
   static async update(req: Request, res: Response): Promise<void> {
     try {
-      const input: Omit<UpdateClassVideoInput, "videos"> = req.body;
+      const input: any = req.body || {};
       const id = Number(req.params.id);
 
-      const ClassVideoContest = await ClassVideoService.getBy({ id });
-      if (!ClassVideoContest) throw new Error("Không tìm thấy video lớp học");
+      const existing = await ClassVideoService.getBy({ id });
+      if (!existing) throw new Error("Không tìm thấy video lớp học");
 
-      const classEx = await prisma.class.findFirst({
-        where: { id: input.classId },
-      });
-      if (!classEx) throw new Error(`Không tìm thấy lớp học`);
+      // Kiểm tra classId nếu có
+      if (input.classId) {
+        const classExists = await prisma.class.findFirst({
+          where: { id: Number(input.classId) },
+        });
+        if (!classExists) throw new Error("Không tìm thấy lớp học");
+        input.classId = classExists.id;
+      }
 
+      // Xử lý file upload nếu có
       let newUrl: string | undefined;
-
       if (req.file) {
         const folderPath = path.resolve(process.cwd(), "uploads", "ClassVideo");
         await ensureFolderExists(folderPath);
@@ -151,24 +155,26 @@ export default class ClassVideoController {
         await moveUploadedFile(info.tempPath!, info.destPath!);
         newUrl = `/uploads/ClassVideo/${info.fileName}`;
       }
-      const data: UpdateClassVideoInput = {
-        name: input.name,
-        slogan: input.slogan,
-        classId: input.classId,
-      };
 
-      if (newUrl) {
-        data.videos = newUrl;
+      // Chuẩn bị dữ liệu cập nhật (chỉ update nếu có)
+      const data: Partial<UpdateClassVideoInput> = {};
+
+      if (input.name) data.name = input.name;
+      if (input.slogan) data.slogan = input.slogan;
+      if (input.classId) data.classId = Number(input.classId);
+      if (newUrl) data.videos = newUrl;
+
+      if (Object.keys(data).length === 0) {
+        throw new Error("Không có dữ liệu nào để cập nhật");
       }
 
       const updated = await ClassVideoService.update(id, data);
-      if (!updated) throw new Error("Cập nhật video lớp học thất bại ");
+      if (!updated) throw new Error("Cập nhật video lớp học thất bại");
 
-      if (newUrl && ClassVideoContest.videos) {
-        await deleteFile(ClassVideoContest.videos);
+      // Xóa file cũ nếu có video mới
+      if (newUrl && existing.videos) {
+        await deleteFile(existing.videos);
       }
-
-      console.log(ClassVideoContest);
 
       logger.info("Cập nhật video lớp học thành công");
       res.json(successResponse(updated, "Cập nhật video lớp học thành công"));

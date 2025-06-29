@@ -33,21 +33,6 @@ classVideoRouter.post(
   ClassVideoController.create
 );
 
-classVideoRouter.get(
-  "/contest/:slug",
-  authenticate,
-  role("Admin"),
-  ClassVideoController.getAlls
-);
-
-classVideoRouter.get(
-  "/:id",
-  authenticate,
-  role("Admin"),
-  validateParams(ClassVideoIdSchema),
-  ClassVideoController.getById
-);
-
 classVideoRouter.patch(
   "/:id",
   authenticate,

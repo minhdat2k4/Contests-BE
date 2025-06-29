@@ -24,7 +24,7 @@ export default class ContestantService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search, roundId, status, schoolId, classId, groupId, matchId } = query;
+    const { page, limit, search, roundId, status, schoolId, classId, groupId, matchId, schoolIds, classIds } = query;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
 
@@ -90,6 +90,30 @@ export default class ContestantService {
       ]);
     }
 
+    if (schoolIds && schoolIds.length > 0 && classIds && classIds.length > 0) {
+      // Lọc theo cả trường và lớp
+      whereClause.student = {
+        class: {
+          schoolId: { in: schoolIds },
+          id: { in: classIds }
+        }
+      };
+    } else if (schoolIds && schoolIds.length > 0) {
+      // Chỉ lọc theo trường
+      whereClause.student = {
+        class: {
+          schoolId: { in: schoolIds }
+        }
+      };
+    } else if (classIds && classIds.length > 0) {
+      // Chỉ lọc theo lớp
+      whereClause.student = {
+        class: {
+          id: { in: classIds }
+        }
+      };
+    }
+
     const ContestantRaw = await prisma.contestant.findMany({
       where: whereClause,
       skip: skip,
@@ -98,8 +122,8 @@ export default class ContestantService {
       select: {
         id: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -114,7 +138,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -176,8 +200,8 @@ export default class ContestantService {
         roundId: true,
         studentId: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -192,7 +216,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -390,7 +414,7 @@ export default class ContestantService {
   }
 
   static async getContestantByIdAndMatch(
-    contestantId: number, 
+    contestantId: number,
     matchId: number
   ): Promise<any> {
     return prisma.contestant.findFirst({
@@ -407,8 +431,8 @@ export default class ContestantService {
         roundId: true,
         studentId: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -423,7 +447,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -517,8 +541,8 @@ export default class ContestantService {
       select: {
         id: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -533,7 +557,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -602,8 +626,8 @@ export default class ContestantService {
         roundId: true,
         studentId: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -618,7 +642,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -682,14 +706,14 @@ export default class ContestantService {
     const contest = await prisma.contest.findFirst({
       where: { slug: slug }
     });
-    
+
     if (!contest) {
       throw new Error("Không tìm thấy cuộc thi");
     }
 
     // Tìm trận đấu
     const match = await prisma.match.findFirst({
-      where: { 
+      where: {
         id: matchId,
         contest: {
           slug: slug
@@ -789,7 +813,7 @@ export default class ContestantService {
     // Transform dữ liệu để trả về đúng format
     const transformedContestants = contestants.map(contestant => {
       const group = contestant.contestantMatches?.[0]?.group || null;
-      
+
       return {
         id: contestant.id,
         fullName: contestant.student.fullName,

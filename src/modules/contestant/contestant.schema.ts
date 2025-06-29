@@ -112,6 +112,14 @@ export const ContestantQuerySchema = z.object({
       "Id trận đấu phải là số nguyên dương"
     )
     .optional(),
+  schoolIds: z.preprocess(
+    val => typeof val === "string" ? val.split(",").map(Number) : val,
+    z.array(z.number()).optional()
+  ),
+  classIds: z.preprocess(
+    val => typeof val === "string" ? val.split(",").map(Number) : val,
+    z.array(z.number()).optional()
+  ),
 });
 
 export const ContestantByContestQuerySchema = z.object({
@@ -224,7 +232,7 @@ export type ContestantById = {
   roundId: number;
   studentId: number;
   round: { name: string };
-  student: { 
+  student: {
     fullName: string;
     studentCode: string | null;
     class: {
@@ -263,6 +271,8 @@ export const GetContestantsInMatchQuerySchema = z.object({
     .optional()
     .default("10"),
   search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
+  // schoolIds: z.array(z.number()).optional(),
+  // classIds: z.array(z.number()).optional(),
 });
 
 export type GetContestantsInMatchQuery = z.infer<typeof GetContestantsInMatchQuerySchema>;

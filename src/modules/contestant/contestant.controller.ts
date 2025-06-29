@@ -34,6 +34,20 @@ export default class ContestantController {
         )
           ? (statusQuery as ContestantStatus)
           : undefined,
+        schoolIds: req.query.schoolIds
+          ? Array.isArray(req.query.schoolIds)
+            ? req.query.schoolIds.flatMap(val => typeof val === "string" ? val.split(",") : val).map(Number)
+            : typeof req.query.schoolIds === "string"
+              ? req.query.schoolIds.split(",").map(Number)
+              : undefined
+          : undefined,
+        classIds: req.query.classIds
+          ? Array.isArray(req.query.classIds)
+            ? req.query.classIds.flatMap(val => typeof val === "string" ? val.split(",") : val).map(Number)
+            : typeof req.query.classIds === "string"
+              ? req.query.classIds.split(",").map(Number)
+              : undefined
+          : undefined,
       };
 
       const data = await ContestantService.getAll(query, contest.id);
@@ -566,7 +580,7 @@ export default class ContestantController {
       const contestantId = Number(req.params.id);
       const contestSlug = req.params.slug;
       const matchId = Number(req.params.matchId);
-      
+
       if (!contestantId || !matchId) {
         throw new Error("ID thí sinh và ID trận đấu không hợp lệ");
       }
@@ -576,7 +590,7 @@ export default class ContestantController {
         contestSlug,
         matchId
       );
-      
+
       if (!contestant) {
         throw new Error("Không tìm thấy thí sinh trong cuộc thi này");
       }
@@ -613,7 +627,7 @@ export default class ContestantController {
     try {
       const slug = req.params.slug;
       const matchId = parseInt(req.params.matchId);
-      
+
       const query = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,

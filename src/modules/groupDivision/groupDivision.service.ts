@@ -303,6 +303,7 @@ export default class GroupDivisionService {
 
       // 3. Tạo các nhóm mới
       const createdGroups = [];
+      let registrationNumber = 1;
 
       for (let i = 0; i < input.groups.length; i++) {
         const groupData = input.groups[i];
@@ -353,7 +354,7 @@ export default class GroupDivisionService {
               contestantId,
               matchId,
               groupId: createdGroup.id,
-              registrationNumber: j + 1, // Số thứ tự trong nhóm
+              registrationNumber: registrationNumber++, // Số thứ tự trong nhóm
               status: "not_started",
             },
           });
@@ -636,6 +637,8 @@ export default class GroupDivisionService {
         where: { groupId: { in: groupIds } }
       });
 
+      let registrationNumber = 1;
+
       // Tạo lại contestantMatch mới
       for (const group of input.groups) {
         for (let i = 0; i < group.contestantIds.length; i++) {
@@ -644,7 +647,7 @@ export default class GroupDivisionService {
               groupId: group.groupId,
               contestantId: group.contestantIds[i],
               matchId,
-              registrationNumber: i + 1
+              registrationNumber: registrationNumber++
             }
           });
         }

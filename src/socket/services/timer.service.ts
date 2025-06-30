@@ -181,6 +181,13 @@ class TimerService {
       updatedAt: new Date().toISOString()
     });
 
+    // 🔥 NEW: Also broadcast to online-control namespace
+    this.io.of("/online-control").to(roomName).emit("match:timerUpdated", {
+      matchId: matchId,
+      remainingTime: remainingTime,
+      updatedAt: new Date().toISOString()
+    });
+
     // Send warning when time is running low
     if (remainingTime === 30 || remainingTime === 10 || remainingTime === 5) {
       // Warning to match control
@@ -192,6 +199,13 @@ class TimerService {
 
       // Warning to students
       this.io.of("/student").to(roomName).emit("match:timerWarning", {
+        matchId: matchId,
+        remainingTime: remainingTime,
+        message: `⚠️ ${remainingTime} giây còn lại!`
+      });
+
+      // 🔥 NEW: Warning to online-control
+      this.io.of("/online-control").to(roomName).emit("match:timerWarning", {
         matchId: matchId,
         remainingTime: remainingTime,
         message: `⚠️ ${remainingTime} giây còn lại!`
@@ -224,6 +238,13 @@ class TimerService {
 
     // Also emit to students
     this.io.of("/student").to(roomName).emit("match:timeUp", {
+      matchId: matchId,
+      questionOrder: match?.currentQuestion || 0,
+      timeUpAt: new Date().toISOString()
+    });
+
+    // 🔥 NEW: Also emit to online-control
+    this.io.of("/online-control").to(roomName).emit("match:timeUp", {
       matchId: matchId,
       questionOrder: match?.currentQuestion || 0,
       timeUpAt: new Date().toISOString()

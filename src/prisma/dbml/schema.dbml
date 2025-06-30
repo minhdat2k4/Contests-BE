@@ -58,8 +58,8 @@ Table students {
   studentCode String
   classId Int [not null]
   class classes [not null]
-  userId Int [unique, not null]
-  user users [not null]
+  userId Int [unique]
+  user users
   isActive Boolean [not null, default: true]
   contestants contestants [not null]
   match matches [not null]
@@ -263,7 +263,6 @@ Table contestant_Matches {
 
 Table results {
   id Int [pk, increment]
-  name String [not null]
   contestantId Int [not null]
   matchId Int [not null]
   contestant contestants [not null]
@@ -443,6 +442,8 @@ Enum ControlValue {
   reset
   zoomIn
   zoomOut
+  Eliminated
+  Rescued
 }
 
 Ref: refreshtokens.userId > users.id [delete: Cascade]

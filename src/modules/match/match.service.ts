@@ -301,6 +301,7 @@ export default class MatchService {
       studentId: matchRaw.student?.id ?? null,
       studentName: matchRaw.student?.fullName ?? null,
     };
+
     return match;
   }
 
@@ -417,6 +418,8 @@ export default class MatchService {
         contestantMatches: {
           select: {
             registrationNumber: true,
+            eliminatedAtQuestionOrder: true,
+            rescuedAtQuestionOrder: true,
             status: true,
             contestant: {
               select: {
@@ -428,6 +431,9 @@ export default class MatchService {
                 },
               },
             },
+          },
+          orderBy: {
+            registrationNumber: "asc",
           },
         },
       },
@@ -448,7 +454,7 @@ export default class MatchService {
 
   static async Total(matchId: number) {
     return prisma.contestantMatch.count({
-      where: { matchId: matchId },
+      where: { matchId: matchId, status: { notIn: ["eliminated", "banned"] } },
     });
   }
 

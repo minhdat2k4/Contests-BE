@@ -18,7 +18,7 @@ CREATE TABLE `users` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `refreshTokens` (
+CREATE TABLE `refreshtokens` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `userId` INTEGER NOT NULL,
     `refreshToken` TEXT NOT NULL,
@@ -62,10 +62,12 @@ CREATE TABLE `students` (
     `full_name` VARCHAR(255) NOT NULL,
     `student_code` VARCHAR(12) NULL,
     `classId` INTEGER NOT NULL,
+    `userId` INTEGER NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
+    UNIQUE INDEX `students_userId_key`(`userId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -216,7 +218,7 @@ CREATE TABLE `matches` (
 CREATE TABLE `groups` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
-    `userId` INTEGER NOT NULL,
+    `userId` INTEGER NULL,
     `matchId` INTEGER NOT NULL,
     `confirmCurrentQuestion` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -246,6 +248,7 @@ CREATE TABLE `contestant_Matches` (
     `registrationNumber` INTEGER NOT NULL,
     `status` ENUM('not_started', 'in_progress', 'confirmed1', 'confirmed2', 'eliminated', 'rescued', 'banned', 'completed') NOT NULL DEFAULT 'not_started',
     `eliminatedAtQuestionOrder` INTEGER NULL,
+    `rescuedAtQuestionOrder` INTEGER NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -256,7 +259,6 @@ CREATE TABLE `contestant_Matches` (
 -- CreateTable
 CREATE TABLE `results` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(255) NOT NULL,
     `contestant_id` INTEGER NOT NULL,
     `match_id` INTEGER NOT NULL,
     `isCorrect` BOOLEAN NOT NULL DEFAULT true,
@@ -279,7 +281,7 @@ CREATE TABLE `rescues` (
     `remainingContestants` INTEGER NOT NULL,
     `questionOrder` INTEGER NULL,
     `index` INTEGER NOT NULL,
-    `status` ENUM('notUsed', 'used', 'passed') NOT NULL,
+    `status` ENUM('notUsed', 'used', 'passed', 'notEligible') NOT NULL,
     `match_id` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -331,8 +333,8 @@ CREATE TABLE `class_Videos` (
 -- CreateTable
 CREATE TABLE `screen_Controls` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `controlKey` ENUM('qrcode', 'background', 'question', 'questionIntro', 'questionInfo', 'answer', 'matchDiagram', 'explanation', 'firstPrize', 'secondPrize', 'thirdPrize', 'fourthPrize', 'impressiveVideo', 'excellentVideo', 'allPrize', 'topWin', 'listEliminated', 'listRescued', 'video', 'audio', 'image') NOT NULL DEFAULT 'background',
-    `controlValue` ENUM('start', 'pause', 'reset', 'zoomIn', 'zoomOut') NULL,
+    `controlKey` ENUM('wingold', 'qrcode', 'background', 'question', 'questionIntro', 'questionInfo', 'answer', 'matchDiagram', 'explanation', 'firstPrize', 'secondPrize', 'thirdPrize', 'fourthPrize', 'impressiveVideo', 'excellentVideo', 'allPrize', 'topWin', 'listEliminated', 'listRescued', 'video', 'audio', 'image') NOT NULL DEFAULT 'background',
+    `controlValue` ENUM('start', 'pause', 'reset', 'zoomIn', 'zoomOut', 'Eliminated', 'Rescued') NULL,
     `matchId` INTEGER NOT NULL,
     `media` VARCHAR(255) NULL,
     `value` VARCHAR(191) NULL,
@@ -344,13 +346,16 @@ CREATE TABLE `screen_Controls` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `refreshTokens` ADD CONSTRAINT `refreshTokens_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `refreshtokens` ADD CONSTRAINT `refreshtokens_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `classes` ADD CONSTRAINT `classes_schoolId_fkey` FOREIGN KEY (`schoolId`) REFERENCES `schools`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
 ALTER TABLE `students` ADD CONSTRAINT `students_classId_fkey` FOREIGN KEY (`classId`) REFERENCES `classes`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+
+-- AddForeignKey
+ALTER TABLE `students` ADD CONSTRAINT `students_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `questions` ADD CONSTRAINT `questions_questionTopicId_fkey` FOREIGN KEY (`questionTopicId`) REFERENCES `question_Topics`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;

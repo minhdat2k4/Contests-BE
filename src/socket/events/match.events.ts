@@ -4,6 +4,7 @@ import { logger } from "@/utils/logger";
 import { MatchService } from "@/modules/match";
 import { prisma } from "@/config/database";
 import { timerService } from "../services/timer.service";
+import { transformQuestionMedia } from "@/utils/mediaTransform";
 
 // Extended Socket interface for type safety
 interface AuthenticatedSocket extends Socket {
@@ -290,7 +291,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         difficulty: questionDetailWithRelation.question.difficulty,
         defaultTime: questionDetailWithRelation.question.defaultTime,
         score: questionDetailWithRelation.question.score,
-        questionMedia: questionDetailWithRelation.question.questionMedia,
+        media: transformQuestionMedia(questionDetailWithRelation.question.questionMedia),
         // Xử lý options từ Json field
         options: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options : [],
         // Không gửi correctAnswer và explanation để tránh gian lận
@@ -785,7 +786,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
           difficulty: questionDetailWithRelation.question.difficulty,
           defaultTime: questionDetailWithRelation.question.defaultTime,
           score: questionDetailWithRelation.question.score,
-          questionMedia: questionDetailWithRelation.question.questionMedia,
+          media: transformQuestionMedia(questionDetailWithRelation.question.questionMedia),
           // Xử lý options từ Json field
           options: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options : []
         }

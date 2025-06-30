@@ -33,7 +33,7 @@ export const registerUpdateStatusByJudgeEvents = (
       console.log("Payload:", rawData);
       const validation = statusUpdateSchema.safeParse(rawData);
       if (!validation.success) {
-        return callback(new Error("Dữ liệu không hợp lệ"));
+        return callback({ success: false, message: "Dữ liệu không hợp lệ" });
       }
 
       const payload = validation.data;
@@ -41,7 +41,10 @@ export const registerUpdateStatusByJudgeEvents = (
       try {
         const match = await MatchService.MatchControl(payload.match);
         if (!match) {
-          return callback(new Error("Không tìm thấy trận đấu"));
+          return callback({
+            success: false,
+            message: "Không tìm thấy trận đấu",
+          });
         }
 
         const updatedContestant =
@@ -52,12 +55,18 @@ export const registerUpdateStatusByJudgeEvents = (
           );
 
         if (!updatedContestant) {
-          return callback(new Error("Cập nhật trạng thái không thành công"));
+          return callback({
+            success: false,
+            message: "Cập nhật trạng thái không thành công",
+          });
         }
 
         const ListContestant = await MatchService.ListContestant(match.id);
         if (!ListContestant) {
-          return callback(new Error("Không tìm thấy danh sách thí sinh"));
+          return callback({
+            success: false,
+            message: "Không tìm thấy danh sách thí sinh",
+          });
         }
 
         const data =
@@ -67,7 +76,10 @@ export const registerUpdateStatusByJudgeEvents = (
           );
 
         if (!data) {
-          return callback(new Error("Không tìm thấy thí sinh"));
+          return callback({
+            success: false,
+            message: "Không tìm thấy thí sinh",
+          });
         }
 
         const roomName = `match-${payload.match}`;

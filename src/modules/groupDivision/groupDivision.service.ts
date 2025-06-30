@@ -187,11 +187,13 @@ export default class GroupDivisionService {
       id: group.id,
       name: group.name,
       userId: group.userId,
-      judge: group.user ? {
-        id: group.user.id,
-        username: group.user.username,
-        email: group.user.email,
-      } : null,
+      judge: group.user
+        ? {
+            id: group.user.id,
+            username: group.user.username,
+            email: group.user.email,
+          }
+        : null,
       contestantMatches: group.contestantMatches.map((cm: any) => ({
         contestant: {
           id: cm.contestant.id,
@@ -255,11 +257,13 @@ export default class GroupDivisionService {
       id: group.id,
       name: group.name,
       userId: group.userId,
-      judge: group.user ? {
-        id: group.user.id,
-        username: group.user.username,
-        email: group.user.email,
-      } : null,
+      judge: group.user
+        ? {
+            id: group.user.id,
+            username: group.user.username,
+            email: group.user.email,
+          }
+        : null,
       contestantMatches: group.contestantMatches.map((cm: any) => ({
         contestant: {
           id: cm.contestant.id,
@@ -628,12 +632,15 @@ export default class GroupDivisionService {
   /**
    * Phân bổ thí sinh vào các nhóm đã có sẵn (theo groupId, contestantIds)
    */
-  static async assignContestantsToGroups(matchId: number, input: import("./groupDivision.schema").AssignContestantsToGroupsInput) {
+  static async assignContestantsToGroups(
+    matchId: number,
+    input: import("./groupDivision.schema").AssignContestantsToGroupsInput
+  ) {
     return await prisma.$transaction(async tx => {
       // Xóa contestantMatch cũ của các groupId này
       const groupIds = input.groups.map(g => g.groupId);
       await tx.contestantMatch.deleteMany({
-        where: { groupId: { in: groupIds } }
+        where: { groupId: { in: groupIds } },
       });
 
       // Tạo lại contestantMatch mới
@@ -644,8 +651,8 @@ export default class GroupDivisionService {
               groupId: group.groupId,
               contestantId: group.contestantIds[i],
               matchId,
-              registrationNumber: i + 1
-            }
+              registrationNumber: i + 1,
+            },
           });
         }
       }

@@ -74,6 +74,7 @@ enum RescueStatus {
   notUsed
   used
   passed
+  notEligible    
 }
 
 enum AwardType {
@@ -86,6 +87,7 @@ enum AwardType {
 }
 
 enum ControlKey {
+  wingold
   qrcode
   background
   question

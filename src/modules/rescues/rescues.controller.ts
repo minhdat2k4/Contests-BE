@@ -11,15 +11,17 @@ import { RescueStatus, RescueType, Match } from "@prisma/client";
 import prisma from "@/config/client";
 import { MatchService } from "../match";
 import string from "zod";
+import { count } from "console";
 export default class RescueController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
       const slug = req.params.slug;
+
       if (!slug) {
         throw new Error("Slug không được để trống");
       }
 
-      const contest = await prisma.contest.findFirst({
+      const contest = await prisma.contest.findUnique({
         where: { slug: slug },
       });
 
@@ -287,8 +289,8 @@ export default class RescueController {
       }
 
       // Kiểm tra và đảm bảo supportAnswers là mảng
-      const supportAnswers = Array.isArray(rescuese.supportAnswers) 
-        ? rescuese.supportAnswers 
+      const supportAnswers = Array.isArray(rescuese.supportAnswers)
+        ? rescuese.supportAnswers
         : [];
 
       if (supportAnswers.length === 0) {
@@ -296,13 +298,10 @@ export default class RescueController {
       }
 
       const data = Object.entries(
-        supportAnswers.reduce(
-          (acc: Record<string, number>, curr: string) => {
-            acc[curr] = (acc[curr] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>
-        )
+        supportAnswers.reduce((acc: Record<string, number>, curr: string) => {
+          acc[curr] = (acc[curr] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
       ).map(([label, value]) => ({ label, value }));
 
       logger.info(`Lấy data cứu trợ cho trận đấu ${id} thành công`);
@@ -339,8 +338,8 @@ export default class RescueController {
       }
 
       // Kiểm tra và đảm bảo supportAnswers là mảng trước khi thêm
-      const currentSupportAnswers = Array.isArray(rescuese.supportAnswers) 
-        ? rescuese.supportAnswers 
+      const currentSupportAnswers = Array.isArray(rescuese.supportAnswers)
+        ? rescuese.supportAnswers
         : [];
 
       const supportAnswers = [...currentSupportAnswers, input.supportAnswers];

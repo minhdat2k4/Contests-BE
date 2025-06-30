@@ -251,6 +251,7 @@ Table contestant_Matches {
   registrationNumber Int [not null]
   status ContestantMatchStatus [not null, default: 'not_started']
   eliminatedAtQuestionOrder Int
+  rescuedAtQuestionOrder Int
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]

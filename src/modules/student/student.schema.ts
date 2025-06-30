@@ -31,6 +31,12 @@ export const CreateStudentShema = z.object({
     .min(1, "Vui lòng nhập tên họ và tên")
     .max(12, "Tên lớp tối đa 12 kí tự")
     .optional(),
+  userId: z
+    .number({
+      required_error: "Vui lòng nhập user ID",
+      invalid_type_error: "User ID là một số nguyên",
+    })
+    .refine(val => !NaN && val > 0, "User ID là một số nguyên dương"),
   isActive: z.boolean().optional(),
 });
 

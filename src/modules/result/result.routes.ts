@@ -12,7 +12,8 @@ import {
   getResultsQuerySchema,
   batchDeleteResultsSchema,
   getResultsByContestSlugSchema,
-  getResultsByContestSlugQuerySchema
+  getResultsByContestSlugQuerySchema,
+  submitAnswerSchema
 } from "./result.schema";
 
 const router = Router();
@@ -42,6 +43,19 @@ router.post(
   role("Admin", "Judge"),
   validateBody(createResultSchema),
   resultController.createResult.bind(resultController)
+);
+
+/**
+ * @route POST /api/results/submit-answer
+ * @desc Submit answer for student
+ * @access Private (Student only)
+ */
+router.post(
+  "/submit-answer",
+  authenticate,
+  role("Student"),
+  validateBody(submitAnswerSchema),
+  resultController.submitAnswer.bind(resultController)
 );
 
 /**

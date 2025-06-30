@@ -15,10 +15,11 @@ Table users {
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
   groups groups [not null]
-  refreshToken refreshTokens [not null]
+  refreshToken refreshtokens [not null]
+  student students
 }
 
-Table refreshTokens {
+Table refreshtokens {
   id Int [pk, increment]
   userId Int [not null]
   user users [not null]
@@ -57,6 +58,8 @@ Table students {
   studentCode String
   classId Int [not null]
   class classes [not null]
+  userId Int [unique]
+  user users
   isActive Boolean [not null, default: true]
   contestants contestants [not null]
   match matches [not null]
@@ -248,6 +251,7 @@ Table contestant_Matches {
   registrationNumber Int [not null]
   status ContestantMatchStatus [not null, default: 'not_started']
   eliminatedAtQuestionOrder Int
+  rescuedAtQuestionOrder Int
   isActive Boolean [not null, default: true]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
@@ -259,7 +263,6 @@ Table contestant_Matches {
 
 Table results {
   id Int [pk, increment]
-  name String [not null]
   contestantId Int [not null]
   matchId Int [not null]
   contestant contestants [not null]
@@ -396,6 +399,7 @@ Enum RescueStatus {
   notUsed
   used
   passed
+  notEligible
 }
 
 Enum AwardType {
@@ -408,6 +412,7 @@ Enum AwardType {
 }
 
 Enum ControlKey {
+  wingold
   qrcode
   background
   question
@@ -437,13 +442,17 @@ Enum ControlValue {
   reset
   zoomIn
   zoomOut
+  Eliminated
+  Rescued
 }
 
-Ref: refreshTokens.userId > users.id [delete: Cascade]
+Ref: refreshtokens.userId > users.id [delete: Cascade]
 
 Ref: classes.schoolId > schools.id [delete: Restrict]
 
 Ref: students.classId > classes.id [delete: Restrict]
+
+Ref: students.userId - users.id [delete: Cascade]
 
 Ref: questions.questionTopicId > question_Topics.id [delete: Restrict]
 

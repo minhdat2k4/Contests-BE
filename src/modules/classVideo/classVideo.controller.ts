@@ -129,6 +129,7 @@ export default class ClassVideoController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
   static async update(req: Request, res: Response): Promise<void> {
     try {
       const input: any = req.body || {};

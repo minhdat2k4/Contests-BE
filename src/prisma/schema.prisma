@@ -5,16 +5,15 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
-}
 generator dbml {
   provider = "prisma-dbml-generator"
   output   = "./dbml"
 }
 
-
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
 
 enum Role {
   Admin
@@ -66,7 +65,6 @@ enum ContestMedia {
   images
 }
 
-
 enum RescueType {
   resurrected
   lifelineUsed
@@ -76,6 +74,7 @@ enum RescueStatus {
   notUsed
   used
   passed
+  notEligible    
 }
 
 enum AwardType {
@@ -88,6 +87,7 @@ enum AwardType {
 }
 
 enum ControlKey {
+  wingold
   qrcode
   background
   question
@@ -117,6 +117,8 @@ enum ControlValue {
   reset
   zoomIn
   zoomOut
+  Eliminated
+  Rescued
 }
 
 model User {
@@ -133,8 +135,10 @@ model User {
   updatedAt DateTime @updatedAt
   groups    Group[]
   refreshToken RefreshToken[]
+  student   Student?
   @@map("users")
 }
+
 model RefreshToken {
   id        Int      @id @default(autoincrement())
   userId    Int     
@@ -143,23 +147,23 @@ model RefreshToken {
   createdAt DateTime @default(now())
   expiredAt DateTime 
   
-  @@map("refreshTokens")
+  @@map("refreshtokens")
 }
 
+model School {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  phone     String?  @unique @db.VarChar(10)
+  address   String?  @db.VarChar(255)
+  isActive  Boolean  @default(true)
+  classes   Class[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  model School {
-    id        Int      @id @default(autoincrement())
-    name      String   @db.VarChar(255)
-    email     String   @unique @db.VarChar(255)
-    phone     String?  @unique @db.VarChar(10)
-    address   String?  @db.VarChar(255)
-    isActive  Boolean  @default(true)
-    classes   Class[]
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  @@map("schools")
+}
 
-    @@map("schools")
-  }
 
   model Class {
     id        Int       @id @default(autoincrement())
@@ -181,6 +185,8 @@ model Student {
   studentCode  String?  @db.VarChar(12) @map("student_code")
   classId      Int     
   class        Class    @relation(fields: [classId], references: [id],onUpdate:Restrict, onDelete:Restrict)
+  userId       Int?      @unique
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   isActive     Boolean  @default(true) 
   contestants  Contestant[]
   match        Match[]
@@ -296,7 +302,6 @@ model Contest {
   @@map("contests")
 }
 
-
 model Media {
   id         Int        @id @default(autoincrement())
   url        String     @db.VarChar(255)
@@ -396,6 +401,7 @@ model ContestantMatch {
   registrationNumber Int                
   status           ContestantMatchStatus @default(not_started)
   eliminatedAtQuestionOrder Int?       
+  rescuedAtQuestionOrder Int?           // note trường này để lưu câu được cứu trợ
   isActive         Boolean              @default(true) 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -406,7 +412,6 @@ model ContestantMatch {
 
 model Result {
   id             Int        @id @default(autoincrement())
-  name           String     @db.VarChar(255)
   contestantId   Int        @map("contestant_id")
   matchId        Int        @map("match_id")
   contestant     Contestant @relation(fields: [contestantId], references: [id],onDelete :Restrict , onUpdate :Restrict)
@@ -482,7 +487,6 @@ model ClassVideo {
 
   @@map("class_Videos")
 }
-
 
 model ScreenControl {
   id           Int          @id @default(autoincrement())

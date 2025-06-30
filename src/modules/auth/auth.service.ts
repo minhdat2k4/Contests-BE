@@ -144,13 +144,14 @@ export default class AuthService {
         },
       });
 
-      // Tạo Student với mã sinh viên tự động sinh
+      // Tạo Student với userId liên kết
       const student = await tx.student.create({
         data: {
           fullName,
-          classId,
           studentCode,
           isActive: true,
+          userId: user.id,
+          classId: classId,
         },
       });
 

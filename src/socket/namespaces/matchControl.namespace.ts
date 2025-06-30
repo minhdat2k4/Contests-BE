@@ -8,6 +8,8 @@ import { registerUpdateStatusByAdminEvents } from "../events/Admin/updateStatus.
 import { registerUpdateStatusByJudgeEvents } from "../events/Judge/updateStatus.events";
 import { verifyToken, JwtPayload } from "@/utils/jwt";
 import cookie from "cookie";
+import { registerAwardEvents } from "../events/award.envent";
+import { registerMatchDiagramEvents } from "../events/matchDiagram.event";
 
 const extractUserFromSocket = (socket: Socket): JwtPayload | null => {
   try {
@@ -32,8 +34,10 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
     "joinMatchRoom",
     (matchId: number, callback?: (response: any) => void) => {
       try {
-        console.log(`🏠 [JOIN ROOM] Socket ${socket.id} wants to join matchId: ${matchId}`);
-        
+        console.log(
+          `🏠 [JOIN ROOM] Socket ${socket.id} wants to join matchId: ${matchId}`
+        );
+
         const roomName = `match-${matchId}`;
         socket.join(roomName);
         logger.info(`✅ Socket ${socket.id} joined room: ${roomName}`);
@@ -90,4 +94,6 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   registerTimerEvents(io, socket);
   registerUpdateStatusByAdminEvents(io, socket);
   registerUpdateStatusByJudgeEvents(io, socket);
+  registerAwardEvents(io, socket);
+  registerMatchDiagramEvents(io, socket);
 };

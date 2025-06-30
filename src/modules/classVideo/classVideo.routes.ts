@@ -24,11 +24,19 @@ classVideoRouter.get(
   ClassVideoController.ClassVideosByContestSlug
 );
 
+classVideoRouter.get(
+  "/:id",
+  authenticate,
+  role("Admin"),
+  // validateQuery(ClassVideoIdSchema),
+  ClassVideoController.getById
+);
+
 classVideoRouter.post(
   "/contest/:slug",
   authenticate,
   role("Admin"),
-  // validateBody(CreateClassVideoSchema),
+  validateBody(CreateClassVideoSchema),
   uploads.single("videos"),
   ClassVideoController.create
 );

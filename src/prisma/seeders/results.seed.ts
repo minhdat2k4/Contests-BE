@@ -135,7 +135,7 @@ export default async function seedResults({ prisma, logger }: SeedParams) {
     if (createdResults.length > 0) {
       const sample = createdResults[0];
       logger.info(
-        `📋 Sample result: "${sample.name}" - Contestant: ${sample.contestant.student.fullName}, Match: ${sample.match.name}, Correct: ${sample.isCorrect}`
+        `📋 Sample result:   Contestant: ${sample.contestant.student.fullName}, Match: ${sample.match.name}, Correct: ${sample.isCorrect}`
       );
     }
 

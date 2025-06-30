@@ -52,11 +52,15 @@ export const registerUpdateStatusByAdminEvents = (
           await GroupDivisionService.UpdateContestantMatchStatus(
             match.id,
             payload.status,
-            payload.ids
+            payload.ids,
+            match.currentQuestion
           );
 
         if (!updatedContestant) {
-          return callback(new Error("Cập nhật trạng thái không thành công"));
+          return callback({
+            success: false,
+            message: "Cập nhật trạng thái thí sinh thất bại",
+          });
         }
 
         const ListContestant = await MatchService.ListContestant(match.id);

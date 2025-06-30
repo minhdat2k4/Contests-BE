@@ -926,4 +926,87 @@ export default class ContestantService {
       },
     };
   }
+
+  // Lấy danh sách thí sinh bị loại để cứu trợ, sắp xếp theo số câu đúng và thứ tự bị loại
+  static async getRescueCandidates(matchId: number) {
+    // Lấy danh sách contestantMatch bị loại trong trận đấu này
+    const eliminatedContestants = await prisma.contestantMatch.findMany({
+      where: {
+        matchId,
+        status: 'eliminated',
+      },
+      select: {
+        contestantId: true,
+        eliminatedAtQuestionOrder: true,
+        contestant: {
+          select: {
+            id: true,
+            status: true,
+            student: {
+              select: {
+                fullName: true,
+                studentCode: true,
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    school: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            round: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    // Lấy số câu đúng của từng thí sinh trong trận đấu này
+    const contestantIds = eliminatedContestants.map(e => e.contestantId);
+    const results = await prisma.result.groupBy({
+      by: ['contestantId'],
+      where: {
+        matchId,
+        contestantId: { in: contestantIds },
+        isCorrect: true,
+      },
+      _count: { id: true },
+    });
+    // Map contestantId -> correctAnswers
+    const correctAnswersMap = new Map<number, number>();
+    results.forEach(r => {
+      correctAnswersMap.set(r.contestantId, r._count.id);
+    });
+
+    // Kết hợp dữ liệu và sắp xếp
+    const data = eliminatedContestants.map(e => {
+      const c = e.contestant;
+      return {
+        contestantId: e.contestantId,
+        fullName: c.student.fullName,
+        studentCode: c.student.studentCode,
+        roundName: c.round.name,
+        status: c.status,
+        schoolId: c.student.class.school.id,
+        schoolName: c.student.class.school.name,
+        classId: c.student.class.id,
+        className: c.student.class.name,
+        correctAnswers: correctAnswersMap.get(e.contestantId) || 0,
+        eliminatedAtQuestionOrder: e.eliminatedAtQuestionOrder,
+      };
+    });
+    // Sắp xếp theo tiêu chí
+    data.sort((a, b) => {
+      if (b.correctAnswers !== a.correctAnswers) {
+        return b.correctAnswers - a.correctAnswers;
+      }
+      return (b.eliminatedAtQuestionOrder || 0) - (a.eliminatedAtQuestionOrder || 0);
+    });
+    return data;
+  }
 }

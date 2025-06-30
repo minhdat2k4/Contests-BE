@@ -668,4 +668,19 @@ export default class ContestantController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  // API cứu trợ: lấy danh sách thí sinh bị loại theo tiêu chí cứu trợ
+  static async getRescueCandidates(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId);
+      if (!matchId || isNaN(matchId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+      const data = await ContestantService.getRescueCandidates(matchId);
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
 }

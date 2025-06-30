@@ -117,4 +117,12 @@ contestantRouter.get(
   ContestantController.getContestantsInMatch
 );
 
+// API cứu trợ: lấy danh sách thí sinh bị loại theo tiêu chí cứu trợ
+contestantRouter.get(
+  "/rescue-candidates/:matchId",
+  authenticate,
+  role("Admin"),
+  ContestantController.getRescueCandidates
+);
+
 export { contestantRouter };

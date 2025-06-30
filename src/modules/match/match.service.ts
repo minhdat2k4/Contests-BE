@@ -7,7 +7,7 @@ import {
   MatchType,
   MatchQueryInput,
 } from "@/modules/match";
-import { Match } from "@prisma/client";
+import { Match, Student } from "@prisma/client";
 import slugify from "slugify";
 
 export default class MatchService {
@@ -298,7 +298,7 @@ export default class MatchService {
       status: matchRaw.status,
       questionPackageId: matchRaw.questionPackageId,
       roundName: matchRaw.round?.name ?? null,
-      student: matchRaw.student?.id ?? null,
+      studentId: matchRaw.student?.id ?? null,
       studentName: matchRaw.student?.fullName ?? null,
     };
     return match;
@@ -418,6 +418,16 @@ export default class MatchService {
           select: {
             registrationNumber: true,
             status: true,
+            contestant: {
+              select: {
+                student: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                  },
+                },
+              },
+            },
           },
         },
       },

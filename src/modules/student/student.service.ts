@@ -213,4 +213,29 @@ export default class StudentService {
       },
     };
   }
+
+  static async getStudentIdByMatchId(
+    matchId: number,
+    registrationNumber: number
+  ): Promise<number | null> {
+    const student = await prisma.student.findFirst({
+      where: {
+        contestants: {
+          some: {
+            contestantMatches: {
+              some: {
+                matchId: matchId,
+                registrationNumber: registrationNumber,
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    return student?.id ?? null;
+  }
 }

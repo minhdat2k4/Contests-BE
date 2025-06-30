@@ -7,9 +7,9 @@ import {
 import { MediaIdShame, deleteMediaesSchema } from "./media.schema";
 import { MediaController } from "@/modules/media";
 import { authenticate, role } from "@/middlewares/auth";
-import multer from "multer";
+import { createMulter } from "@/utils/multer";
 const mediaRouter = Router();
-const uploads = multer({ dest: "tmp/" });
+const uploads = createMulter("media");
 // prive
 
 mediaRouter.post(

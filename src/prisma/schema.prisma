@@ -397,6 +397,7 @@ model ContestantMatch {
   registrationNumber Int                
   status           ContestantMatchStatus @default(not_started)
   eliminatedAtQuestionOrder Int?       
+  rescuedAtQuestionOrder Int?           // note trường này để lưu câu được cứu trợ
   isActive         Boolean              @default(true) 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

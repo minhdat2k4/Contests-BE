@@ -628,10 +628,30 @@ export default class ContestantController {
       const slug = req.params.slug;
       const matchId = parseInt(req.params.matchId);
 
+      // Lấy các filter từ query
       const query = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
-        search: (req.query.search as string) || undefined,
+        search: req.query.search as string | undefined,
+        groupId: req.query.groupId ? parseInt(req.query.groupId as string) : undefined,
+        schoolId: req.query.schoolId ? parseInt(req.query.schoolId as string) : undefined,
+        classId: req.query.classId ? parseInt(req.query.classId as string) : undefined,
+        roundId: req.query.roundId ? parseInt(req.query.roundId as string) : undefined,
+        status: req.query.status as ContestantStatus | undefined,
+        schoolIds: req.query.schoolIds
+          ? typeof req.query.schoolIds === "string"
+            ? (req.query.schoolIds as string).split(",").map(Number)
+            : Array.isArray(req.query.schoolIds)
+              ? (req.query.schoolIds as string[]).flatMap(val => val.split(",").map(Number))
+              : undefined
+          : undefined,
+        classIds: req.query.classIds
+          ? typeof req.query.classIds === "string"
+            ? (req.query.classIds as string).split(",").map(Number)
+            : Array.isArray(req.query.classIds)
+              ? (req.query.classIds as string[]).flatMap(val => val.split(",").map(Number))
+              : undefined
+          : undefined,
       };
 
       const data = await ContestantService.getContestantsInMatch(slug, matchId, query);

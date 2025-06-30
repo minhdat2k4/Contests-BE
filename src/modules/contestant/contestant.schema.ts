@@ -258,21 +258,22 @@ export type ContestantDetailParams = z.infer<typeof ContestantDetailParamsSchema
 
 // Schema cho query params của API getContestantsInMatch
 export const GetContestantsInMatchQuerySchema = z.object({
-  page: z
-    .string()
-    .transform(val => parseInt(val))
-    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
-    .optional()
-    .default("1"),
-  limit: z
-    .string()
-    .transform(val => parseInt(val))
-    .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
-    .optional()
-    .default("10"),
-  search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
-  // schoolIds: z.array(z.number()).optional(),
-  // classIds: z.array(z.number()).optional(),
+  page: z.string().transform(val => parseInt(val)).optional().default("1"),
+  limit: z.string().transform(val => parseInt(val)).optional().default("10"),
+  search: z.string().max(100).optional(),
+  groupId: z.string().transform(val => parseInt(val)).optional(),
+  schoolId: z.string().transform(val => parseInt(val)).optional(),
+  classId: z.string().transform(val => parseInt(val)).optional(),
+  roundId: z.string().transform(val => parseInt(val)).optional(),
+  status: z.nativeEnum(ContestantStatus).optional(),
+  schoolIds: z.preprocess(
+    val => typeof val === "string" ? val.split(",").map(Number) : val,
+    z.array(z.number()).optional()
+  ),
+  classIds: z.preprocess(
+    val => typeof val === "string" ? val.split(",").map(Number) : val,
+    z.array(z.number()).optional()
+  ),
 });
 
 export type GetContestantsInMatchQuery = z.infer<typeof GetContestantsInMatchQuerySchema>;

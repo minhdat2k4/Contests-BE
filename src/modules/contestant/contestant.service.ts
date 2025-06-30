@@ -32,7 +32,7 @@ export default class ContestantService {
       whereClause.contestId = contestId;
     }
 
-    if (roundId !== undefined) {
+    if (typeof roundId === "number" && !isNaN(roundId) && roundId > 0) {
       whereClause.roundId = roundId;
     }
 
@@ -675,6 +675,13 @@ export default class ContestantService {
       page: number;
       limit: number;
       search?: string;
+      groupId?: number;
+      schoolId?: number;
+      classId?: number;
+      roundId?: number;
+      status?: string;
+      schoolIds?: number[];
+      classIds?: number[];
     }
   ): Promise<{
     contestants: Array<{
@@ -699,7 +706,18 @@ export default class ContestantService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search } = query;
+    const {
+      page,
+      limit,
+      search,
+      groupId,
+      schoolId,
+      classId,
+      roundId,
+      status,
+      schoolIds,
+      classIds,
+    } = query;
     const skip = (page - 1) * limit;
 
     // Tìm cuộc thi theo slug
@@ -725,7 +743,7 @@ export default class ContestantService {
       throw new Error("Không tìm thấy trận đấu trong cuộc thi này");
     }
 
-    // Build where clause
+    // Build where clause giống getAll
     const whereClause: any = {
       contestId: contest.id,
       contestantMatches: {
@@ -735,26 +753,91 @@ export default class ContestantService {
       }
     };
 
-    // Thêm search condition
+    // Filter by groupId
+    if (groupId !== undefined) {
+      if (groupId === -1) {
+        // Chưa phân nhóm
+        whereClause.contestantMatches = {
+          none: { matchId: matchId }
+        };
+      } else if (groupId > 0) {
+        whereClause.contestantMatches = {
+          some: { matchId: matchId, groupId: groupId }
+        };
+      }
+    }
+
+    // // Filter by schoolId
+    // if (schoolId !== undefined) {
+    //   whereClause.student = {
+    //     ...whereClause.student,
+    //     class: {
+    //       ...whereClause.student?.class,
+    //       schoolId: schoolId
+    //     }
+    //   };
+    // }
+
+    // // Filter by classId
+    // if (classId !== undefined) {
+    //   whereClause.student = {
+    //     ...whereClause.student,
+    //     classId: classId
+    //   };
+    // }
+
+    // Filter by roundId
+    if (typeof roundId === "number" && !isNaN(roundId) && roundId > 0) {
+      whereClause.roundId = roundId;
+    }
+
+    // Filter by status
+    if (status !== undefined) {
+      whereClause.status = status;
+    }
+
+    // // Filter by schoolIds/classIds (ưu tiên lọc đồng thời)
+    // if (schoolIds && schoolIds.length > 0 && classIds && classIds.length > 0) {
+    //   whereClause.student = {
+    //     class: {
+    //       schoolId: { in: schoolIds },
+    //       id: { in: classIds }
+    //     }
+    //   };
+    // } else if (schoolIds && schoolIds.length > 0) {
+    //   whereClause.student = {
+    //     class: {
+    //       schoolId: { in: schoolIds }
+    //     }
+    //   };
+    // } else if (classIds && classIds.length > 0) {
+    //   whereClause.student = {
+    //     class: {
+    //       id: { in: classIds }
+    //     }
+    //   };
+    // }
+    const studentWhere: any = {};
+    const classWhere: any = {};
+
+    if (schoolId !== undefined) classWhere.schoolId = schoolId;
+    if (classId !== undefined) classWhere.id = classId;
+    if (schoolIds && schoolIds.length > 0) classWhere.schoolId = { in: schoolIds };
+    if (classIds && classIds.length > 0) classWhere.id = { in: classIds };
+
+    if (Object.keys(classWhere).length > 0) studentWhere.class = classWhere;
+    if (Object.keys(studentWhere).length > 0) whereClause.student = studentWhere;
+
+    // Filter by search
     if (search) {
-      whereClause.OR = [
-        {
-          student: {
-            fullName: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        },
-        {
-          student: {
-            studentCode: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        }
-      ];
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { student: { is: { fullName: { contains: keyword } } } },
+        { student: { is: { studentCode: { contains: keyword } } } },
+        { round: { is: { name: { contains: keyword } } } },
+        { student: { is: { class: { is: { school: { is: { name: { contains: keyword } } } } } } } },
+        { student: { is: { class: { is: { name: { contains: keyword } } } } } },
+      ]);
     }
 
     // Đếm tổng số thí sinh

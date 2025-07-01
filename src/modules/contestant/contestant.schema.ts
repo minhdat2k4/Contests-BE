@@ -277,3 +277,25 @@ export const GetContestantsInMatchQuerySchema = z.object({
 });
 
 export type GetContestantsInMatchQuery = z.infer<typeof GetContestantsInMatchQuerySchema>;
+
+// Schema cho API cứu trợ hàng loạt
+export const RescueManySchema = z.object({
+  contestantIds: z.array(z.number().int().positive("ID thí sinh phải là số nguyên dương")).min(1, "Phải chọn ít nhất 1 thí sinh"),
+  currentQuestionOrder: z.number().int().positive("Thứ tự câu hỏi phải là số nguyên dương"),
+});
+
+// Schema cho API thêm hàng loạt studentIds vào rescue (push, không trùng)
+export const AddStudentsToRescueSchema = z.object({
+  rescueId: z.number().int().positive("ID rescue phải là số nguyên dương"),
+  studentIds: z.array(z.number().int().positive("ID sinh viên phải là số nguyên dương")).min(1, "Phải chọn ít nhất 1 sinh viên"),
+});
+
+// Schema cho API xóa 1 studentId khỏi rescue
+export const RemoveStudentFromRescueSchema = z.object({
+  rescueId: z.number().int().positive("ID rescue phải là số nguyên dương"),
+  studentId: z.number().int().positive("ID sinh viên phải là số nguyên dương"),
+});
+
+export type RescueManyInput = z.infer<typeof RescueManySchema>;
+export type AddStudentsToRescueInput = z.infer<typeof AddStudentsToRescueSchema>;
+export type RemoveStudentFromRescueInput = z.infer<typeof RemoveStudentFromRescueSchema>;

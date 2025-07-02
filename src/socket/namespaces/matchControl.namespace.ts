@@ -9,6 +9,7 @@ import { registerUpdateStatusByJudgeEvents } from "../events/Judge/updateStatus.
 import { verifyToken, JwtPayload } from "@/utils/jwt";
 import cookie from "cookie";
 import { registerAwardEvents } from "../events/award.envent";
+import { registerMatchDiagramEvents } from "../events/matchDiagram.event";
 
 const extractUserFromSocket = (socket: Socket): JwtPayload | null => {
   try {
@@ -94,4 +95,5 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   registerUpdateStatusByAdminEvents(io, socket);
   registerUpdateStatusByJudgeEvents(io, socket);
   registerAwardEvents(io, socket);
+  registerMatchDiagramEvents(io, socket);
 };

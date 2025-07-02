@@ -622,12 +622,35 @@ export default class GroupDivisionService {
       | "rescued"
       | "banned"
       | "completed",
-    ids: number[] = []
+    ids: number[] = [],
+    questionOrder?: number
   ) {
-    return await prisma.contestantMatch.updateMany({
-      where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
-      data: { status },
-    });
+    console.log(
+      "Match:",
+      contestantMatchId,
+      "Status:",
+      status,
+      "IDs:",
+      ids,
+      "Question Order:",
+      questionOrder
+    );
+    if (status === "eliminated") {
+      return await prisma.contestantMatch.updateMany({
+        where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
+        data: { status, eliminatedAtQuestionOrder: questionOrder },
+      });
+    } else if (status === "rescued") {
+      return await prisma.contestantMatch.updateMany({
+        where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
+        data: { status, rescuedAtQuestionOrder: questionOrder },
+      });
+    } else {
+      return await prisma.contestantMatch.updateMany({
+        where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
+        data: { status },
+      });
+    }
   }
 
   /**
@@ -662,5 +685,54 @@ export default class GroupDivisionService {
       }
       return { success: true };
     });
+  }
+
+  static async UpdateContestantStatusEliminated(matchId: number) {
+    return await prisma.contestantMatch.updateMany({
+      where: {
+        matchId: matchId,
+        status: "confirmed2",
+      },
+      data: {
+        status: "eliminated",
+      },
+    });
+  }
+
+  static async getContestantMatchByStatus(
+    matchId: number,
+    status:
+      | "not_started"
+      | "in_progress"
+      | "confirmed1"
+      | "confirmed2"
+      | "eliminated"
+      | "rescued"
+      | "banned"
+      | "completed",
+    questionOrder?: number
+  ) {
+    if (questionOrder === undefined) {
+      return await prisma.contestantMatch.findMany({
+        where: {
+          matchId: matchId,
+          status: status,
+        },
+        select: {
+          contestantId: true,
+        },
+      });
+    } else {
+      return await prisma.contestantMatch.findMany({
+        where: {
+          matchId: matchId,
+          status: status,
+          eliminatedAtQuestionOrder: questionOrder,
+        },
+        select: {
+          contestantId: true,
+        },
+      });
+    }
   }
 }

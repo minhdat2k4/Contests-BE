@@ -30,7 +30,6 @@ export default class ScreenService {
     data: UpdateScreenInput
   ): Promise<ScreenControl | null> {
     const updateData: any = {};
-    console.log(data);
 
     if (data.controlKey !== undefined) {
       updateData.controlKey = data.controlKey;

@@ -674,6 +674,8 @@ export default class ContestantController {
     try {
       const matchId = Number(req.params.matchId); // chuyển đổi matchId sang số
       const rescueId = req.query.rescueId ? Number(req.query.rescueId) : undefined;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined; // số lượng thí sinh cần cứu
+      
       if (!matchId || isNaN(matchId)) {
         res.status(400).json({ success: false, message: "Thiếu hoặc sai matchId" });
         return;
@@ -682,7 +684,14 @@ export default class ContestantController {
         res.status(400).json({ success: false, message: "Thiếu hoặc sai rescueId" });
         return;
       }
-      const data = await ContestantService.getRescueCandidates(matchId, rescueId);
+      
+      // Validate limit nếu có
+      if (limit !== undefined && (isNaN(limit) || limit <= 0)) {
+        res.status(400).json({ success: false, message: "Limit phải là số nguyên dương" });
+        return;
+      }
+      
+      const data = await ContestantService.getRescueCandidates(matchId, rescueId, limit);
       res.json({ success: true, ...data });
     } catch (error) {
       res.status(500).json({ success: false, message: (error as Error).message });

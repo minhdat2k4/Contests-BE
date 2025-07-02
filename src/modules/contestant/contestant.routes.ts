@@ -14,6 +14,7 @@ import {
   ContestantMatchParamsSchema,
   ContestantDetailParamsSchema,
   GetContestantsInMatchQuerySchema,
+  EliminatedContestantsFilterQuerySchema,
   RescueManySchema,
   AddStudentsToRescueSchema,
   RemoveStudentFromRescueSchema,
@@ -151,6 +152,7 @@ contestantRouter.get(
   "/eliminated/:matchId/list",
   authenticate,
   role("Admin"),
+  validateQuery(EliminatedContestantsFilterQuerySchema),
   ContestantController.getEliminatedContestantsWithFilter
 );
 

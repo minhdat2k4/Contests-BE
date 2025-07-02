@@ -938,6 +938,7 @@ export default class ContestantService {
       select: {
         contestantId: true,
         eliminatedAtQuestionOrder: true,
+        registrationNumber: true,
         contestant: {
           select: {
             id: true,
@@ -968,9 +969,10 @@ export default class ContestantService {
   }
 
   // Lấy danh sách thí sinh bị loại để cứu trợ, sắp xếp theo số câu đúng và thứ tự bị loại, trả về rescue nếu rescueId có
-  static async getRescueCandidates(matchId: number, rescueId?: number) {
+  static async getRescueCandidates(matchId: number, rescueId?: number, limit?: number) {
     // Tái sử dụng hàm lấy danh sách bị loại
     const eliminatedContestants = await this.getEliminatedContestants(matchId);
+    
     // Lấy số câu đúng của từng thí sinh trong trận đấu này
     const contestantIds = eliminatedContestants.map(e => e.contestantId);
     const results = await prisma.result.groupBy({
@@ -982,11 +984,13 @@ export default class ContestantService {
       },
       _count: { id: true },
     });
+    
     // Map contestantId -> correctAnswers
     const correctAnswersMap = new Map<number, number>();
     results.forEach(r => {
       correctAnswersMap.set(r.contestantId, r._count.id);
     });
+    
     // Kết hợp dữ liệu và sắp xếp
     const candidates = eliminatedContestants.map(e => ({
       contestantId: e.contestantId,
@@ -1000,23 +1004,46 @@ export default class ContestantService {
       status: e.contestant.status,
       correctAnswers: correctAnswersMap.get(e.contestantId) || 0,
       eliminatedAtQuestionOrder: e.eliminatedAtQuestionOrder,
+      registrationNumber: e.registrationNumber,
     }));
+    
     candidates.sort((a, b) => {
       if (b.correctAnswers !== a.correctAnswers) {
         return b.correctAnswers - a.correctAnswers;
       }
       return (b.eliminatedAtQuestionOrder || 0) - (a.eliminatedAtQuestionOrder || 0);
     });
+
+    // Áp dụng limit nếu có, đảm bảo không vượt quá số thí sinh có sẵn
+    let limitedCandidates = candidates;
+    const maxAvailable = candidates.length;
+    let actualLimit = maxAvailable;
+    
+    if (limit !== undefined && limit > 0) {
+      actualLimit = Math.min(limit, maxAvailable);
+      limitedCandidates = candidates.slice(0, actualLimit);
+    }
+    
     let rescue = undefined;
     if (rescueId) {
-      // Dọn studentIds cũ và cập nhật hoàn toàn bằng danh sách candidates mới
-      const studentIds = candidates.map(d => d.contestantId);
+      // Dọn studentIds cũ và cập nhật hoàn toàn bằng danh sách candidates đã giới hạn
+      const studentIds = limitedCandidates.map(d => d.contestantId);
       rescue = await prisma.rescue.update({
         where: { id: rescueId },
         data: { studentIds }, // Thay thế hoàn toàn studentIds cũ
       });
     }
-    return { rescue, candidates };
+    
+    return { 
+      rescue, 
+      candidates: limitedCandidates,
+      meta: {
+        requestedLimit: limit,
+        actualLimit,
+        maxAvailable,
+        totalCandidates: candidates.length
+      }
+    };
   }
 
   // Cập nhật cứu trợ hàng loạt cho các thí sinh trong trận đấu
@@ -1037,8 +1064,16 @@ export default class ContestantService {
 
   // Lấy danh sách thí sinh bị loại có phân trang, lọc, tìm kiếm
   static async getEliminatedContestantsWithFilter(query: any, matchId: number) {
-    const { page = 1, limit = 10, search, schoolId, classId, status } = query;
-    const skip = (page - 1) * limit;
+    const { page = 1, limit = 10, search, schoolId, classId, status, registrationNumber } = query;
+    
+    // Convert query parameters to numbers once
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const schoolIdNum = schoolId ? Number(schoolId) : undefined;
+    const classIdNum = classId ? Number(classId) : undefined;
+    
+    const skip = (pageNum - 1) * limitNum;
+    
     // where cho contestantMatch
     const whereMatch: any = {
       matchId,
@@ -1046,8 +1081,8 @@ export default class ContestantService {
     };
     // where cho contestant
     const whereContestant: any = {};
-    if (schoolId) whereContestant["student.class.schoolId"] = Number(schoolId);
-    if (classId) whereContestant["student.classId"] = Number(classId);
+    if (schoolIdNum) whereContestant["student.class.schoolId"] = schoolIdNum;
+    if (classIdNum) whereContestant["student.classId"] = classIdNum;
     if (status) whereContestant["status"] = status;
     // Tìm kiếm theo tên, mã, lớp, trường
     let searchFilter = [];
@@ -1058,7 +1093,25 @@ export default class ContestantService {
         { contestant: { student: { studentCode: { contains: keyword } } } },
         { contestant: { student: { class: { name: { contains: keyword } } } } },
         { contestant: { student: { class: { school: { name: { contains: keyword } } } } } },
+        // For registrationNumber, try to convert keyword to number and use equality
+        ...(Number.isInteger(Number(keyword)) && !isNaN(Number(keyword)) 
+          ? [{ registrationNumber: Number(keyword) }] 
+          : []
+        ),
       ]);
+    }
+    
+    // Tìm kiếm riêng theo registrationNumber
+    if (registrationNumber) {
+      const regNumberInt = Number(registrationNumber);
+      if (!isNaN(regNumberInt) && Number.isInteger(regNumberInt)) {
+        const registrationFilter = { registrationNumber: regNumberInt };
+        if (searchFilter.length > 0) {
+          searchFilter.push(registrationFilter);
+        } else {
+          searchFilter = [registrationFilter];
+        }
+      }
     }
     // Lấy tổng số
     const total = await prisma.contestantMatch.count({
@@ -1076,11 +1129,12 @@ export default class ContestantService {
         ...(searchFilter.length > 0 ? { OR: searchFilter } : {}),
       },
       skip,
-      take: limit,
+      take: limitNum,
       orderBy: [{ eliminatedAtQuestionOrder: 'desc' }, { contestantId: 'desc' }],
       select: {
         contestantId: true,
         eliminatedAtQuestionOrder: true,
+        registrationNumber: true,
         contestant: {
           select: {
             id: true,
@@ -1108,7 +1162,7 @@ export default class ContestantService {
         },
       },
     });
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limitNum);
     return {
       contestants: data.map(e => {
         const c = e.contestant;
@@ -1123,15 +1177,16 @@ export default class ContestantService {
           classId: c.student.class.id,
           className: c.student.class.name,
           eliminatedAtQuestionOrder: e.eliminatedAtQuestionOrder,
+          registrationNumber: e.registrationNumber,
         };
       }),
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
         totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1,
       },
     };
   }
@@ -1165,6 +1220,7 @@ export default class ContestantService {
       select: {
         contestantId: true,
         eliminatedAtQuestionOrder: true,
+        registrationNumber: true,
         contestant: {
           select: {
             id: true,
@@ -1217,6 +1273,7 @@ export default class ContestantService {
       status: e.contestant.status,
       correctAnswers: correctAnswersMap.get(e.contestantId) || 0,
       eliminatedAtQuestionOrder: e.eliminatedAtQuestionOrder,
+      registrationNumber: e.registrationNumber,
     }));
     return { rescue, contestants };
   }

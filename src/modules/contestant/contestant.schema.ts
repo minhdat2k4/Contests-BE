@@ -326,6 +326,7 @@ export type EliminatedContestantsFilterQuery = z.infer<typeof EliminatedContesta
 export const RescueManySchema = z.object({
   contestantIds: z.array(z.number().int().positive("ID thí sinh phải là số nguyên dương")).min(1, "Phải chọn ít nhất 1 thí sinh"),
   currentQuestionOrder: z.number().int().positive("Thứ tự câu hỏi phải là số nguyên dương"),
+  rescueId: z.number().int().positive("ID rescue phải là số nguyên dương").optional(),
 });
 
 // Schema cho API thêm hàng loạt studentIds vào rescue (push, không trùng)

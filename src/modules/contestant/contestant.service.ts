@@ -1047,7 +1047,7 @@ export default class ContestantService {
   }
 
   // Cập nhật cứu trợ hàng loạt cho các thí sinh trong trận đấu
-  static async rescueMany(matchId: number, contestantIds: number[], currentQuestionOrder: number) {
+  static async rescueMany(matchId: number, contestantIds: number[], currentQuestionOrder: number, rescueId?: number) {
     // Cập nhật status và rescuedAtQuestionOrder cho các contestantMatch
     const result = await prisma.contestantMatch.updateMany({
       where: {
@@ -1059,7 +1059,25 @@ export default class ContestantService {
         rescuedAtQuestionOrder: currentQuestionOrder,
       },
     });
-    return result;
+
+    // Nếu có rescueId, cập nhật status của rescue thành "used"
+    let rescueUpdated = false;
+    if (rescueId) {
+      try {
+        await prisma.rescue.update({
+          where: { id: rescueId },
+          data: { status: 'used' },
+        });
+        rescueUpdated = true;
+      } catch (error) {
+        console.warn(`Không thể cập nhật rescue status cho rescueId ${rescueId}:`, error);
+      }
+    }
+
+    return {
+      ...result,
+      rescueUpdated,
+    };
   }
 
   // Lấy danh sách thí sinh bị loại có phân trang, lọc, tìm kiếm

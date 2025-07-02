@@ -706,13 +706,13 @@ export default class ContestantController {
         res.status(400).json({ success: false, message: "Thiếu hoặc sai matchId" });
         return;
       }
-      const { contestantIds, currentQuestionOrder } = req.body;
+      const { contestantIds, currentQuestionOrder, rescueId } = req.body;
       if (!Array.isArray(contestantIds) || contestantIds.length === 0 || !currentQuestionOrder) {
         res.status(400).json({ success: false, message: "Thiếu dữ liệu contestantIds hoặc currentQuestionOrder" });
         return;
       }
-      const result = await ContestantService.rescueMany(matchId, contestantIds, currentQuestionOrder);
-      res.json({ success: true, updatedCount: result.count });
+      const result = await ContestantService.rescueMany(matchId, contestantIds, currentQuestionOrder, rescueId);
+      res.json({ success: true, updatedCount: result.count, rescueUpdated: result.rescueUpdated });
     } catch (error) {
       res.status(500).json({ success: false, message: (error as Error).message });
     }

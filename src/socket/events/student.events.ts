@@ -17,10 +17,6 @@ interface AuthenticatedSocket extends Socket {
 }
 
 // Validation schemas
-const JoinMatchSchema = z.object({
-  matchId: z.number().int().positive()
-});
-
 const SubmitAnswerSchema = z.object({
   matchId: z.number().int().positive(),
   questionOrder: z.number().int().positive(),
@@ -111,84 +107,7 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
   // REMOVED: All match control events (match:start, match:nextQuestion, match:pauseTimer, match:resumeTimer, match:end)
   // These events are security vulnerabilities when handled by students
 
-  console.log('🎯 [BE STUDENT EVENTS] Đang đăng ký event: student:joinMatch');
-  /**
-   * Event: student:joinMatch
-   * Allow students to join a match
-   */
-  socket.on("student:joinMatch", async (data, callback) => {
-    console.log('🏠 [BE STUDENT EVENTS] Nhận event student:joinMatch từ student:', {
-      data: data,
-      socketId: socket.id,
-      username: socket.user.username
-    });
-    try {
-      const validatedData = JoinMatchSchema.parse(data);
-      const { matchId } = validatedData;
-
-      // Check if match exists and is active
-      const match = await prisma.match.findUnique({
-        where: { id: matchId },
-        include: {
-          round: {
-            include: {
-              contest: true
-            }
-          }
-        }
-      });
-
-      if (!match) {
-        return callback?.({ success: false, message: "Match not found" });
-      }
-
-      // Check if user is a contestant in this match
-      const contestant = await prisma.contestant.findFirst({
-        where: {
-          studentId: socket.user.userId,
-          contestId: match.round.contestId
-        }
-      });
-
-      if (!contestant) {
-        return callback?.({ success: false, message: "Not registered for this contest" });
-      }
-
-      // Store contestant info in socket
-      socket.contestantId = contestant.id;
-      socket.matchId = matchId;
-
-      // Join the match room
-      const roomName = `match-${matchId}`;
-      await socket.join(roomName);
-
-      console.log('✅ [BE STUDENT EVENTS] Student joined match successfully:', {
-        contestantId: contestant.id,
-        matchId,
-        roomName,
-        username: socket.user.username
-      });
-
-      callback?.({
-        success: true,
-        message: "Joined match successfully",
-        data: {
-          matchId: match.id,
-          matchName: match.name,
-          contestName: match.round.contest.name,
-          currentQuestion: match.currentQuestion,
-          remainingTime: match.remainingTime,
-          status: match.status
-        }
-      });
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.log('❌ [BE STUDENT EVENTS] Error in student:joinMatch:', errorMessage);
-      logger.error(`❌ Error in student joinMatch: ${errorMessage}`);
-      callback?.({ success: false, message: "Failed to join match" });
-    }
-  });
+  // REMOVED: student:joinMatch event handler - now handled in student.namespace.ts to avoid conflicts
 
   // REMOVED: student:submitAnswer event handler - now handled by API
 
@@ -429,7 +348,6 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
     socketId: socket.id,
     username: socket.user.username,
     eventsRegistered: [
-      'student:joinMatch',
       'student:getMatchStatus', 
       'student:getQuestion',
       'joinMatchRoom',

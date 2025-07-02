@@ -317,6 +317,7 @@ export default class AuthController {
         select: {
           id: true,
           name: true,
+          slug: true,
           status: true,
           currentQuestion: true,
           remainingTime: true,

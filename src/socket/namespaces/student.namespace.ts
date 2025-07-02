@@ -138,7 +138,7 @@ export const registerStudentNamespaceEvents = async (io: Server, socket: Socket)
   console.log('✅ [BE NAMESPACE] Đã đăng ký xong các student events');
 
   // Join match for answering nhận các event từ admin ( start, pause, nextQuestion, endMatch)
-  socket.on("student:joinMatch", (data: { matchId: number }, callback?: (response: any) => void) => {
+  socket.on("student:joinMatch", (data: { matchSlug: string }, callback?: (response: any) => void) => {
     try {
       console.log('📝 [BE NAMESPACE] Nhận event student:joinMatch:', {
         data: data,
@@ -147,22 +147,35 @@ export const registerStudentNamespaceEvents = async (io: Server, socket: Socket)
         contestantId: contestantId
       });
       
-      const { matchId } = data;
+      const { matchSlug } = data;
       
-      // Tham gia phòng chính để nhận các event như questionChanged, timerUpdated...
-      const mainRoomName = `match-${matchId}`;
+      // 🔥 FIX: Sử dụng slug trực tiếp làm room name để đồng bộ với admin
+      const mainRoomName = `match-${matchSlug}`;
       socket.join(mainRoomName);
       console.log(`🏠 [BE NAMESPACE] Student ${user.username} tham gia phòng chính: ${mainRoomName}`);
       
+      // Log debug để xem room size
+      const room = studentNamespace.adapter.rooms.get(mainRoomName);
+      const roomSize = room ? room.size : 0;
+      const memberSocketIds = room ? Array.from(room) : [];
+      
+      console.log(`🔍 [BE NAMESPACE] Debug room info:`, {
+        roomName: mainRoomName,
+        roomSize: roomSize,
+        memberSocketIds: memberSocketIds,
+        newJoinerSocketId: socket.id,
+        newJoinerUsername: user.username
+      });
+      
       // Tham gia phòng trả lời riêng cho việc submit answers
-      const answerRoomName = `match-${matchId}-answers`;
+      const answerRoomName = `match-${matchSlug}-answers`;
       socket.join(answerRoomName);
       console.log(`🏠 [BE NAMESPACE] Student ${user.username} tham gia phòng trả lời: ${answerRoomName}`);
       
       console.log('✅ [BE NAMESPACE] Student đã tham gia cả hai phòng thành công:', {
         mainRoom: mainRoomName,
         answerRoom: answerRoomName,
-        matchId: matchId,
+        matchSlug: matchSlug,
         studentName: user.username
       });
       logger.info(`📝 Student ${user.username} joined rooms: ${mainRoomName} & ${answerRoomName}`);
@@ -172,7 +185,7 @@ export const registerStudentNamespaceEvents = async (io: Server, socket: Socket)
           success: true,
           message: `Joined match room ${mainRoomName}`,
           roomName: mainRoomName,
-          matchId
+          matchSlug
         };
         console.log('📤 [BE NAMESPACE] Gửi callback response:', response);
         callback(response);
@@ -182,7 +195,7 @@ export const registerStudentNamespaceEvents = async (io: Server, socket: Socket)
         error: error,
         socketId: socket.id,
         username: user.username,
-        matchId: data?.matchId
+        matchSlug: data?.matchSlug
       });
       logger.error(`Error joining rooms:`, error);
       if (callback) {
@@ -219,6 +232,41 @@ export const registerStudentNamespaceEvents = async (io: Server, socket: Socket)
         reason: reason,
         timestamp: new Date().toISOString()
       });
+    }
+  });
+
+  // 🔥 NEW: Handle leave match room với matchSlug
+  socket.on("leaveMatchRoom", (matchSlug: string) => {
+    try {
+      console.log('🚪 [BE NAMESPACE] Student rời match room:', {
+        matchSlug: matchSlug,
+        socketId: socket.id,
+        username: user.username,
+        contestantId: contestantId
+      });
+      
+      const mainRoomName = `match-${matchSlug}`;
+      const answerRoomName = `match-${matchSlug}-answers`;
+      
+      socket.leave(mainRoomName);
+      socket.leave(answerRoomName);
+      
+      console.log('✅ [BE NAMESPACE] Student đã rời khỏi cả hai phòng:', {
+        mainRoom: mainRoomName,
+        answerRoom: answerRoomName,
+        matchSlug: matchSlug,
+        studentName: user.username
+      });
+      
+      logger.info(`🚪 Student ${user.username} left rooms: ${mainRoomName} & ${answerRoomName}`);
+    } catch (error) {
+      console.error('💥 [BE NAMESPACE] Lỗi khi rời khỏi rooms:', {
+        error: error,
+        socketId: socket.id,
+        username: user.username,
+        matchSlug: matchSlug
+      });
+      logger.error(`Error leaving rooms:`, error);
     }
   });
   

@@ -262,3 +262,27 @@ export interface SubmitAnswerResponse {
   };
   alreadyAnswered?: boolean;
 }
+
+// 🛡️ NEW: Schema for ban contestant API
+export const banContestantSchema = z.object({
+  matchId: z.number().int().positive("Match ID phải là số nguyên dương"),
+  violationType: z.string().min(1, "Loại vi phạm không được để trống"),
+  violationCount: z.number().int().min(1, "Số lần vi phạm phải lớn hơn 0"),
+  reason: z.string().min(10, "Lý do cấm phải có ít nhất 10 ký tự"),
+  bannedBy: z.string().optional()
+});
+
+export type BanContestantData = z.infer<typeof banContestantSchema>;
+
+export interface BanContestantResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    contestantId: number;
+    matchId: number;
+    bannedAt: string;
+    reason: string;
+    violationType: string;
+    violationCount: number;
+  };
+}

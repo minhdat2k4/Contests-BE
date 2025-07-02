@@ -137,7 +137,7 @@ export const registerStudentNamespaceEvents = async (io: Server, socket: Socket)
   registerStudentEvents(studentNamespace, socket as AuthenticatedSocket);
   console.log('✅ [BE NAMESPACE] Đã đăng ký xong các student events');
 
-  // Join match for answering (specific to answering questions)
+  // Join match for answering nhận các event từ admin ( start, pause, nextQuestion, endMatch)
   socket.on("student:joinMatch", (data: { matchId: number }, callback?: (response: any) => void) => {
     try {
       console.log('📝 [BE NAMESPACE] Nhận event student:joinMatch:', {

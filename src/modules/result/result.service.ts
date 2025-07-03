@@ -861,11 +861,40 @@ export class ResultService {
         fullName: contestant.student?.fullName,
       });
 
-      // 2. Kiểm tra nếu thí sinh đã bị loại - CHỈ CẢNH BÁO, KHÔNG CHẶN
-      if (contestant.status === "eliminate") {
-        console.log(
-          "⚠️ [API SUBMIT] Contestant đã bị eliminate, nhưng vẫn cho phép xem kết quả câu đã trả lời"
-        );
+
+      // 2. 🚫 KIỂM TRA TRẠNG THÁI CONTESTANT_MATCH (eliminated/banned)
+      const contestantMatch = await this.prisma.contestantMatch.findFirst({
+        where: {
+          contestantId: contestantId,
+          matchId: data.matchId
+        }
+      });
+
+      if (contestantMatch) {
+        console.log('✅ [API SUBMIT] Thông tin contestant_match:', {
+          status: contestantMatch.status,
+          eliminatedAtQuestionOrder: contestantMatch.eliminatedAtQuestionOrder
+        });
+
+        // Chặn nếu đã bị eliminated
+        if (contestantMatch.status === "eliminated") {
+          console.log('🚫 [API SUBMIT] ContestantMatch status = eliminated - CHẶN SUBMIT');
+          return {
+            success: false,
+            message: `Bạn đã bị loại tại câu hỏi số ${contestantMatch.eliminatedAtQuestionOrder || 'N/A'} và không thể tiếp tục trả lời`
+          };
+        }
+
+        // Chặn nếu đã bị banned
+        if (contestantMatch.status === "banned") {
+          console.log('🚫 [API SUBMIT] ContestantMatch status = banned - CHẶN SUBMIT');
+          return {
+            success: false,
+            message: "Bạn đã bị cấm tham gia trận đấu này do vi phạm quy định"
+          };
+        }
+      } else {
+        console.log('⚠️ [API SUBMIT] Không tìm thấy contestantMatch record');
       }
 
       // 3. Kiểm tra match tồn tại và active
@@ -1115,6 +1144,189 @@ export class ResultService {
 
       throw new CustomError(
         "Lỗi khi xử lý câu trả lời",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * Ban contestant due to anti-cheat violations
+   * 🛡️ NEW: API to ban contestant for anti-cheat violations
+   */
+  async banContestant(
+    contestantId: number,
+    data: {
+      matchId: number;
+      violationType: string;
+      violationCount: number;
+      reason: string;
+      bannedBy?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      contestantId: number;
+      matchId: number;
+      bannedAt: string;
+      reason: string;
+      violationType: string;
+      violationCount: number;
+    };
+  }> {
+    try {
+      console.log('🚨 [BAN API] ===== XỬ LÝ BAN CONTESTANT DO VI PHẠM ANTI-CHEAT =====');
+      console.log('📋 [BAN API] Thông tin ban:', {
+        contestantId,
+        matchId: data.matchId,
+        violationType: data.violationType,
+        violationCount: data.violationCount,
+        reason: data.reason
+      });
+
+      // 1. Kiểm tra contestant tồn tại
+      const contestant = await this.prisma.contestant.findUnique({
+        where: { id: contestantId },
+        include: {
+          student: {
+            select: { fullName: true, studentCode: true }
+          }
+        }
+      });
+
+      if (!contestant) {
+        throw new CustomError(
+          "Thí sinh không tồn tại",
+          404,
+          ERROR_CODES.CONTESTANT_NOT_FOUND
+        );
+      }
+
+      console.log('✅ [BAN API] Thông tin contestant:', {
+        id: contestant.id,
+        currentStatus: contestant.status,
+        fullName: contestant.student?.fullName,
+        studentCode: contestant.student?.studentCode
+      });
+
+      // 2. Kiểm tra match tồn tại
+      const match = await this.prisma.match.findUnique({
+        where: { id: data.matchId },
+        select: { id: true, name: true, status: true }
+      });
+
+      if (!match) {
+        throw new CustomError(
+          "Trận đấu không tồn tại",
+          404,
+          ERROR_CODES.MATCH_NOT_FOUND
+        );
+      }
+
+      console.log('✅ [BAN API] Thông tin match:', {
+        id: match.id,
+        name: match.name,
+        status: match.status
+      });
+
+      // 3. Kiểm tra đã bị ban chưa - kiểm tra trong contestantMatch
+      const existingMatch = await this.prisma.contestantMatch.findFirst({
+        where: {
+          contestantId: contestantId,
+          matchId: data.matchId
+        }
+      });
+
+      if (existingMatch?.status === "banned") {
+        console.log('⚠️ [BAN API] Contestant đã bị banned trong match này');
+        return {
+          success: false,
+          message: "Thí sinh đã bị cấm tham gia trận đấu này"
+        };
+      }
+
+      // 4. Cập nhật trạng thái contestant thành eliminate (đã bị loại)
+      const bannedAt = new Date();
+      
+      await this.prisma.contestant.update({
+        where: { id: contestantId },
+        data: { 
+          status: "eliminate"
+        }
+      });
+
+      console.log('🚫 [BAN API] Đã cập nhật trạng thái contestant thành eliminate');
+
+      // 5. Cập nhật trạng thái contestant_match thành banned
+      await this.prisma.contestantMatch.updateMany({
+        where: {
+          contestantId: contestantId,
+          matchId: data.matchId
+        },
+        data: { 
+          status: "banned"
+        }
+      });
+
+      console.log('🚫 [BAN API] Đã cập nhật trạng thái contestant_match thành banned');
+
+      // 6. Tạo anti-cheat violation log
+      try {
+        await this.prisma.$executeRaw`
+          INSERT INTO anti_cheat_violations 
+          (contestant_id, match_id, violation_type, violation_count, reason, banned_at, banned_by)
+          VALUES 
+          (${contestantId}, ${data.matchId}, ${data.violationType}, ${data.violationCount}, ${data.reason}, ${bannedAt}, ${data.bannedBy || 'SYSTEM'})
+        `;
+        console.log('✅ [BAN API] Đã tạo anti-cheat violation log');
+      } catch (logError) {
+        console.warn('⚠️ [BAN API] Không thể tạo violation log (table có thể chưa tồn tại):', logError);
+        // Không throw error vì đây chỉ là logging
+      }
+
+      // 7. Tạo elimination log với lý do anti-cheat
+      try {
+        await this.prisma.$executeRaw`
+          INSERT INTO elimination_logs (contestant_id, question_order, elimination_reason, eliminated_at)
+          VALUES (${contestantId}, 0, 'anti_cheat_violation', ${bannedAt})
+        `;
+        console.log('✅ [BAN API] Đã tạo elimination log với lý do anti-cheat');
+      } catch (logError) {
+        console.warn('⚠️ [BAN API] Không thể tạo elimination log:', logError);
+      }
+
+      const response = {
+        success: true,
+        message: `Thí sinh ${contestant.student?.fullName} đã bị cấm tham gia do vi phạm ${data.violationType}`,
+        data: {
+          contestantId: contestantId,
+          matchId: data.matchId,
+          bannedAt: bannedAt.toISOString(),
+          reason: data.reason,
+          violationType: data.violationType,
+          violationCount: data.violationCount
+        }
+      };
+
+      console.log('📤 [BAN API] Response:', {
+        success: response.success,
+        message: response.message
+      });
+
+      console.log('🚨 [BAN API] ===== HOÀN THÀNH XỬ LÝ BAN CONTESTANT =====');
+      return response;
+
+    } catch (error) {
+      console.error('💥 [BAN API] Lỗi trong quá trình ban contestant:', error);
+      logger.error("Error in banContestant API:", error);
+      
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      
+      throw new CustomError(
+        "Lỗi khi xử lý cấm thí sinh",
         500,
         ERROR_CODES.INTERNAL_SERVER_ERROR
       );

@@ -359,4 +359,32 @@ export default class RescueController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  // API: Lấy danh sách rescue theo matchId và rescueType (mặc định 'resurrected')
+  static async getRescuesByMatchIdAndType(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      const rescueType = req.query.rescueType as string || 'resurrected';
+
+      if (isNaN(matchId)) {
+        res.status(400).json({
+          message: 'Invalid matchId parameter'
+        });
+        return;
+      }
+
+      const rescues = await RescueService.getRescuesByMatchIdAndType(matchId, rescueType);
+
+      res.status(200).json({
+        message: 'Rescues retrieved successfully',
+        data: rescues
+      });
+    } catch (error) {
+      console.error('Error in getRescuesByMatchIdAndType:', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error : {}
+      });
+    }
+  }
 }

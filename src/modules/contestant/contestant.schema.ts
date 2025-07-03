@@ -277,3 +277,70 @@ export const GetContestantsInMatchQuerySchema = z.object({
 });
 
 export type GetContestantsInMatchQuery = z.infer<typeof GetContestantsInMatchQuerySchema>;
+
+// Schema cho API lấy danh sách thí sinh bị loại có phân trang, lọc, tìm kiếm
+export const EliminatedContestantsFilterQuerySchema = z.object({
+  page: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Page phải là số nguyên dương")
+    .optional()
+    .default("1"),
+  limit: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(val => !isNaN(val) && val > 0, "Limit phải là số nguyên dương")
+    .optional()
+    .default("10"),
+  search: z.string().max(100, "Từ khóa tìm kiếm tối đa 100 ký tự").optional(),
+  schoolId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id trường học phải là số nguyên dương"
+    )
+    .optional(),
+  classId: z
+    .string()
+    .transform(val => parseInt(val))
+    .refine(
+      val => !isNaN(val) && val > 0,
+      "Id lớp học phải là số nguyên dương"
+    )
+    .optional(),
+  status: z.nativeEnum(ContestantStatus).optional(),
+  registrationNumber: z
+    .string()
+    .transform(val => val === "" ? undefined : parseInt(val))
+    .refine(
+      val => val === undefined || (!isNaN(val) && Number.isInteger(val)),
+      "Số báo danh phải là số nguyên"
+    )
+    .optional(),
+});
+
+export type EliminatedContestantsFilterQuery = z.infer<typeof EliminatedContestantsFilterQuerySchema>;
+
+// Schema cho API cứu trợ hàng loạt
+export const RescueManySchema = z.object({
+  contestantIds: z.array(z.number().int().positive("ID thí sinh phải là số nguyên dương")).min(1, "Phải chọn ít nhất 1 thí sinh"),
+  currentQuestionOrder: z.number().int().positive("Thứ tự câu hỏi phải là số nguyên dương"),
+  rescueId: z.number().int().positive("ID rescue phải là số nguyên dương").optional(),
+});
+
+// Schema cho API thêm hàng loạt studentIds vào rescue (push, không trùng)
+export const AddStudentsToRescueSchema = z.object({
+  rescueId: z.number().int().positive("ID rescue phải là số nguyên dương"),
+  studentIds: z.array(z.number().int().positive("ID sinh viên phải là số nguyên dương")).min(1, "Phải chọn ít nhất 1 sinh viên"),
+});
+
+// Schema cho API xóa 1 studentId khỏi rescue
+export const RemoveStudentFromRescueSchema = z.object({
+  rescueId: z.number().int().positive("ID rescue phải là số nguyên dương"),
+  studentId: z.number().int().positive("ID sinh viên phải là số nguyên dương"),
+});
+
+export type RescueManyInput = z.infer<typeof RescueManySchema>;
+export type AddStudentsToRescueInput = z.infer<typeof AddStudentsToRescueSchema>;
+export type RemoveStudentFromRescueInput = z.infer<typeof RemoveStudentFromRescueSchema>;

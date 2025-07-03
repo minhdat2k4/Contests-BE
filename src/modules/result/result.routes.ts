@@ -13,7 +13,8 @@ import {
   batchDeleteResultsSchema,
   getResultsByContestSlugSchema,
   getResultsByContestSlugQuerySchema,
-  submitAnswerSchema
+  submitAnswerSchema,
+  banContestantSchema
 } from "./result.schema";
 
 const router = Router();
@@ -56,6 +57,19 @@ router.post(
   role("Student"),
   validateBody(submitAnswerSchema),
   resultController.submitAnswer.bind(resultController)
+);
+
+/**
+ * @route POST /api/results/ban-contestant
+ * @desc Ban contestant due to anti-cheat violations
+ * @access Private (Student only) - contestant can ban themselves when detected violations
+ */
+router.post(
+  "/ban-contestant",
+  authenticate,
+  role("Student"),
+  validateBody(banContestantSchema),
+  resultController.banContestant.bind(resultController)
 );
 
 /**
@@ -111,6 +125,20 @@ router.get(
 );
 
 /**
+ * @route GET /api/results/contest/:slug
+ * @desc Get results by contest slug with pagination and filtering
+ * @access Private (Admin/Judge)
+ */
+router.get(
+  "/contest/:slug",
+  authenticate,
+  role("Admin", "Judge"),
+  validateParams(getResultsByContestSlugSchema),
+  validateQuery(getResultsByContestSlugQuerySchema),
+  resultController.getResultsByContestSlug.bind(resultController)
+);
+
+/**
  * @route GET /api/results/:id
  * @desc Get result by ID
  * @access Private (Admin/Judge)
@@ -148,20 +176,6 @@ router.delete(
   role("Admin"),
   validateParams(deleteResultSchema),
   resultController.deleteResult.bind(resultController)
-);
-
-/**
- * @route GET /api/results/contest/:slug
- * @desc Get results by contest slug with pagination and filtering
- * @access Private (Admin/Judge)
- */
-router.get(
-  "/contest/:slug",
-  authenticate,
-  role("Admin", "Judge"),
-  validateParams(getResultsByContestSlugSchema),
-  validateQuery(getResultsByContestSlugQuerySchema),
-  resultController.getResultsByContestSlug.bind(resultController)
 );
 
 export { router as resultRouter };

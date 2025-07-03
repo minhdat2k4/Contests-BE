@@ -99,4 +99,10 @@ rescueRoute.post(
   RescuesController.deleteMany
 );
 
+// GET /rescues/match/:matchId - Lấy danh sách rescue theo matchId và rescueType
+rescueRoute.get(
+  "/match/:matchId",
+  RescuesController.getRescuesByMatchIdAndType
+);
+
 export { rescueRoute };

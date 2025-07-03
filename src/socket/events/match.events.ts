@@ -3,7 +3,6 @@ import { z } from "zod";
 import { logger } from "@/utils/logger";
 import { MatchService } from "@/modules/match";
 import { prisma } from "@/config/database";
-import { timerService } from "../services/timer.service";
 import { transformQuestionMedia } from "@/utils/mediaTransform";
 
 // Extended Socket interface for type safety
@@ -62,17 +61,8 @@ const StartMatchSchema = z.object({
   matchId: z.union([z.number().int().positive(), z.string().min(1)])
 });
 
-const NextQuestionSchema = z.object({
-  matchId: z.union([z.number().int().positive(), z.string().min(1)])
-});
-
-const TimerControlSchema = z.object({
-  matchId: z.union([z.number().int().positive(), z.string().min(1)])
-});
-
-const UpdateTimerSchema = z.object({
-  matchId: z.union([z.number().int().positive(), z.string().min(1)]),
-  remainingTime: z.number().int().min(0)
+const ShowQuestionSchema = z.object({
+  match: z.string().min(1)
 });
 
 const EndMatchSchema = z.object({
@@ -148,7 +138,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         startedAt: new Date().toISOString()
       });
 
-      // Also broadcast to students namespace
+      // Also broadcast to students namespace - CHỈ thông báo match bắt đầu, KHÔNG có câu hỏi
       io.of("/student").to(roomName).emit("match:started", {
         matchId: match.id,
         matchSlug: match.slug,
@@ -157,11 +147,12 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         status: "ongoing",
         startedBy: socket.user.username,
         startedAt: new Date().toISOString()
+        // 🔥 REMOVED: currentQuestion, remainingTime, currentQuestionData
+        // Học sinh sẽ chỉ nhận câu hỏi khi admin nhấn "Hiển thị câu hỏi"
       });
 
-      console.log('🔍 [DEBUG] Event emitted successfully to', studentsInRoom?.size || 0, 'students and', adminInRoom?.size || 0, 'admins');
-
-      // Fallback: Also emit globally to all students in the namespace as backup
+      // 🔥 DEBUGGING: Global broadcast để test
+      console.log('🌍 [DEBUG] Broadcasting global match:globalStarted for debugging...');
       io.of("/student").emit("match:globalStarted", {
         matchId: match.id,
         matchSlug: match.slug,
@@ -170,9 +161,10 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         status: "ongoing",
         startedBy: socket.user.username,
         startedAt: new Date().toISOString()
+        // 🔥 REMOVED: currentQuestion, remainingTime, currentQuestionData
       });
-      
-      console.log('🌍 [DEBUG] Global match:globalStarted event emitted to all students');
+
+      console.log('🔍 [DEBUG] Event emitted successfully to', studentsInRoom?.size || 0, 'students and', adminInRoom?.size || 0, 'admins');
 
       logger.info(
         `✅ Match started: ${match.id} (${match.slug}) by ${socket.user.username} (${socket.user.role})`
@@ -197,87 +189,78 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
   });
 
   /**
-   * Event: match:nextQuestion
-   * Move to next question and start timer
+   * Event: match:showQuestion  
+   * 🔥 NEW: Show current question to students WITHOUT incrementing
+   * Timer will be controlled separately via timer.event.ts
    */
-  socket.on("match:nextQuestion", async (data, callback) => {
+  socket.on("match:showQuestion", async (data, callback) => {
     try {
-      console.log('🔍 [DEBUG] match:nextQuestion received data:', data);
+      console.log('🔍 [DEBUG] match:showQuestion received data:', data);
       
-      const validatedData = NextQuestionSchema.parse(data);
-      const { matchId: matchIdentifier } = validatedData;
+      const validatedData = ShowQuestionSchema.parse(data);
+      const { match: matchSlug } = validatedData;
 
-      console.log('🔍 [DEBUG] Match identifier:', { matchIdentifier, type: typeof matchIdentifier });
+      console.log('🔍 [DEBUG] Match slug:', { matchSlug });
 
-      // Get match information using helper function
-      const match = await resolveMatch(matchIdentifier);
+      // Get match information using slug
+      const match = await resolveMatch(matchSlug);
 
       if (!match) {
         const error = "Match not found";
-        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
-        logger.warn(`❌ ${error}: ${matchIdentifier}`);
+        console.log('🔍 [DEBUG] Match not found:', matchSlug);
+        logger.warn(`❌ ${error}: ${matchSlug}`);
         return callback?.({ success: false, message: error });
       }
 
-      console.log('🔍 [DEBUG] Match found:', { id: match.id, slug: match.slug, name: match.name });
-      console.log('🔍 [DEBUG] Current match state:', {
-        currentQuestion: match.currentQuestion,
-        status: match.status,
-        remainingTime: match.remainingTime
-      });
+      console.log('🔍 [DEBUG] Match found:', { id: match.id, slug: match.slug, name: match.name, currentQuestion: match.currentQuestion });
 
-      // Calculate next question order automatically
-      const nextQuestionOrder = match.currentQuestion + 1;
-      console.log('🔍 [DEBUG] Calculated next question order:', nextQuestionOrder);
-
-      // Get question details
-      const questionDetail = await prisma.questionDetail.findFirst({
-        where: {
-          questionPackageId: match.questionPackageId,
-          questionOrder: nextQuestionOrder,
-          isActive: true
-        },
-        include: {
-          question: true // Không cần include options vì nó là Json field
-        }
-      });
-
-      if (!questionDetail) {
-        callback({
+      // 🔥 FIX: Chỉ hiển thị câu hiện tại, không tăng
+      const currentQuestionOrder = match.currentQuestion;
+      
+      if (!currentQuestionOrder || currentQuestionOrder <= 0) {
+        callback?.({
           success: false,
-          message: `Không tìm thấy câu hỏi ${nextQuestionOrder}`
+          message: "Chưa có câu hỏi hiện tại. Hãy chuyển sang câu đầu tiên trước."
         });
         return;
       }
 
-      // Type assertion để TypeScript hiểu include relationship
+      console.log('🔍 [DEBUG] Current question order to show:', currentQuestionOrder);
+
+      // Get question details for the current question
+      const questionDetail = await prisma.questionDetail.findFirst({
+        where: {
+          questionPackageId: match.questionPackageId,
+          questionOrder: currentQuestionOrder,
+          isActive: true
+        },
+        include: {
+          question: true
+        }
+      });
+
+      if (!questionDetail) {
+        callback?.({
+          success: false,
+          message: `Không tìm thấy câu hỏi ${currentQuestionOrder}.`
+        });
+        return;
+      }
+
       const questionDetailWithRelation = questionDetail as any;
 
       console.log('🔍 [DEBUG] Found question detail:', {
         id: questionDetailWithRelation.question.id,
+        order: currentQuestionOrder,
         defaultTime: questionDetailWithRelation.question.defaultTime,
         optionsCount: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options.length : 0
       });
 
-      // Update match with current question and reset timer
-      await prisma.match.update({
-        where: { id: match.id },
-        data: {
-          currentQuestion: nextQuestionOrder,
-          remainingTime: questionDetailWithRelation.question.defaultTime
-        }
-      });
-
-      console.log(`🔄 [DB] Updated match ${match.id} to question ${nextQuestionOrder}`);
-
-      // Start timer using timer service
-      timerService.startTimer(match.id, questionDetailWithRelation.question.defaultTime);
-
       const roomName = `match-${match.id}`;
 
-      console.log(`⏭️ [SOCKET] Broadcasting to room ${roomName}:`, {
+      console.log(`📺 [SOCKET] Broadcasting current question to room ${roomName}:`, {
         matchId: match.id,
-        currentQuestion: nextQuestionOrder,
+        currentQuestion: currentQuestionOrder,
         remainingTime: questionDetailWithRelation.question.defaultTime,
         optionsCount: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options.length : 0
       });
@@ -292,24 +275,22 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         defaultTime: questionDetailWithRelation.question.defaultTime,
         score: questionDetailWithRelation.question.score,
         media: transformQuestionMedia(questionDetailWithRelation.question.questionMedia),
-        // Xử lý options từ Json field
         options: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options : [],
-        // Không gửi correctAnswer và explanation để tránh gian lận
       };
 
       // Emit to match-control namespace (for admins)
-      io.of('/match-control').to(roomName).emit('match:questionChanged', {
+      io.of('/match-control').to(roomName).emit('match:questionShown', {
         matchId: match.id,
         matchSlug: match.slug,
-        currentQuestion: nextQuestionOrder,
+        currentQuestion: currentQuestionOrder,
         remainingTime: questionDetailWithRelation.question.defaultTime,
         currentQuestionData: {
-          order: nextQuestionOrder,
+          order: currentQuestionOrder,
           question: questionData
         }
       });
 
-      // Emit to student namespace (for students) - DEBUG ADDED
+      // Emit to student namespace (for students)
       const studentNamespace = io.of('/student');
       const studentsInRoom = studentNamespace.adapter.rooms.get(roomName);
       console.log(`📊 [DEBUG] Students in room ${roomName}:`, {
@@ -317,68 +298,30 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         studentIds: studentsInRoom ? Array.from(studentsInRoom) : []
       });
 
-      // Debug: Liệt kê tất cả rooms trong student namespace
-      console.log(`🔍 [DEBUG] All rooms in student namespace:`, Array.from(studentNamespace.adapter.rooms.keys()));
-      
-      // Debug: Liệt kê tất cả sockets trong student namespace
-      const allStudentSockets = Array.from(studentNamespace.sockets.keys());
-      console.log(`👥 [DEBUG] All connected student sockets:`, allStudentSockets);
-
-      io.of('/student').to(roomName).emit('match:questionChanged', {
+      io.of('/student').to(roomName).emit('match:questionShown', {
         matchId: match.id,
         matchSlug: match.slug,
-        currentQuestion: nextQuestionOrder,
+        currentQuestion: currentQuestionOrder,
         remainingTime: questionDetailWithRelation.question.defaultTime,
         currentQuestionData: {
-          order: nextQuestionOrder,
+          order: currentQuestionOrder,
           question: questionData
         }
       });
 
-      console.log(`✅ [DEBUG] Event match:questionChanged emitted to room ${roomName} for ${studentsInRoom?.size || 0} students`);
-      
-      // Debug: Thêm global emit cho tất cả students
-      console.log(`🌍 [DEBUG] Emitting global questionChanged to all students...`);
-      io.of('/student').emit('match:globalQuestionChanged', {
-        matchId: match.id,
-        matchSlug: match.slug,
-        currentQuestion: nextQuestionOrder,
-        remainingTime: questionDetailWithRelation.question.defaultTime,
-        currentQuestionData: {
-          order: nextQuestionOrder,
-          question: questionData
-        }
-      });
-      console.log(`🌍 [DEBUG] Global questionChanged emitted to ${allStudentSockets.length} total students`);
-
-      // Send event to all students in /student namespace (global notification)
-      io.of('/student').emit('match:globalUpdate', {
-        eventType: 'questionChanged',
-        data: {
-          matchId: match.id,
-          matchSlug: match.slug,
-          currentQuestion: nextQuestionOrder,
-          remainingTime: questionDetailWithRelation.question.defaultTime,
-          totalQuestions: await prisma.questionDetail.count({
-            where: { questionPackageId: match.questionPackageId }
-          })
-        }
-      });
-
-      console.log('🔍 [DEBUG] Event emitted successfully');
+      console.log(`✅ [DEBUG] Event match:questionShown emitted to room ${roomName} for ${studentsInRoom?.size || 0} students`);
 
       logger.info(
-        `✅ Question changed: Match ${match.id} (${match.slug}) | Question ${nextQuestionOrder} | By ${socket.user.username}`
+        `✅ Question shown: Match ${match.id} (${match.slug}) | Question ${currentQuestionOrder} | By ${socket.user.username}`
       );
 
-      console.log('🔍 [DEBUG] Success response ready');
       callback?.({
         success: true,
-        message: "Question changed successfully",
+        message: `Đã hiển thị câu hỏi số ${currentQuestionOrder}`,
         data: {
           matchId: match.id,
           matchSlug: match.slug,
-          currentQuestion: nextQuestionOrder,
+          currentQuestion: currentQuestionOrder,
           remainingTime: questionDetailWithRelation.question.defaultTime,
           totalQuestions: await prisma.questionDetail.count({
             where: { questionPackageId: match.questionPackageId }
@@ -390,219 +333,8 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.log('🔍 [DEBUG] Error caught:', errorMessage);
       console.log('🔍 [DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack');
-      logger.error(`❌ Error in match:nextQuestion: ${errorMessage}`);
-      callback?.({ success: false, message: "Failed to change question" });
-    }
-  });
-
-  /**
-   * Event: match:pauseTimer
-   * Pause the current question timer
-   */
-  socket.on("match:pauseTimer", async (data, callback) => {
-    try {
-      const validatedData = TimerControlSchema.parse(data);
-      const { matchId: matchIdentifier } = validatedData;
-
-      console.log('🔍 [DEBUG] match:pauseTimer received:', { matchIdentifier, type: typeof matchIdentifier });
-
-      // Get match information using helper function
-      const match = await resolveMatch(matchIdentifier);
-
-      if (!match) {
-        const error = "Match not found";
-        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
-        logger.warn(`❌ ${error}: ${matchIdentifier}`);
-        return callback?.({ success: false, message: error });
-      }
-
-      // Pause timer
-      timerService.pauseTimer(match.id);
-
-      const roomName = `match-${match.id}`;
-
-      // Broadcast timer pause to all clients
-      io.of("/match-control").to(roomName).emit("match:timerPaused", {
-        matchId: match.id,
-        matchSlug: match.slug,
-        pausedBy: socket.user.username,
-        pausedAt: new Date().toISOString()
-      });
-
-      // Also broadcast to students
-      io.of("/student").to(roomName).emit("match:timerPaused", {
-        matchId: match.id,
-        matchSlug: match.slug,
-        pausedBy: socket.user.username,
-        pausedAt: new Date().toISOString()
-      });
-
-      logger.info(`⏸️ Timer paused for match ${match.id} (${match.slug}) by ${socket.user.username}`);
-
-      callback?.({
-        success: true,
-        message: "Timer paused successfully"
-      });
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.log('🔍 [DEBUG] Error in match:pauseTimer:', errorMessage);
-      logger.error(`❌ Error in match:pauseTimer: ${errorMessage}`);
-      callback?.({ success: false, message: "Failed to pause timer" });
-    }
-  });
-
-  /**
-   * Event: match:resumeTimer
-   * Resume the current question timer
-   */
-  socket.on("match:resumeTimer", async (data, callback) => {
-    try {
-      const validatedData = TimerControlSchema.parse(data);
-      const { matchId: matchIdentifier } = validatedData;
-
-      console.log('🔍 [DEBUG] match:resumeTimer received:', { matchIdentifier, type: typeof matchIdentifier });
-
-      // Get match information using helper function
-      const match = await resolveMatch(matchIdentifier);
-
-      if (!match) {
-        const error = "Match not found";
-        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
-        logger.warn(`❌ ${error}: ${matchIdentifier}`);
-        return callback?.({ success: false, message: error });
-      }
-
-      // Resume timer
-      timerService.resumeTimer(match.id);
-
-      const roomName = `match-${match.id}`;
-
-      // Broadcast timer resume to all clients
-      io.of("/match-control").to(roomName).emit("match:timerResumed", {
-        matchId: match.id,
-        matchSlug: match.slug,
-        resumedBy: socket.user.username,
-        resumedAt: new Date().toISOString()
-      });
-
-      // Also broadcast to students
-      io.of("/student").to(roomName).emit("match:timerResumed", {
-        matchId: match.id,
-        matchSlug: match.slug,
-        resumedBy: socket.user.username,
-        resumedAt: new Date().toISOString()
-      });
-
-      logger.info(`▶️ Timer resumed for match ${match.id} (${match.slug}) by ${socket.user.username}`);
-
-      callback?.({
-        success: true,
-        message: "Timer resumed successfully"
-      });
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.log('🔍 [DEBUG] Error in match:resumeTimer:', errorMessage);
-      logger.error(`❌ Error in match:resumeTimer: ${errorMessage}`);
-      callback?.({ success: false, message: "Failed to resume timer" });
-    }
-  });
-
-  /**
-   * Event: match:updateTimer
-   * Update remaining time for current question
-   */
-  socket.on("match:updateTimer", async (data, callback) => {
-    try {
-      const validatedData = UpdateTimerSchema.parse(data);
-      const { matchId: matchIdentifier, remainingTime } = validatedData;
-
-      console.log('🔍 [DEBUG] match:updateTimer received:', { matchIdentifier, remainingTime, type: typeof matchIdentifier });
-
-      // Get match information using helper function
-      const match = await resolveMatch(matchIdentifier);
-
-      if (!match) {
-        const error = "Match not found";
-        console.log('🔍 [DEBUG] Match not found:', matchIdentifier);
-        logger.warn(`❌ ${error}: ${matchIdentifier}`);
-        return callback?.({ success: false, message: error });
-      }
-
-      // Update match timer
-      const updatedMatch = await prisma.match.update({
-        where: { id: match.id },
-        data: { remainingTime: remainingTime }
-      });
-
-      const roomName = `match-${match.id}`;
-
-      // Broadcast timer update to all clients
-      io.of("/match-control").to(roomName).emit("match:timerUpdated", {
-        matchId: match.id,
-        matchSlug: match.slug,
-        remainingTime: remainingTime,
-        updatedAt: new Date().toISOString()
-      });
-
-      // Also broadcast to students
-      io.of("/student").to(roomName).emit("match:timerUpdated", {
-        matchId: match.id,
-        matchSlug: match.slug,
-        remainingTime: remainingTime,
-        updatedAt: new Date().toISOString()
-      });
-
-      // 🔥 NEW: Also broadcast to online-control namespace
-      io.of("/online-control").to(roomName).emit("match:timerUpdated", {
-        matchId: match.id,
-        matchSlug: match.slug,
-        remainingTime: remainingTime,
-        updatedAt: new Date().toISOString()
-      });
-
-      // If time is up, emit time up event
-      if (remainingTime <= 0) {
-        io.of("/match-control").to(roomName).emit("match:timeUp", {
-          matchId: match.id,
-          matchSlug: match.slug,
-          questionOrder: updatedMatch.currentQuestion,
-          timeUpAt: new Date().toISOString()
-        });
-
-        // Also to students
-        io.of("/student").to(roomName).emit("match:timeUp", {
-          matchId: match.id,
-          matchSlug: match.slug,
-          questionOrder: updatedMatch.currentQuestion,
-          timeUpAt: new Date().toISOString()
-        });
-
-        // 🔥 NEW: Also to online-control
-        io.of("/online-control").to(roomName).emit("match:timeUp", {
-          matchId: match.id,
-          matchSlug: match.slug,
-          questionOrder: updatedMatch.currentQuestion,
-          timeUpAt: new Date().toISOString()
-        });
-      }
-
-      callback?.({
-        success: true,
-        message: "Timer updated successfully",
-        data: {
-          matchId: match.id,
-          matchSlug: match.slug,
-          remainingTime: remainingTime
-        }
-      });
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.log('🔍 [DEBUG] Error in match:updateTimer:', errorMessage);
-      logger.error(`❌ Error in match:updateTimer: ${errorMessage}`);
-      callback?.({ success: false, message: "Failed to update timer" });
+      logger.error(`❌ Error in match:showQuestion: ${errorMessage}`);
+      callback?.({ success: false, message: "Failed to show question" });
     }
   });
 
@@ -626,9 +358,6 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
         logger.warn(`❌ ${error}: ${matchIdentifier}`);
         return callback?.({ success: false, message: error });
       }
-
-      // Stop timer
-      timerService.stopTimer(match.id);
 
       // Update match status to completed
       const updatedMatch = await prisma.match.update({
@@ -769,7 +498,7 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
           isActive: true
         },
         include: {
-          question: true // Include question relation
+          question: true
         }
       }) : null;
 
@@ -787,7 +516,6 @@ export const registerMatchEvents = (io: Server, socket: AuthenticatedSocket) => 
           defaultTime: questionDetailWithRelation.question.defaultTime,
           score: questionDetailWithRelation.question.score,
           media: transformQuestionMedia(questionDetailWithRelation.question.questionMedia),
-          // Xử lý options từ Json field
           options: Array.isArray(questionDetailWithRelation.question.options) ? questionDetailWithRelation.question.options : []
         }
       } : null;

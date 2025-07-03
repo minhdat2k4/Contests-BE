@@ -167,49 +167,33 @@ class TimerService {
 
     const roomName = `match-${matchId}`;
     
-    // Broadcast to match control namespace
-    this.io.of("/match-control").to(roomName).emit("match:timerUpdated", {
-      matchId: matchId,
-      remainingTime: remainingTime,
+    // 🔥 UPDATE: Broadcast timer:update event từ timer.event.ts
+    const timerData = {
+      timeRemaining: remainingTime,
+      isActive: true,
+      isPaused: false,
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    // Broadcast to match control namespace
+    this.io.of("/match-control").to(roomName).emit("timer:update", timerData);
 
     // Also broadcast to student namespace
-    this.io.of("/student").to(roomName).emit("match:timerUpdated", {
-      matchId: matchId,
-      remainingTime: remainingTime,
-      updatedAt: new Date().toISOString()
-    });
-
-    // 🔥 NEW: Also broadcast to online-control namespace
-    this.io.of("/online-control").to(roomName).emit("match:timerUpdated", {
-      matchId: matchId,
-      remainingTime: remainingTime,
-      updatedAt: new Date().toISOString()
-    });
+    this.io.of("/student").to(roomName).emit("timer:update", timerData);
 
     // Send warning when time is running low
     if (remainingTime === 30 || remainingTime === 10 || remainingTime === 5) {
-      // Warning to match control
-      this.io.of("/match-control").to(roomName).emit("match:timerWarning", {
+      const warningData = {
         matchId: matchId,
         remainingTime: remainingTime,
         message: `⚠️ ${remainingTime} giây còn lại!`
-      });
+      };
+
+      // Warning to match control
+      this.io.of("/match-control").to(roomName).emit("match:timerWarning", warningData);
 
       // Warning to students
-      this.io.of("/student").to(roomName).emit("match:timerWarning", {
-        matchId: matchId,
-        remainingTime: remainingTime,
-        message: `⚠️ ${remainingTime} giây còn lại!`
-      });
-
-      // 🔥 NEW: Warning to online-control
-      this.io.of("/online-control").to(roomName).emit("match:timerWarning", {
-        matchId: matchId,
-        remainingTime: remainingTime,
-        message: `⚠️ ${remainingTime} giây còn lại!`
-      });
+      this.io.of("/student").to(roomName).emit("match:timerWarning", warningData);
     }
   }
 
@@ -238,13 +222,6 @@ class TimerService {
 
     // Also emit to students
     this.io.of("/student").to(roomName).emit("match:timeUp", {
-      matchId: matchId,
-      questionOrder: match?.currentQuestion || 0,
-      timeUpAt: new Date().toISOString()
-    });
-
-    // 🔥 NEW: Also emit to online-control
-    this.io.of("/online-control").to(roomName).emit("match:timeUp", {
       matchId: matchId,
       questionOrder: match?.currentQuestion || 0,
       timeUpAt: new Date().toISOString()

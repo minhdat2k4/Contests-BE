@@ -12,7 +12,6 @@ import { registerMatchEvents } from "./events/match.events";
 import { registerAudienceEvents } from "./events/audience.events";
 import { timerService } from "./services/timer.service";
 import { prisma } from "@/config/database";
-import { registerOnlineControlNamespaceEvents } from "./namespaces/onlineControl.namespace";
 
 // Extend Socket interface to include user and contestant info
 interface AuthenticatedSocket extends Socket {
@@ -186,7 +185,7 @@ export const initializeSocketIO = (io: Server) => {
   // Initialize timer service
   timerService.setIO(io);
 
-  // Namespace điều khiển trận đấu (dành cho Admin/Judge)
+  // Namespace điều khiển trận đấu (dành cho Admin/Judge) - Đã tích hợp online control
   const matchControlNamespace = io.of("/match-control");
 
   // Enable authentication middleware
@@ -200,12 +199,9 @@ export const initializeSocketIO = (io: Server) => {
       `✅ Connected to /match-control: ${socket.id} | User: ${user.username} (${user.userId}) | Role: ${user.role}`
     );
 
-    // Đăng ký các sự kiện riêng cho namespace này
+    // Đăng ký các sự kiện riêng cho namespace này (bao gồm cả online control)
     registerMatchControlEvents(io, authSocket);
     registerTestEvents(io, authSocket);
-    
-    // Register match control events
-    registerMatchEvents(io, authSocket);
     
     // Register audience control events
     registerAudienceEvents(io, authSocket);
@@ -228,16 +224,5 @@ export const initializeSocketIO = (io: Server) => {
     await registerStudentNamespaceEvents(io, authSocket);
   });
 
-  // Namespace mới /online-control
-  const onlineControlNamespace = io.of("/online-control");
-  onlineControlNamespace.use(authMiddleware);
-  
-  onlineControlNamespace.on("connection", async (socket: Socket) => {
-    const authSocket = socket as AuthenticatedSocket;
-    
-    // Register all online control namespace events using the dedicated namespace handler
-    await registerOnlineControlNamespaceEvents(io, authSocket);
-  });
-
-  logger.info("✅ Socket.IO server initialized with /match-control, /student, and /online-control namespaces.");
+  logger.info("✅ Socket.IO server initialized with /match-control and /student namespaces.");
 };

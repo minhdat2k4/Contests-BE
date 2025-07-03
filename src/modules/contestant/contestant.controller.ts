@@ -34,6 +34,20 @@ export default class ContestantController {
         )
           ? (statusQuery as ContestantStatus)
           : undefined,
+        schoolIds: req.query.schoolIds
+          ? Array.isArray(req.query.schoolIds)
+            ? req.query.schoolIds.flatMap(val => typeof val === "string" ? val.split(",") : val).map(Number)
+            : typeof req.query.schoolIds === "string"
+              ? req.query.schoolIds.split(",").map(Number)
+              : undefined
+          : undefined,
+        classIds: req.query.classIds
+          ? Array.isArray(req.query.classIds)
+            ? req.query.classIds.flatMap(val => typeof val === "string" ? val.split(",") : val).map(Number)
+            : typeof req.query.classIds === "string"
+              ? req.query.classIds.split(",").map(Number)
+              : undefined
+          : undefined,
       };
 
       const data = await ContestantService.getAll(query, contest.id);
@@ -566,7 +580,7 @@ export default class ContestantController {
       const contestantId = Number(req.params.id);
       const contestSlug = req.params.slug;
       const matchId = Number(req.params.matchId);
-      
+
       if (!contestantId || !matchId) {
         throw new Error("ID thí sinh và ID trận đấu không hợp lệ");
       }
@@ -576,7 +590,7 @@ export default class ContestantController {
         contestSlug,
         matchId
       );
-      
+
       if (!contestant) {
         throw new Error("Không tìm thấy thí sinh trong cuộc thi này");
       }
@@ -613,11 +627,31 @@ export default class ContestantController {
     try {
       const slug = req.params.slug;
       const matchId = parseInt(req.params.matchId);
-      
+
+      // Lấy các filter từ query
       const query = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
-        search: (req.query.search as string) || undefined,
+        search: req.query.search as string | undefined,
+        groupId: req.query.groupId ? parseInt(req.query.groupId as string) : undefined,
+        schoolId: req.query.schoolId ? parseInt(req.query.schoolId as string) : undefined,
+        classId: req.query.classId ? parseInt(req.query.classId as string) : undefined,
+        roundId: req.query.roundId ? parseInt(req.query.roundId as string) : undefined,
+        status: req.query.status as ContestantStatus | undefined,
+        schoolIds: req.query.schoolIds
+          ? typeof req.query.schoolIds === "string"
+            ? (req.query.schoolIds as string).split(",").map(Number)
+            : Array.isArray(req.query.schoolIds)
+              ? (req.query.schoolIds as string[]).flatMap(val => val.split(",").map(Number))
+              : undefined
+          : undefined,
+        classIds: req.query.classIds
+          ? typeof req.query.classIds === "string"
+            ? (req.query.classIds as string).split(",").map(Number)
+            : Array.isArray(req.query.classIds)
+              ? (req.query.classIds as string[]).flatMap(val => val.split(",").map(Number))
+              : undefined
+          : undefined,
       };
 
       const data = await ContestantService.getContestantsInMatch(slug, matchId, query);
@@ -632,6 +666,153 @@ export default class ContestantController {
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  // API cứu trợ: lấy danh sách thí sinh bị loại theo tiêu chí cứu trợ
+  static async getRescueCandidates(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId); // chuyển đổi matchId sang số
+      const rescueId = req.query.rescueId ? Number(req.query.rescueId) : undefined;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined; // số lượng thí sinh cần cứu
+      
+      if (!matchId || isNaN(matchId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+      if (!rescueId || isNaN(rescueId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai rescueId" });
+        return;
+      }
+      
+      // Validate limit nếu có
+      if (limit !== undefined && (isNaN(limit) || limit <= 0)) {
+        res.status(400).json({ success: false, message: "Limit phải là số nguyên dương" });
+        return;
+      }
+      
+      const data = await ContestantService.getRescueCandidates(matchId, rescueId, limit);
+      res.json({ success: true, ...data });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  // API cứu trợ hàng loạt
+  static async rescueMany(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId);
+      if (!matchId || isNaN(matchId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+      const { contestantIds, currentQuestionOrder, rescueId } = req.body;
+      if (!Array.isArray(contestantIds) || contestantIds.length === 0 || !currentQuestionOrder) {
+        res.status(400).json({ success: false, message: "Thiếu dữ liệu contestantIds hoặc currentQuestionOrder" });
+        return;
+      }
+      const result = await ContestantService.rescueMany(matchId, contestantIds, currentQuestionOrder, rescueId);
+      res.json({ success: true, updatedCount: result.count, rescueUpdated: result.rescueUpdated });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  // API lấy danh sách thí sinh bị loại trong 1 trận đấu
+  static async getEliminatedContestants(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId);
+      if (!matchId || isNaN(matchId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+      const data = await ContestantService.getEliminatedContestants(matchId);
+      res.json({ success: true, data });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  // API lấy danh sách thí sinh bị loại có phân trang, lọc, tìm kiếm
+  static async getEliminatedContestantsWithFilter(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId);
+      if (!matchId || isNaN(matchId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+      const query = req.query;
+      const data = await ContestantService.getEliminatedContestantsWithFilter(query, matchId);
+      res.json({ success: true, ...data });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  // Controller: Lấy danh sách thí sinh đã được cứu trợ theo rescueId
+  static async getRescuedContestantsByRescueId(req: Request, res: Response): Promise<void> {
+    try {
+      const rescueId = Number(req.params.rescueId);
+      if (!rescueId || isNaN(rescueId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai rescueId" });
+        return;
+      }
+      const data = await ContestantService.getRescuedContestantsByRescueId(rescueId);
+      res.json({ success: true, ...data });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  // Controller: Thêm hàng loạt studentIds vào rescue (push, không trùng lặp)
+  static async addStudentsToRescue(req: Request, res: Response): Promise<void> {
+    try {
+      const { rescueId, studentIds } = req.body;
+      
+      if (!rescueId || isNaN(rescueId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai rescueId" });
+        return;
+      }
+      
+      if (!Array.isArray(studentIds) || studentIds.length === 0) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai danh sách studentIds" });
+        return;
+      }
+
+      const data = await ContestantService.addStudentsToRescue(rescueId, studentIds);
+      res.json({ 
+        success: true, 
+        message: `Đã thêm ${data.addedCount} sinh viên vào rescue. Tổng cộng: ${data.totalCount} sinh viên`,
+        ...data 
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  // Controller: Xóa 1 studentId khỏi rescue
+  static async removeStudentFromRescue(req: Request, res: Response): Promise<void> {
+    try {
+      const { rescueId, studentId } = req.body;
+      
+      if (!rescueId || isNaN(rescueId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai rescueId" });
+        return;
+      }
+      
+      if (!studentId || isNaN(studentId)) {
+        res.status(400).json({ success: false, message: "Thiếu hoặc sai studentId" });
+        return;
+      }
+
+      const data = await ContestantService.removeStudentFromRescue(rescueId, studentId);
+      res.json({ 
+        success: true, 
+        message: `Đã xóa sinh viên ${data.removedStudentId} khỏi rescue. Còn lại: ${data.totalCount} sinh viên`,
+        ...data 
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: (error as Error).message });
     }
   }
 }

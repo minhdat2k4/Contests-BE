@@ -74,6 +74,7 @@ enum RescueStatus {
   notUsed
   used
   passed
+  notEligible    
 }
 
 enum AwardType {
@@ -86,6 +87,7 @@ enum AwardType {
 }
 
 enum ControlKey {
+  wingold
   qrcode
   background
   question
@@ -115,6 +117,8 @@ enum ControlValue {
   reset
   zoomIn
   zoomOut
+  Eliminated
+  Rescued
 }
 
 model User {
@@ -181,8 +185,8 @@ model Student {
   studentCode  String?  @db.VarChar(12) @map("student_code")
   classId      Int     
   class        Class    @relation(fields: [classId], references: [id],onUpdate:Restrict, onDelete:Restrict)
-  userId       Int      @unique
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId       Int?      @unique
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   isActive     Boolean  @default(true) 
   contestants  Contestant[]
   match        Match[]
@@ -397,6 +401,7 @@ model ContestantMatch {
   registrationNumber Int                
   status           ContestantMatchStatus @default(not_started)
   eliminatedAtQuestionOrder Int?       
+  rescuedAtQuestionOrder Int?           // note trường này để lưu câu được cứu trợ
   isActive         Boolean              @default(true) 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -407,7 +412,6 @@ model ContestantMatch {
 
 model Result {
   id             Int        @id @default(autoincrement())
-  name           String     @db.VarChar(255)
   contestantId   Int        @map("contestant_id")
   matchId        Int        @map("match_id")
   contestant     Contestant @relation(fields: [contestantId], references: [id],onDelete :Restrict , onUpdate :Restrict)

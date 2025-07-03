@@ -216,4 +216,50 @@ export default class RescueService {
       },
     });
   }
+
+  // API: Lấy danh sách rescue theo matchId và rescueType
+  static async getRescuesByMatchIdAndType(
+    matchId: number,
+    rescueType: string = "resurrected"
+  ): Promise<
+    Array<{
+      id: number;
+      name: string;
+      rescueType: string;
+      status: string;
+      questionOrder: number | null;
+      index: number | null;
+      studentIds: any;
+    }>
+  > {
+    const rescues = await prisma.rescue.findMany({
+      where: {
+        matchId: matchId,
+        rescueType: rescueType as any,
+      },
+      select: {
+        id: true,
+        name: true,
+        rescueType: true,
+        status: true,
+        questionOrder: true,
+        index: true,
+        studentIds: true,
+      },
+      orderBy: [
+        { index: "asc" },
+        { createdAt: "desc" },
+      ],
+    });
+
+    return rescues.map(rescue => ({
+      id: rescue.id,
+      name: rescue.name,
+      rescueType: rescue.rescueType,
+      status: rescue.status,
+      questionOrder: rescue.questionOrder,
+      index: rescue.index,
+      studentIds: rescue.studentIds,
+    }));
+  }
 }

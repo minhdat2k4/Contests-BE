@@ -187,11 +187,13 @@ export default class GroupDivisionService {
       id: group.id,
       name: group.name,
       userId: group.userId,
-      judge: group.user ? {
-        id: group.user.id,
-        username: group.user.username,
-        email: group.user.email,
-      } : null,
+      judge: group.user
+        ? {
+            id: group.user.id,
+            username: group.user.username,
+            email: group.user.email,
+          }
+        : null,
       contestantMatches: group.contestantMatches.map((cm: any) => ({
         contestant: {
           id: cm.contestant.id,
@@ -255,11 +257,13 @@ export default class GroupDivisionService {
       id: group.id,
       name: group.name,
       userId: group.userId,
-      judge: group.user ? {
-        id: group.user.id,
-        username: group.user.username,
-        email: group.user.email,
-      } : null,
+      judge: group.user
+        ? {
+            id: group.user.id,
+            username: group.user.username,
+            email: group.user.email,
+          }
+        : null,
       contestantMatches: group.contestantMatches.map((cm: any) => ({
         contestant: {
           id: cm.contestant.id,
@@ -303,6 +307,7 @@ export default class GroupDivisionService {
 
       // 3. Tạo các nhóm mới
       const createdGroups = [];
+      let registrationNumber = 1;
 
       for (let i = 0; i < input.groups.length; i++) {
         const groupData = input.groups[i];
@@ -353,7 +358,7 @@ export default class GroupDivisionService {
               contestantId,
               matchId,
               groupId: createdGroup.id,
-              registrationNumber: j + 1, // Số thứ tự trong nhóm
+              registrationNumber: registrationNumber++, // Số thứ tự trong nhóm
               status: "not_started",
             },
           });
@@ -617,24 +622,52 @@ export default class GroupDivisionService {
       | "rescued"
       | "banned"
       | "completed",
-    ids: number[] = []
+    ids: number[] = [],
+    questionOrder?: number
   ) {
-    return await prisma.contestantMatch.updateMany({
-      where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
-      data: { status },
-    });
+    console.log(
+      "Match:",
+      contestantMatchId,
+      "Status:",
+      status,
+      "IDs:",
+      ids,
+      "Question Order:",
+      questionOrder
+    );
+    if (status === "eliminated") {
+      return await prisma.contestantMatch.updateMany({
+        where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
+        data: { status, eliminatedAtQuestionOrder: questionOrder },
+      });
+    } else if (status === "rescued") {
+      return await prisma.contestantMatch.updateMany({
+        where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
+        data: { status, rescuedAtQuestionOrder: questionOrder },
+      });
+    } else {
+      return await prisma.contestantMatch.updateMany({
+        where: { matchId: contestantMatchId, registrationNumber: { in: ids } },
+        data: { status },
+      });
+    }
   }
 
   /**
    * Phân bổ thí sinh vào các nhóm đã có sẵn (theo groupId, contestantIds)
    */
-  static async assignContestantsToGroups(matchId: number, input: import("./groupDivision.schema").AssignContestantsToGroupsInput) {
+  static async assignContestantsToGroups(
+    matchId: number,
+    input: import("./groupDivision.schema").AssignContestantsToGroupsInput
+  ) {
     return await prisma.$transaction(async tx => {
       // Xóa contestantMatch cũ của các groupId này
       const groupIds = input.groups.map(g => g.groupId);
       await tx.contestantMatch.deleteMany({
-        where: { groupId: { in: groupIds } }
+        where: { groupId: { in: groupIds } },
       });
+
+      let registrationNumber = 1;
 
       // Tạo lại contestantMatch mới
       for (const group of input.groups) {
@@ -644,12 +677,62 @@ export default class GroupDivisionService {
               groupId: group.groupId,
               contestantId: group.contestantIds[i],
               matchId,
-              registrationNumber: i + 1
-            }
+
+              registrationNumber: registrationNumber++,
+            },
           });
         }
       }
       return { success: true };
     });
+  }
+
+  static async UpdateContestantStatusEliminated(matchId: number) {
+    return await prisma.contestantMatch.updateMany({
+      where: {
+        matchId: matchId,
+        status: "confirmed2",
+      },
+      data: {
+        status: "eliminated",
+      },
+    });
+  }
+
+  static async getContestantMatchByStatus(
+    matchId: number,
+    status:
+      | "not_started"
+      | "in_progress"
+      | "confirmed1"
+      | "confirmed2"
+      | "eliminated"
+      | "rescued"
+      | "banned"
+      | "completed",
+    questionOrder?: number
+  ) {
+    if (questionOrder === undefined) {
+      return await prisma.contestantMatch.findMany({
+        where: {
+          matchId: matchId,
+          status: status,
+        },
+        select: {
+          contestantId: true,
+        },
+      });
+    } else {
+      return await prisma.contestantMatch.findMany({
+        where: {
+          matchId: matchId,
+          status: status,
+          eliminatedAtQuestionOrder: questionOrder,
+        },
+        select: {
+          contestantId: true,
+        },
+      });
+    }
   }
 }

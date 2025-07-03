@@ -24,7 +24,7 @@ export default class ContestantService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search, roundId, status, schoolId, classId, groupId, matchId } = query;
+    const { page, limit, search, roundId, status, schoolId, classId, groupId, matchId, schoolIds, classIds } = query;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
 
@@ -32,7 +32,7 @@ export default class ContestantService {
       whereClause.contestId = contestId;
     }
 
-    if (roundId !== undefined) {
+    if (typeof roundId === "number" && !isNaN(roundId) && roundId > 0) {
       whereClause.roundId = roundId;
     }
 
@@ -90,6 +90,30 @@ export default class ContestantService {
       ]);
     }
 
+    if (schoolIds && schoolIds.length > 0 && classIds && classIds.length > 0) {
+      // Lọc theo cả trường và lớp
+      whereClause.student = {
+        class: {
+          schoolId: { in: schoolIds },
+          id: { in: classIds }
+        }
+      };
+    } else if (schoolIds && schoolIds.length > 0) {
+      // Chỉ lọc theo trường
+      whereClause.student = {
+        class: {
+          schoolId: { in: schoolIds }
+        }
+      };
+    } else if (classIds && classIds.length > 0) {
+      // Chỉ lọc theo lớp
+      whereClause.student = {
+        class: {
+          id: { in: classIds }
+        }
+      };
+    }
+
     const ContestantRaw = await prisma.contestant.findMany({
       where: whereClause,
       skip: skip,
@@ -98,8 +122,8 @@ export default class ContestantService {
       select: {
         id: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -114,7 +138,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -176,8 +200,8 @@ export default class ContestantService {
         roundId: true,
         studentId: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -192,7 +216,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -390,7 +414,7 @@ export default class ContestantService {
   }
 
   static async getContestantByIdAndMatch(
-    contestantId: number, 
+    contestantId: number,
     matchId: number
   ): Promise<any> {
     return prisma.contestant.findFirst({
@@ -407,8 +431,8 @@ export default class ContestantService {
         roundId: true,
         studentId: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -423,7 +447,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -517,8 +541,8 @@ export default class ContestantService {
       select: {
         id: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -533,7 +557,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -602,8 +626,8 @@ export default class ContestantService {
         roundId: true,
         studentId: true,
         status: true,
-        student: { 
-          select: { 
+        student: {
+          select: {
             fullName: true,
             studentCode: true,
             class: {
@@ -618,7 +642,7 @@ export default class ContestantService {
                 }
               }
             }
-          } 
+          }
         },
         round: { select: { name: true } },
         contest: {
@@ -651,6 +675,13 @@ export default class ContestantService {
       page: number;
       limit: number;
       search?: string;
+      groupId?: number;
+      schoolId?: number;
+      classId?: number;
+      roundId?: number;
+      status?: string;
+      schoolIds?: number[];
+      classIds?: number[];
     }
   ): Promise<{
     contestants: Array<{
@@ -675,21 +706,32 @@ export default class ContestantService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search } = query;
+    const {
+      page,
+      limit,
+      search,
+      groupId,
+      schoolId,
+      classId,
+      roundId,
+      status,
+      schoolIds,
+      classIds,
+    } = query;
     const skip = (page - 1) * limit;
 
     // Tìm cuộc thi theo slug
     const contest = await prisma.contest.findFirst({
       where: { slug: slug }
     });
-    
+
     if (!contest) {
       throw new Error("Không tìm thấy cuộc thi");
     }
 
     // Tìm trận đấu
     const match = await prisma.match.findFirst({
-      where: { 
+      where: {
         id: matchId,
         contest: {
           slug: slug
@@ -701,7 +743,7 @@ export default class ContestantService {
       throw new Error("Không tìm thấy trận đấu trong cuộc thi này");
     }
 
-    // Build where clause
+    // Build where clause giống getAll
     const whereClause: any = {
       contestId: contest.id,
       contestantMatches: {
@@ -711,26 +753,91 @@ export default class ContestantService {
       }
     };
 
-    // Thêm search condition
+    // Filter by groupId
+    if (groupId !== undefined) {
+      if (groupId === -1) {
+        // Chưa phân nhóm
+        whereClause.contestantMatches = {
+          none: { matchId: matchId }
+        };
+      } else if (groupId > 0) {
+        whereClause.contestantMatches = {
+          some: { matchId: matchId, groupId: groupId }
+        };
+      }
+    }
+
+    // // Filter by schoolId
+    // if (schoolId !== undefined) {
+    //   whereClause.student = {
+    //     ...whereClause.student,
+    //     class: {
+    //       ...whereClause.student?.class,
+    //       schoolId: schoolId
+    //     }
+    //   };
+    // }
+
+    // // Filter by classId
+    // if (classId !== undefined) {
+    //   whereClause.student = {
+    //     ...whereClause.student,
+    //     classId: classId
+    //   };
+    // }
+
+    // Filter by roundId
+    if (typeof roundId === "number" && !isNaN(roundId) && roundId > 0) {
+      whereClause.roundId = roundId;
+    }
+
+    // Filter by status
+    if (status !== undefined) {
+      whereClause.status = status;
+    }
+
+    // // Filter by schoolIds/classIds (ưu tiên lọc đồng thời)
+    // if (schoolIds && schoolIds.length > 0 && classIds && classIds.length > 0) {
+    //   whereClause.student = {
+    //     class: {
+    //       schoolId: { in: schoolIds },
+    //       id: { in: classIds }
+    //     }
+    //   };
+    // } else if (schoolIds && schoolIds.length > 0) {
+    //   whereClause.student = {
+    //     class: {
+    //       schoolId: { in: schoolIds }
+    //     }
+    //   };
+    // } else if (classIds && classIds.length > 0) {
+    //   whereClause.student = {
+    //     class: {
+    //       id: { in: classIds }
+    //     }
+    //   };
+    // }
+    const studentWhere: any = {};
+    const classWhere: any = {};
+
+    if (schoolId !== undefined) classWhere.schoolId = schoolId;
+    if (classId !== undefined) classWhere.id = classId;
+    if (schoolIds && schoolIds.length > 0) classWhere.schoolId = { in: schoolIds };
+    if (classIds && classIds.length > 0) classWhere.id = { in: classIds };
+
+    if (Object.keys(classWhere).length > 0) studentWhere.class = classWhere;
+    if (Object.keys(studentWhere).length > 0) whereClause.student = studentWhere;
+
+    // Filter by search
     if (search) {
-      whereClause.OR = [
-        {
-          student: {
-            fullName: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        },
-        {
-          student: {
-            studentCode: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        }
-      ];
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { student: { is: { fullName: { contains: keyword } } } },
+        { student: { is: { studentCode: { contains: keyword } } } },
+        { round: { is: { name: { contains: keyword } } } },
+        { student: { is: { class: { is: { school: { is: { name: { contains: keyword } } } } } } } },
+        { student: { is: { class: { is: { name: { contains: keyword } } } } } },
+      ]);
     }
 
     // Đếm tổng số thí sinh
@@ -789,7 +896,7 @@ export default class ContestantService {
     // Transform dữ liệu để trả về đúng format
     const transformedContestants = contestants.map(contestant => {
       const group = contestant.contestantMatches?.[0]?.group || null;
-      
+
       return {
         id: contestant.id,
         fullName: contestant.student.fullName,
@@ -817,6 +924,455 @@ export default class ContestantService {
         hasNext: page < totalPages,
         hasPrev: page > 1,
       },
+    };
+  }
+
+  /**====================================CỨU trợ====================================== */
+  // Hàm dùng chung: lấy danh sách contestantMatch bị loại trong 1 trận đấu
+  static async getEliminatedContestants(matchId: number) {
+    return prisma.contestantMatch.findMany({
+      where: {
+        matchId,
+        status: 'eliminated',
+      },
+      select: {
+        contestantId: true,
+        eliminatedAtQuestionOrder: true,
+        registrationNumber: true,
+        contestant: {
+          select: {
+            id: true,
+            status: true,
+            student: {
+              select: {
+                fullName: true,
+                studentCode: true,
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    school: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            round: { select: { name: true } },
+          },
+        },
+      },
+    });
+  }
+
+  // Lấy danh sách thí sinh bị loại để cứu trợ, sắp xếp theo số câu đúng và thứ tự bị loại, trả về rescue nếu rescueId có
+  static async getRescueCandidates(matchId: number, rescueId?: number, limit?: number) {
+    // Tái sử dụng hàm lấy danh sách bị loại
+    const eliminatedContestants = await this.getEliminatedContestants(matchId);
+    
+    // Lấy số câu đúng của từng thí sinh trong trận đấu này
+    const contestantIds = eliminatedContestants.map(e => e.contestantId);
+    const results = await prisma.result.groupBy({
+      by: ['contestantId'],
+      where: {
+        matchId,
+        contestantId: { in: contestantIds },
+        isCorrect: true,
+      },
+      _count: { id: true },
+    });
+    
+    // Map contestantId -> correctAnswers
+    const correctAnswersMap = new Map<number, number>();
+    results.forEach(r => {
+      correctAnswersMap.set(r.contestantId, r._count.id);
+    });
+    
+    // Kết hợp dữ liệu và sắp xếp
+    const candidates = eliminatedContestants.map(e => ({
+      contestantId: e.contestantId,
+      fullName: e.contestant.student.fullName,
+      studentCode: e.contestant.student.studentCode,
+      schoolId: e.contestant.student.class.school.id,
+      schoolName: e.contestant.student.class.school.name,
+      classId: e.contestant.student.class.id,
+      className: e.contestant.student.class.name,
+      roundName: e.contestant.round?.name || '',
+      status: e.contestant.status,
+      correctAnswers: correctAnswersMap.get(e.contestantId) || 0,
+      eliminatedAtQuestionOrder: e.eliminatedAtQuestionOrder,
+      registrationNumber: e.registrationNumber,
+    }));
+    
+    candidates.sort((a, b) => {
+      if (b.correctAnswers !== a.correctAnswers) {
+        return b.correctAnswers - a.correctAnswers;
+      }
+      return (b.eliminatedAtQuestionOrder || 0) - (a.eliminatedAtQuestionOrder || 0);
+    });
+
+    // Áp dụng limit nếu có, đảm bảo không vượt quá số thí sinh có sẵn
+    let limitedCandidates = candidates;
+    const maxAvailable = candidates.length;
+    let actualLimit = maxAvailable;
+    
+    if (limit !== undefined && limit > 0) {
+      actualLimit = Math.min(limit, maxAvailable);
+      limitedCandidates = candidates.slice(0, actualLimit);
+    }
+    
+    let rescue = undefined;
+    if (rescueId) {
+      // Dọn studentIds cũ và cập nhật hoàn toàn bằng danh sách candidates đã giới hạn
+      const studentIds = limitedCandidates.map(d => d.contestantId);
+      rescue = await prisma.rescue.update({
+        where: { id: rescueId },
+        data: { studentIds }, // Thay thế hoàn toàn studentIds cũ
+      });
+    }
+    
+    return { 
+      rescue, 
+      candidates: limitedCandidates,
+      meta: {
+        requestedLimit: limit,
+        actualLimit,
+        maxAvailable,
+        totalCandidates: candidates.length
+      }
+    };
+  }
+
+  // Cập nhật cứu trợ hàng loạt cho các thí sinh trong trận đấu
+  static async rescueMany(matchId: number, contestantIds: number[], currentQuestionOrder: number, rescueId?: number) {
+    // Cập nhật status và rescuedAtQuestionOrder cho các contestantMatch
+    const result = await prisma.contestantMatch.updateMany({
+      where: {
+        matchId,
+        contestantId: { in: contestantIds },
+      },
+      data: {
+        status: 'rescued',
+        rescuedAtQuestionOrder: currentQuestionOrder,
+      },
+    });
+
+    // Nếu có rescueId, cập nhật status của rescue thành "used"
+    let rescueUpdated = false;
+    if (rescueId) {
+      try {
+        await prisma.rescue.update({
+          where: { id: rescueId },
+          data: { status: 'used' },
+        });
+        rescueUpdated = true;
+      } catch (error) {
+        console.warn(`Không thể cập nhật rescue status cho rescueId ${rescueId}:`, error);
+      }
+    }
+
+    return {
+      ...result,
+      rescueUpdated,
+    };
+  }
+
+  // Lấy danh sách thí sinh bị loại có phân trang, lọc, tìm kiếm
+  static async getEliminatedContestantsWithFilter(query: any, matchId: number) {
+    const { page = 1, limit = 10, search, schoolId, classId, status, registrationNumber } = query;
+    
+    // Convert query parameters to numbers once
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const schoolIdNum = schoolId ? Number(schoolId) : undefined;
+    const classIdNum = classId ? Number(classId) : undefined;
+    
+    const skip = (pageNum - 1) * limitNum;
+    
+    // where cho contestantMatch
+    const whereMatch: any = {
+      matchId,
+      status: 'eliminated',
+    };
+    // where cho contestant
+    const whereContestant: any = {};
+    if (schoolIdNum) whereContestant["student.class.schoolId"] = schoolIdNum;
+    if (classIdNum) whereContestant["student.classId"] = classIdNum;
+    if (status) whereContestant["status"] = status;
+    // Tìm kiếm theo tên, mã, lớp, trường
+    let searchFilter = [];
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      searchFilter = keywords.flatMap((keyword: string) => [
+        { contestant: { student: { fullName: { contains: keyword } } } },
+        { contestant: { student: { studentCode: { contains: keyword } } } },
+        { contestant: { student: { class: { name: { contains: keyword } } } } },
+        { contestant: { student: { class: { school: { name: { contains: keyword } } } } } },
+        // For registrationNumber, try to convert keyword to number and use equality
+        ...(Number.isInteger(Number(keyword)) && !isNaN(Number(keyword)) 
+          ? [{ registrationNumber: Number(keyword) }] 
+          : []
+        ),
+      ]);
+    }
+    
+    // Tìm kiếm riêng theo registrationNumber
+    if (registrationNumber) {
+      const regNumberInt = Number(registrationNumber);
+      if (!isNaN(regNumberInt) && Number.isInteger(regNumberInt)) {
+        const registrationFilter = { registrationNumber: regNumberInt };
+        if (searchFilter.length > 0) {
+          searchFilter.push(registrationFilter);
+        } else {
+          searchFilter = [registrationFilter];
+        }
+      }
+    }
+    // Lấy tổng số
+    const total = await prisma.contestantMatch.count({
+      where: {
+        ...whereMatch,
+        ...whereContestant,
+        ...(searchFilter.length > 0 ? { OR: searchFilter } : {}),
+      },
+    });
+    // Lấy danh sách
+    const data = await prisma.contestantMatch.findMany({
+      where: {
+        ...whereMatch,
+        ...whereContestant,
+        ...(searchFilter.length > 0 ? { OR: searchFilter } : {}),
+      },
+      skip,
+      take: limitNum,
+      orderBy: [{ eliminatedAtQuestionOrder: 'desc' }, { contestantId: 'desc' }],
+      select: {
+        contestantId: true,
+        eliminatedAtQuestionOrder: true,
+        registrationNumber: true,
+        contestant: {
+          select: {
+            id: true,
+            status: true,
+            student: {
+              select: {
+                fullName: true,
+                studentCode: true,
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    school: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            round: { select: { name: true } },
+          },
+        },
+      },
+    });
+    const totalPages = Math.ceil(total / limitNum);
+    return {
+      contestants: data.map(e => {
+        const c = e.contestant;
+        return {
+          contestantId: e.contestantId,
+          fullName: c.student.fullName,
+          studentCode: c.student.studentCode,
+          roundName: c.round.name,
+          status: c.status,
+          schoolId: c.student.class.school.id,
+          schoolName: c.student.class.school.name,
+          classId: c.student.class.id,
+          className: c.student.class.name,
+          eliminatedAtQuestionOrder: e.eliminatedAtQuestionOrder,
+          registrationNumber: e.registrationNumber,
+        };
+      }),
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1,
+      },
+    };
+  }
+
+  // API: Lấy danh sách thí sinh đã được cứu trợ theo rescueId, trả về rescue + contestants (tương tự getRescueCandidates)
+  static async getRescuedContestantsByRescueId(rescueId: number) {
+    // Lấy rescue
+    const rescue = await prisma.rescue.findUnique({ where: { id: rescueId } });
+    if (!rescue) throw new Error("Rescue không tồn tại");
+    let studentIds: number[] = [];
+    if (Array.isArray(rescue.studentIds)) {
+      studentIds = rescue.studentIds.map(Number).filter(x => !isNaN(x));
+    } else if (typeof rescue.studentIds === 'string') {
+      try {
+        const arr = JSON.parse(rescue.studentIds);
+        if (Array.isArray(arr)) studentIds = arr.map(Number).filter(x => !isNaN(x));
+      } catch { }
+    } else if (rescue.studentIds && typeof rescue.studentIds === 'object') {
+      // Nếu là object kiểu JsonArray
+      studentIds = Object.values(rescue.studentIds).map(Number).filter(x => !isNaN(x));
+    }
+    if (!studentIds || studentIds.length === 0) {
+      return { rescue, contestants: [] };
+    }
+    // Lấy contestantMatch theo matchId và contestantId (studentId)
+    const contestantMatches = await prisma.contestantMatch.findMany({
+      where: {
+        matchId: rescue.matchId,
+        contestantId: { in: studentIds },
+      },
+      select: {
+        contestantId: true,
+        eliminatedAtQuestionOrder: true,
+        registrationNumber: true,
+        contestant: {
+          select: {
+            id: true,
+            status: true,
+            student: {
+              select: {
+                fullName: true,
+                studentCode: true,
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    school: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            round: { select: { name: true } },
+          },
+        },
+      },
+    });
+    // Lấy số câu đúng của từng thí sinh trong trận đấu này
+    const results = await prisma.result.groupBy({
+      by: ['contestantId'],
+      where: {
+        matchId: rescue.matchId,
+        contestantId: { in: studentIds },
+        isCorrect: true,
+      },
+      _count: { id: true },
+    });
+    const correctAnswersMap = new Map<number, number>();
+    results.forEach(r => correctAnswersMap.set(r.contestantId, r._count.id));
+    // Kết hợp dữ liệu
+    const contestants = contestantMatches.map(e => ({
+      contestantId: e.contestantId,
+      fullName: e.contestant.student.fullName,
+      studentCode: e.contestant.student.studentCode,
+      schoolId: e.contestant.student.class.school.id,
+      schoolName: e.contestant.student.class.school.name,
+      classId: e.contestant.student.class.id,
+      className: e.contestant.student.class.name,
+      roundName: e.contestant.round?.name || '',
+      status: e.contestant.status,
+      correctAnswers: correctAnswersMap.get(e.contestantId) || 0,
+      eliminatedAtQuestionOrder: e.eliminatedAtQuestionOrder,
+      registrationNumber: e.registrationNumber,
+    }));
+    return { rescue, contestants };
+  }
+
+  // API: Thêm hàng loạt studentIds vào rescue (push, không trùng lặp)
+  static async addStudentsToRescue(rescueId: number, studentIds: number[]) {
+    // Lấy rescue hiện tại
+    const rescue = await prisma.rescue.findUnique({ where: { id: rescueId } });
+    if (!rescue) throw new Error("Rescue không tồn tại");
+
+    // Parse studentIds hiện tại từ JSON
+    let currentStudentIds: number[] = [];
+    if (Array.isArray(rescue.studentIds)) {
+      currentStudentIds = rescue.studentIds.map(Number).filter(x => !isNaN(x));
+    } else if (typeof rescue.studentIds === 'string') {
+      try {
+        const arr = JSON.parse(rescue.studentIds);
+        if (Array.isArray(arr)) currentStudentIds = arr.map(Number).filter(x => !isNaN(x));
+      } catch { }
+    } else if (rescue.studentIds && typeof rescue.studentIds === 'object') {
+      currentStudentIds = Object.values(rescue.studentIds).map(Number).filter(x => !isNaN(x));
+    }
+
+    // Thêm studentIds mới, không trùng lặp
+    const uniqueNewIds = studentIds.filter(id => !currentStudentIds.includes(id));
+    const updatedStudentIds = [...currentStudentIds, ...uniqueNewIds];
+
+    // Cập nhật rescue
+    const updatedRescue = await prisma.rescue.update({
+      where: { id: rescueId },
+      data: {
+        studentIds: updatedStudentIds,
+      },
+    });
+
+    return {
+      rescue: updatedRescue,
+      addedCount: uniqueNewIds.length,
+      totalCount: updatedStudentIds.length,
+    };
+  }
+
+  // API: Xóa 1 studentId khỏi rescue
+  static async removeStudentFromRescue(rescueId: number, studentId: number) {
+    // Lấy rescue hiện tại
+    const rescue = await prisma.rescue.findUnique({ where: { id: rescueId } });
+    if (!rescue) throw new Error("Rescue không tồn tại");
+
+    // Parse studentIds hiện tại từ JSON
+    let currentStudentIds: number[] = [];
+    if (Array.isArray(rescue.studentIds)) {
+      currentStudentIds = rescue.studentIds.map(Number).filter(x => !isNaN(x));
+    } else if (typeof rescue.studentIds === 'string') {
+      try {
+        const arr = JSON.parse(rescue.studentIds);
+        if (Array.isArray(arr)) currentStudentIds = arr.map(Number).filter(x => !isNaN(x));
+      } catch { }
+    } else if (rescue.studentIds && typeof rescue.studentIds === 'object') {
+      currentStudentIds = Object.values(rescue.studentIds).map(Number).filter(x => !isNaN(x));
+    }
+
+    // Kiểm tra xem studentId có tồn tại không
+    if (!currentStudentIds.includes(studentId)) {
+      throw new Error("Student ID không tồn tại trong rescue này");
+    }
+
+    // Xóa studentId khỏi danh sách
+    const updatedStudentIds = currentStudentIds.filter(id => id !== studentId);
+
+    // Cập nhật rescue
+    const updatedRescue = await prisma.rescue.update({
+      where: { id: rescueId },
+      data: {
+        studentIds: updatedStudentIds,
+      },
+    });
+
+    return {
+      rescue: updatedRescue,
+      removedStudentId: studentId,
+      totalCount: updatedStudentIds.length,
     };
   }
 }

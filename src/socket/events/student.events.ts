@@ -17,52 +17,58 @@ interface AuthenticatedSocket extends Socket {
 }
 
 // Validation schemas
+
+
+const JoinMatchSchema = z.object({
+  matchId: z.number().int().positive(),
+});
+
 const SubmitAnswerSchema = z.object({
   matchId: z.number().int().positive(),
   questionOrder: z.number().int().positive(),
   answer: z.string().min(1).max(500),
-  submittedAt: z.string().datetime().optional()
+  submittedAt: z.string().datetime().optional(),
 });
 
 const GetQuestionSchema = z.object({
   matchId: z.number().int().positive(),
-  questionOrder: z.number().int().positive()
+  questionOrder: z.number().int().positive(),
 });
 
 // Match control schemas (for admin commands)
 const StartMatchSchema = z.object({
-  matchId: z.union([z.number().int().positive(), z.string().min(1)])
+  matchId: z.union([z.number().int().positive(), z.string().min(1)]),
 });
 
 const NextQuestionSchema = z.object({
-  matchId: z.union([z.number().int().positive(), z.string().min(1)])
+  matchId: z.union([z.number().int().positive(), z.string().min(1)]),
 });
 
 const TimerControlSchema = z.object({
-  matchId: z.union([z.number().int().positive(), z.string().min(1)])
+  matchId: z.union([z.number().int().positive(), z.string().min(1)]),
 });
 
 const EndMatchSchema = z.object({
-  matchId: z.union([z.number().int().positive(), z.string().min(1)])
+  matchId: z.union([z.number().int().positive(), z.string().min(1)]),
 });
 
 // Helper function to resolve match from either ID or slug
 const resolveMatch = async (matchIdentifier: number | string) => {
-  if (typeof matchIdentifier === 'number') {
+  if (typeof matchIdentifier === "number") {
     return await prisma.match.findUnique({
       where: { id: matchIdentifier },
       include: {
         round: {
           include: {
             contest: {
-              select: { name: true, status: true }
-            }
-          }
+              select: { name: true, status: true },
+            },
+          },
         },
         questionPackage: {
-          select: { name: true }
-        }
-      }
+          select: { name: true },
+        },
+      },
     });
   } else {
     return await prisma.match.findFirst({
@@ -71,47 +77,54 @@ const resolveMatch = async (matchIdentifier: number | string) => {
         round: {
           include: {
             contest: {
-              select: { name: true, status: true }
-            }
-          }
+              select: { name: true, status: true },
+            },
+          },
         },
         questionPackage: {
-          select: { name: true }
-        }
-      }
+          select: { name: true },
+        },
+      },
     });
   }
 };
 
-export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocket) => {
-  console.log('📋 [BE STUDENT EVENTS] Bắt đầu đăng ký events cho student socket:', {
-    socketId: socket.id,
-    username: socket.user.username,
-    userId: socket.user.userId,
-    role: socket.user.role,
-    contestantId: socket.contestantId || 'KHÔNG CÓ'
-  });
-  
+export const registerStudentEvents = (
+  namespace: any,
+  socket: AuthenticatedSocket
+) => {
+  console.log(
+    "📋 [BE STUDENT EVENTS] Bắt đầu đăng ký events cho student socket:",
+    {
+      socketId: socket.id,
+      username: socket.user.username,
+      userId: socket.user.userId,
+      role: socket.user.role,
+      contestantId: socket.contestantId || "KHÔNG CÓ",
+    }
+  );
+
   // Only allow Student role to access these events
   if (socket.user.role !== "Student") {
-    console.log('🚫 [BE STUDENT EVENTS] Từ chối đăng ký events - user không phải Student:', {
-      socketId: socket.id,
-      role: socket.user.role,
-      username: socket.user.username
-    });
+    console.log(
+      "🚫 [BE STUDENT EVENTS] Từ chối đăng ký events - user không phải Student:",
+      {
+        socketId: socket.id,
+        role: socket.user.role,
+        username: socket.user.username,
+      }
+    );
     return;
   }
 
-  console.log('✅ [BE STUDENT EVENTS] Xác nhận user là Student, tiếp tục đăng ký events');
+  console.log(
+    "✅ [BE STUDENT EVENTS] Xác nhận user là Student, tiếp tục đăng ký events"
+  );
 
   // REMOVED: All match control events (match:start, match:nextQuestion, match:pauseTimer, match:resumeTimer, match:end)
   // These events are security vulnerabilities when handled by students
 
-  // REMOVED: student:joinMatch event handler - now handled in student.namespace.ts to avoid conflicts
-
-  // REMOVED: student:submitAnswer event handler - now handled by API
-
-  console.log('🎯 [BE STUDENT EVENTS] Đang đăng ký event: student:getMatchStatus');
+  console.log("🎯 [BE STUDENT EVENTS] Đang đăng ký event: match:start");
   /**
    * Event: student:getMatchStatus
    * Get current match status and results
@@ -137,10 +150,10 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
         include: {
           round: {
             include: {
-              contest: true
-            }
-          }
-        }
+              contest: true,
+            },
+          },
+        },
       });
 
       if (!match) {
@@ -272,7 +285,6 @@ export const registerStudentEvents = (namespace: any, socket: AuthenticatedSocke
           }))
         }
       });
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.log('❌ [BE STUDENT EVENTS] Error in student:getQuestion:', errorMessage);

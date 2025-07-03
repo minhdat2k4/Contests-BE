@@ -14,6 +14,10 @@ import {
   ContestantMatchParamsSchema,
   ContestantDetailParamsSchema,
   GetContestantsInMatchQuerySchema,
+  EliminatedContestantsFilterQuerySchema,
+  RescueManySchema,
+  AddStudentsToRescueSchema,
+  RemoveStudentFromRescueSchema,
 } from "./contestant.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const contestantRouter = Router();
@@ -115,6 +119,67 @@ contestantRouter.get(
   role("Admin"),
   validateQuery(GetContestantsInMatchQuerySchema),
   ContestantController.getContestantsInMatch
+);
+
+/**==================================CỨU TRỢ========================================== */
+// API cứu trợ: lấy danh sách thí sinh bị loại theo tiêu chí cứu trợ
+contestantRouter.get(
+  "/rescue-candidates/:matchId",
+  authenticate,
+  role("Admin"),
+  ContestantController.getRescueCandidates
+);
+
+// API cứu trợ: cập nhật cứu trợ hàng loạt
+contestantRouter.post(
+  "/rescue-candidates/:matchId/rescue-many",
+  authenticate,
+  role("Admin"),
+  validateBody(RescueManySchema),
+  ContestantController.rescueMany
+);
+
+// API lấy danh sách thí sinh bị loại trong 1 trận đấu không có phân trang, lọc, tìm kiếm
+contestantRouter.get(
+  "/eliminated/:matchId",
+  authenticate,
+  role("Admin"),
+  ContestantController.getEliminatedContestants
+);
+
+// API lấy danh sách thí sinh bị loại có phân trang, lọc, tìm kiếm
+contestantRouter.get(
+  "/eliminated/:matchId/list",
+  authenticate,
+  role("Admin"),
+  validateQuery(EliminatedContestantsFilterQuerySchema),
+  ContestantController.getEliminatedContestantsWithFilter
+);
+
+// API lấy danh sách thí sinh đã được cứu trợ theo rescueId
+contestantRouter.get(
+  "/rescued/:rescueId",
+  authenticate,
+  role("Admin"),
+  ContestantController.getRescuedContestantsByRescueId
+);
+
+// API thêm hàng loạt studentIds vào rescue (push, không trùng lặp)
+contestantRouter.post(
+  "/rescue/add-students",
+  authenticate,
+  role("Admin"),
+  validateBody(AddStudentsToRescueSchema),
+  ContestantController.addStudentsToRescue
+);
+
+// API xóa 1 studentId khỏi rescue
+contestantRouter.delete(
+  "/rescue/remove-student",
+  authenticate,
+  role("Admin"),
+  validateBody(RemoveStudentFromRescueSchema),
+  ContestantController.removeStudentFromRescue
 );
 
 export { contestantRouter };

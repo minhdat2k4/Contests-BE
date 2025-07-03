@@ -34,7 +34,7 @@ export const registerUpdateStatusByAdminEvents = (
     async (rawData: unknown, callback) => {
       const validation = statusUpdateSchema.safeParse(rawData);
       if (!validation.success) {
-        return callback(new Error("Dữ liệu không hợp lệ"));
+        return callback({ success: false, message: "Dữ liệu không hợp lệ" });
       }
 
       const payload = validation.data;
@@ -42,23 +42,33 @@ export const registerUpdateStatusByAdminEvents = (
       try {
         const match = await MatchService.MatchControl(payload.match);
         if (!match) {
-          return callback(new Error("Không tìm thấy trận đấu"));
+          return callback({
+            success: false,
+            message: "Không tìm thấy trận đấu",
+          });
         }
 
         const updatedContestant =
           await GroupDivisionService.UpdateContestantMatchStatus(
             match.id,
             payload.status,
-            payload.ids
+            payload.ids,
+            match.currentQuestion
           );
 
         if (!updatedContestant) {
-          return callback(new Error("Cập nhật trạng thái không thành công"));
+          return callback({
+            success: false,
+            message: "Cập nhật trạng thái thí sinh thất bại",
+          });
         }
 
         const ListContestant = await MatchService.ListContestant(match.id);
         if (!ListContestant) {
-          return callback(new Error("Không tìm thấy danh sách thí sinh"));
+          return callback({
+            success: false,
+            message: "Không tìm thấy danh sách thí sinh",
+          });
         }
 
         callback(null, {
@@ -88,7 +98,10 @@ export const registerUpdateStatusByAdminEvents = (
           });
         }
         if (!judges) {
-          return callback(new Error("Không tìm thấy danh sách giám khảo"));
+          return callback({
+            success: false,
+            message: "Không tìm thấy danh sách giám khảo",
+          });
         }
 
         callback(null, {
@@ -97,7 +110,7 @@ export const registerUpdateStatusByAdminEvents = (
         });
       } catch (error) {
         console.error("Lỗi khi xử lý cập nhật trạng thái:", error);
-        callback(new Error("Đã xảy ra lỗi nội bộ"));
+        callback({ success: false, message: "Đã xảy ra lỗi nội bộ" });
       }
     }
   );

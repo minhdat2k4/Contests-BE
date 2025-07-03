@@ -11,10 +11,11 @@ import {
 } from "./classVideo.schema";
 import { ClassVideoController } from "@/modules/classVideo";
 import { authenticate, role } from "@/middlewares/auth";
-import multer from "multer";
+import { createMulter } from "@/utils/multer";
 const classVideoRouter = Router();
-const uploads = multer({ dest: "tmp/" });
-// prive
+const uploads = createMulter("ClassVideo");
+
+// private
 
 classVideoRouter.get(
   "/contest/list-video/:slug",
@@ -23,28 +24,21 @@ classVideoRouter.get(
   ClassVideoController.ClassVideosByContestSlug
 );
 
-classVideoRouter.post(
-  "/contest/:slug",
-  authenticate,
-  role("Admin"),
-  // validateBody(CreateClassVideoSchema),
-  uploads.single("videos"),
-  ClassVideoController.create
-);
-
-classVideoRouter.get(
-  "/contest/:slug",
-  authenticate,
-  role("Admin"),
-  ClassVideoController.getAlls
-);
-
 classVideoRouter.get(
   "/:id",
   authenticate,
   role("Admin"),
-  validateParams(ClassVideoIdSchema),
+  // validateQuery(ClassVideoIdSchema),
   ClassVideoController.getById
+);
+
+classVideoRouter.post(
+  "/contest/:slug",
+  authenticate,
+  role("Admin"),
+  validateBody(CreateClassVideoSchema),
+  uploads.single("videos"),
+  ClassVideoController.create
 );
 
 classVideoRouter.patch(

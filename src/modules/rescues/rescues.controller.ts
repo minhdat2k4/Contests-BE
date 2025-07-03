@@ -11,15 +11,17 @@ import { RescueStatus, RescueType, Match } from "@prisma/client";
 import prisma from "@/config/client";
 import { MatchService } from "../match";
 import string from "zod";
+import { count } from "console";
 export default class RescueController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
       const slug = req.params.slug;
+
       if (!slug) {
         throw new Error("Slug không được để trống");
       }
 
-      const contest = await prisma.contest.findFirst({
+      const contest = await prisma.contest.findUnique({
         where: { slug: slug },
       });
 
@@ -287,8 +289,8 @@ export default class RescueController {
       }
 
       // Kiểm tra và đảm bảo supportAnswers là mảng
-      const supportAnswers = Array.isArray(rescuese.supportAnswers) 
-        ? rescuese.supportAnswers 
+      const supportAnswers = Array.isArray(rescuese.supportAnswers)
+        ? rescuese.supportAnswers
         : [];
 
       if (supportAnswers.length === 0) {
@@ -296,13 +298,10 @@ export default class RescueController {
       }
 
       const data = Object.entries(
-        supportAnswers.reduce(
-          (acc: Record<string, number>, curr: string) => {
-            acc[curr] = (acc[curr] || 0) + 1;
-            return acc;
-          },
-          {} as Record<string, number>
-        )
+        supportAnswers.reduce((acc: Record<string, number>, curr: string) => {
+          acc[curr] = (acc[curr] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
       ).map(([label, value]) => ({ label, value }));
 
       logger.info(`Lấy data cứu trợ cho trận đấu ${id} thành công`);
@@ -339,8 +338,8 @@ export default class RescueController {
       }
 
       // Kiểm tra và đảm bảo supportAnswers là mảng trước khi thêm
-      const currentSupportAnswers = Array.isArray(rescuese.supportAnswers) 
-        ? rescuese.supportAnswers 
+      const currentSupportAnswers = Array.isArray(rescuese.supportAnswers)
+        ? rescuese.supportAnswers
         : [];
 
       const supportAnswers = [...currentSupportAnswers, input.supportAnswers];
@@ -358,6 +357,34 @@ export default class RescueController {
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  // API: Lấy danh sách rescue theo matchId và rescueType (mặc định 'resurrected')
+  static async getRescuesByMatchIdAndType(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      const rescueType = req.query.rescueType as string || 'resurrected';
+
+      if (isNaN(matchId)) {
+        res.status(400).json({
+          message: 'Invalid matchId parameter'
+        });
+        return;
+      }
+
+      const rescues = await RescueService.getRescuesByMatchIdAndType(matchId, rescueType);
+
+      res.status(200).json({
+        message: 'Rescues retrieved successfully',
+        data: rescues
+      });
+    } catch (error) {
+      console.error('Error in getRescuesByMatchIdAndType:', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error : {}
+      });
     }
   }
 }

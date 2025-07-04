@@ -387,4 +387,39 @@ export default class RescueController {
       });
     }
   }
+
+  /**
+   * API cập nhật trạng thái rescue dựa trên câu hỏi hiện tại
+   */
+  static async updateRescueStatusByCurrentQuestion(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { matchId, currentQuestionOrder } = req.body;
+
+      const result = await RescueService.updateRescueStatusByCurrentQuestion(
+        matchId,
+        currentQuestionOrder
+      );
+
+      res.json({
+        success: true,
+        message: `Cập nhật trạng thái rescue thành công. Tổng cộng ${result.totalUpdated} rescue được cập nhật.`,
+        data: {
+          rescues: result.updatedRescues,
+          currentEligible: result.currentEligibleRescues,
+          summary: result.summary,
+          currentQuestionOrder
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error in updateRescueStatusByCurrentQuestion:', error);
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message || "Lỗi server khi cập nhật trạng thái rescue"
+      });
+    }
+  }
 }

@@ -11,6 +11,7 @@ import {
   UpdateRescuesShema,
   deleteRescuesesSchema,
   SupportAnswerSchema,
+  UpdateRescueStatusSchema,
 } from "./rescues.schema";
 import { authenticate, role } from "@/middlewares/auth";
 import requestQueue from "@/middlewares/queue";
@@ -103,6 +104,14 @@ rescueRoute.post(
 rescueRoute.get(
   "/match/:matchId",
   RescuesController.getRescuesByMatchIdAndType
+);
+
+rescueRoute.post(
+  "/update-status-by-question",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdateRescueStatusSchema),
+  RescuesController.updateRescueStatusByCurrentQuestion
 );
 
 export { rescueRoute };

@@ -157,6 +157,14 @@ export type RescuesById = {
   status: RescueStatus;
   match: { name: string };
 };
+
+// Schema mới cho việc cập nhật trạng thái rescue
+export const UpdateRescueStatusSchema = z.object({
+  matchId: z.number().int().positive("Match ID phải là số dương"),
+  currentQuestionOrder: z.number().int().min(1, "Câu hỏi hiện tại phải >= 1")
+});
+
+export type UpdateRescueStatusInput = z.infer<typeof UpdateRescueStatusSchema>;
 export type CreateRescueInput = z.infer<typeof CreateRescuesShema>;
 export type RescuesIdParams = z.infer<typeof RescuesIdShame>;
 export type UpdateRescueInput = z.infer<typeof UpdateRescuesShema>;

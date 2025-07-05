@@ -538,7 +538,8 @@ export default class RescueService {
           status: true,
           questionFrom: true,
           questionTo: true,
-          rescueType: true
+          rescueType: true,
+          remainingContestants: true
         }
       });
 

@@ -91,7 +91,10 @@ export const registerMatchEvents = (
       const validatedData = StartMatchSchema.parse(data);
       const { matchId: matchIdentifier } = validatedData;
 
-
+      console.log("🔍 [DEBUG] match:start received:", {
+        matchIdentifier,
+        type: typeof matchIdentifier,
+      });
 
       // Get match information using helper function
       const match = await resolveMatch(matchIdentifier);
@@ -101,7 +104,6 @@ export const registerMatchEvents = (
         logger.warn(`❌ ${error}: ${matchIdentifier}`);
         return callback?.({ success: false, message: error });
       }
-
 
 
       // Update match status to active
@@ -119,7 +121,6 @@ export const registerMatchEvents = (
       // Debug: Check who is in the room
       const studentsInRoom = io.of("/student").adapter.rooms.get(roomName);
       const adminInRoom = io.of("/match-control").adapter.rooms.get(roomName);
-
 
 
       // Broadcast to all clients in the match room
@@ -156,7 +157,6 @@ export const registerMatchEvents = (
         startedAt: new Date().toISOString(),
         // 🔥 REMOVED: currentQuestion, remainingTime, currentQuestionData
       });
-
 
 
       logger.info(
@@ -202,7 +202,6 @@ export const registerMatchEvents = (
       }
 
 
-
       // 🔥 FIX: Chỉ hiển thị câu hiện tại, không tăng
       const currentQuestionOrder = match.currentQuestion;
 
@@ -214,7 +213,6 @@ export const registerMatchEvents = (
         });
         return;
       }
-
 
 
       // Get question details for the current question
@@ -315,7 +313,6 @@ export const registerMatchEvents = (
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-
       logger.error(`❌ Error in match:showQuestion: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to show question" });
     }

@@ -1,12 +1,23 @@
 // src/socket/events/question.events.ts
 import { Server, Socket } from "socket.io";
 import { MatchService } from "@/modules/match";
+import { RescueService } from "@/modules/rescues";
+import { logger } from "@/utils/logger";
+
+import { matchTimers } from "../events/timer.event";
 
 export const registerQuestionEvents = (io: Server, socket: Socket) => {
   socket.on("currentQuestion:get", async (data, callback) => {
     // console.log("[DEBUG] Admin gửi currentQuestion:get:", data);
 
     const { match, questionOrder } = data;
+
+    const matchTimer = matchTimers.get(match);
+    if (matchTimer?.intervalId) {
+      clearInterval(matchTimer.intervalId);
+      matchTimer.intervalId = null;
+      matchTimer.status = "paused";
+    }
 
     // console.log(data);
 

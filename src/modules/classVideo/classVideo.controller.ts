@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import path from "path";
 import {
+  ClassVideoQueryInput,
   ClassVideoService,
   CreateClassVideoInput,
   UpdateClassVideoInput,
@@ -24,7 +25,13 @@ export default class ClassVideoController {
       const contest = await Contestervice.getBy({ slug: slug });
       if (!contest) throw new Error("Không tìm thấy cuộc thi");
 
-      const ClassVideos = await ClassVideoService.getAll(contest.id);
+      const query: ClassVideoQueryInput = {
+        page: parseInt(req.query.page as string) || 1,
+        limit: parseInt(req.query.limit as string) || 10,
+        search: (req.query.search as string) || undefined,
+      };
+
+      const ClassVideos = await ClassVideoService.getAll(query, contest.id);
 
       if (!ClassVideos) {
         throw new Error("Không tìm thấy ClassVideo nào");
@@ -197,8 +204,6 @@ export default class ClassVideoController {
 
       for (const id of ids) {
         const ClassVideo = await ClassVideoService.getBy({ id: Number(id) });
-
-        console.log("ClassVideo", ClassVideo);
 
         if (!ClassVideo) {
           messages.push({

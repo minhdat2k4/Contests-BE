@@ -10,10 +10,20 @@ export function createMulter(subfolder: string): multer.Multer {
       cb(null, folderPath);
     },
     filename: (req, file, cb): void => {
-      const uniqueName = Date.now() + "-" + file.originalname;
+      const sanitized = file.originalname
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w.-]/g, "");
+
+      const uniqueName = `${Date.now()}-${sanitized}`;
       cb(null, uniqueName);
     },
   });
 
-  return multer({ storage });
+  return multer({
+    storage,
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100MB
+    },
+  });
 }

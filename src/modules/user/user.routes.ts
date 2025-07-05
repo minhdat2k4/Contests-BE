@@ -12,6 +12,7 @@ import {
   validateParams,
   validateQuery,
 } from "@/utils/validation";
+
 const userRouter = Router();
 export { userRouter };
 // Prive(schema)
@@ -20,6 +21,20 @@ userRouter.get(
   authenticate,
   role("Admin"),
   UserController.getListUser
+);
+
+userRouter.get(
+  "/get-student",
+  authenticate,
+  role("Admin"),
+  UserController.getListStudent
+);
+
+userRouter.get(
+  "/get-student/:userId",
+  authenticate,
+  role("Admin"),
+  UserController.getListStudentCurrent
 );
 
 userRouter.get(

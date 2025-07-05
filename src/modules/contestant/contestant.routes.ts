@@ -30,6 +30,13 @@ contestantRouter.get(
   ContestantController.getAlls
 );
 
+contestantRouter.get(
+  "/list-contestant/:slug/list",
+  authenticate,
+  role("Admin"),
+  ContestantController.listContestant
+);
+
 // lấy tất cả thí sinh trong cuộc thi với nhóm
 contestantRouter.get(
   "/contest/:slug/with-groups",

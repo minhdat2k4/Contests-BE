@@ -53,12 +53,12 @@ router.get(
  * @desc Batch delete sponsors (hard delete)
  * @access Private (Admin only)
  */
-router.delete(
+router.post(
   "/batch",
   authenticate,
   role("Admin"),
-  validateBody(batchDeleteSponsorsSchema),
-  sponsorController.batchDeleteSponsors.bind(sponsorController)
+  // validateBody(batchDeleteSponsorsSchema),
+  sponsorController.deletes.bind(sponsorController)
 );
 
 /**
@@ -92,11 +92,6 @@ router.post(
  * @desc Get sponsors with pagination and filtering
  * @access Public
  */
-router.get(
-  "/",
-  validateQuery(getSponsorsQuerySchema),
-  sponsorController.getSponsors.bind(sponsorController)
-);
 
 /**
  * @route POST /api/sponsors

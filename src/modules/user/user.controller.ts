@@ -144,6 +144,12 @@ export default class UserController {
   }
   static async getAllUsers(req: Request, res: Response): Promise<void> {
     try {
+      const allowedRoles = ["Admin", "Judge", "Student"] as const;
+
+      const role = allowedRoles.includes(req.query.role as any)
+        ? (req.query.role as (typeof allowedRoles)[number])
+        : undefined;
+
       const query: UserQueryInput = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
@@ -152,12 +158,7 @@ export default class UserController {
           req.query.isActive !== undefined
             ? req.query.isActive === "true"
             : undefined,
-        role:
-          req.query.role === "Admin"
-            ? "Admin"
-            : req.query.role === "Judge"
-            ? "Judge"
-            : undefined,
+        role: role,
       };
       const id = req.user?.userId;
       const data = await UserService.getAllUser(query, id);
@@ -261,6 +262,38 @@ export default class UserController {
   static async getListUser(req: Request, res: Response): Promise<void> {
     try {
       const user = await UserService.getListUser();
+      if (!user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      logger.info(`Lấy thông tin người thành công ${user}`);
+      res.json(successResponse(user, "Lấy danh sách người dùng thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getListStudent(req: Request, res: Response): Promise<void> {
+    try {
+      const user = await UserService.getListStudent();
+      if (!user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      logger.info(`Lấy thông tin người thành công ${user}`);
+      res.json(successResponse(user, "Lấy danh sách người dùng thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async getListStudentCurrent(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const id = req.params.userId;
+      const user = await UserService.getListStudentCurrent(Number(id));
       if (!user) {
         throw new Error("Không tìm thấy người dùng");
       }

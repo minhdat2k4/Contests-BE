@@ -81,7 +81,6 @@ export const authenticate = async (
     // If user is Student, find and attach contestantId
     if (user.role === "Student") {
       try {
-        console.log('🔍 [AUTH MIDDLEWARE] Tìm contestant cho Student userId:', user.id);
         
         const contestant = await prisma.contestant.findFirst({
           where: {
@@ -97,12 +96,8 @@ export const authenticate = async (
         });
 
         if (contestant) {
-          console.log('✅ [AUTH MIDDLEWARE] Đã tìm thấy contestant:', contestant.id, 'cho student:', contestant.student.fullName);
           userInfo.contestantId = contestant.id;
-        } else {
-          console.log('❌ [AUTH MIDDLEWARE] Không tìm thấy contestant cho userId:', user.id);
-          // Không throw error vì có thể Student chưa được assign vào contest nào
-        }
+        } 
       } catch (error) {
         console.error('💥 [AUTH MIDDLEWARE] Lỗi khi tìm contestant:', error);
         // Không throw error, chỉ log để debug

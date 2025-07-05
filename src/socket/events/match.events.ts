@@ -101,41 +101,27 @@ export const registerMatchEvents = (
 
       if (!match) {
         const error = "Match not found";
-        console.log("🔍 [DEBUG] Match not found:", matchIdentifier);
         logger.warn(`❌ ${error}: ${matchIdentifier}`);
         return callback?.({ success: false, message: error });
       }
 
-      console.log("🔍 [DEBUG] Match found:", {
-        id: match.id,
-        slug: match.slug,
-        name: match.name,
-      });
 
       // Update match status to active
       const updatedMatch = await prisma.match.update({
         where: { id: match.id },
         data: {
           status: "ongoing",
-          currentQuestion: 0,
+          currentQuestion: 1,
           remainingTime: 0,
         },
       });
 
       const roomName = `match-${match.id}`;
-      console.log("🔍 [DEBUG] About to emit match:started to room:", roomName);
 
       // Debug: Check who is in the room
       const studentsInRoom = io.of("/student").adapter.rooms.get(roomName);
       const adminInRoom = io.of("/match-control").adapter.rooms.get(roomName);
 
-      console.log("🔍 [DEBUG] Room population before emit:", {
-        roomName,
-        studentsCount: studentsInRoom?.size || 0,
-        studentIds: studentsInRoom ? Array.from(studentsInRoom) : [],
-        adminCount: adminInRoom?.size || 0,
-        adminIds: adminInRoom ? Array.from(adminInRoom) : [],
-      });
 
       // Broadcast to all clients in the match room
       io.of("/match-control").to(roomName).emit("match:started", {
@@ -161,10 +147,6 @@ export const registerMatchEvents = (
         // Học sinh sẽ chỉ nhận câu hỏi khi admin nhấn "Hiển thị câu hỏi"
       });
 
-      // 🔥 DEBUGGING: Global broadcast để test
-      console.log(
-        "🌍 [DEBUG] Broadcasting global match:globalStarted for debugging..."
-      );
       io.of("/student").emit("match:globalStarted", {
         matchId: match.id,
         matchSlug: match.slug,
@@ -176,13 +158,6 @@ export const registerMatchEvents = (
         // 🔥 REMOVED: currentQuestion, remainingTime, currentQuestionData
       });
 
-      console.log(
-        "🔍 [DEBUG] Event emitted successfully to",
-        studentsInRoom?.size || 0,
-        "students and",
-        adminInRoom?.size || 0,
-        "admins"
-      );
 
       logger.info(
         `✅ Match started: ${match.id} (${match.slug}) by ${socket.user.username} (${socket.user.role})`
@@ -200,7 +175,6 @@ export const registerMatchEvents = (
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.log("🔍 [DEBUG] Error in match:start:", errorMessage);
       logger.error(`❌ Error in match:start: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to start match" });
     }
@@ -213,29 +187,20 @@ export const registerMatchEvents = (
    */
   socket.on("match:showQuestion", async (data, callback) => {
     try {
-      console.log("🔍 [DEBUG] match:showQuestion received data:", data);
 
       const validatedData = ShowQuestionSchema.parse(data);
       const { match: matchSlug } = validatedData;
 
-      console.log("🔍 [DEBUG] Match slug:", { matchSlug });
 
       // Get match information using slug
       const match = await resolveMatch(matchSlug);
 
       if (!match) {
         const error = "Match not found";
-        console.log("🔍 [DEBUG] Match not found:", matchSlug);
         logger.warn(`❌ ${error}: ${matchSlug}`);
         return callback?.({ success: false, message: error });
       }
 
-      console.log("🔍 [DEBUG] Match found:", {
-        id: match.id,
-        slug: match.slug,
-        name: match.name,
-        currentQuestion: match.currentQuestion,
-      });
 
       // 🔥 FIX: Chỉ hiển thị câu hiện tại, không tăng
       const currentQuestionOrder = match.currentQuestion;
@@ -249,10 +214,6 @@ export const registerMatchEvents = (
         return;
       }
 
-      console.log(
-        "🔍 [DEBUG] Current question order to show:",
-        currentQuestionOrder
-      );
 
       // Get question details for the current question
       const questionDetail = await prisma.questionDetail.findFirst({
@@ -276,30 +237,11 @@ export const registerMatchEvents = (
 
       const questionDetailWithRelation = questionDetail as any;
 
-      console.log("🔍 [DEBUG] Found question detail:", {
-        id: questionDetailWithRelation.question.id,
-        order: currentQuestionOrder,
-        defaultTime: questionDetailWithRelation.question.defaultTime,
-        optionsCount: Array.isArray(questionDetailWithRelation.question.options)
-          ? questionDetailWithRelation.question.options.length
-          : 0,
-      });
+
 
       const roomName = `match-${match.id}`;
 
-      console.log(
-        `📺 [SOCKET] Broadcasting current question to room ${roomName}:`,
-        {
-          matchId: match.id,
-          currentQuestion: currentQuestionOrder,
-          remainingTime: questionDetailWithRelation.question.defaultTime,
-          optionsCount: Array.isArray(
-            questionDetailWithRelation.question.options
-          )
-            ? questionDetailWithRelation.question.options.length
-            : 0,
-        }
-      );
+
 
       // Chuẩn bị data câu hỏi với options
       const questionData = {
@@ -335,10 +277,7 @@ export const registerMatchEvents = (
       // Emit to student namespace (for students)
       const studentNamespace = io.of("/student");
       const studentsInRoom = studentNamespace.adapter.rooms.get(roomName);
-      console.log(`📊 [DEBUG] Students in room ${roomName}:`, {
-        roomSize: studentsInRoom?.size || 0,
-        studentIds: studentsInRoom ? Array.from(studentsInRoom) : [],
-      });
+
 
       io.of("/student")
         .to(roomName)
@@ -353,11 +292,6 @@ export const registerMatchEvents = (
           },
         });
 
-      console.log(
-        `✅ [DEBUG] Event match:questionShown emitted to room ${roomName} for ${
-          studentsInRoom?.size || 0
-        } students`
-      );
 
       logger.info(
         `✅ Question shown: Match ${match.id} (${match.slug}) | Question ${currentQuestionOrder} | By ${socket.user.username}`
@@ -379,11 +313,6 @@ export const registerMatchEvents = (
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.log("🔍 [DEBUG] Error caught:", errorMessage);
-      console.log(
-        "🔍 [DEBUG] Error stack:",
-        error instanceof Error ? error.stack : "No stack"
-      );
       logger.error(`❌ Error in match:showQuestion: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to show question" });
     }
@@ -398,17 +327,12 @@ export const registerMatchEvents = (
       const validatedData = EndMatchSchema.parse(data);
       const { matchId: matchIdentifier } = validatedData;
 
-      console.log("🔍 [DEBUG] match:end received:", {
-        matchIdentifier,
-        type: typeof matchIdentifier,
-      });
 
       // Get match information using helper function
       const match = await resolveMatch(matchIdentifier);
 
       if (!match) {
         const error = "Match not found";
-        console.log("🔍 [DEBUG] Match not found:", matchIdentifier);
         logger.warn(`❌ ${error}: ${matchIdentifier}`);
         return callback?.({ success: false, message: error });
       }
@@ -519,7 +443,6 @@ export const registerMatchEvents = (
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.log("🔍 [DEBUG] Error in match:end:", errorMessage);
       logger.error(`❌ Error in match:end: ${errorMessage}`);
       callback?.({ success: false, message: "Failed to end match" });
     }

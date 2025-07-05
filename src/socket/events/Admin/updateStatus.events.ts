@@ -81,9 +81,28 @@ export const registerUpdateStatusByAdminEvents = (
           ListContestant,
         });
 
+        // 🔥 NEW: Notify rescued students
+        if (payload.status === "rescued" && payload.ids.length > 0) {
+          const roomById = `match-${match.id}`;
+          const roomBySlug = `match-${match.slug}`;
+
+          const eventData = {
+            rescuedContestantIds: payload.ids,
+            message: "Bạn đã được cứu trợ! Hãy tiếp tục thi đấu.",
+          };
+
+          // Emit to room by ID (for Dashboard)
+          io.of("/student").to(roomById).emit("student:rescued", eventData);
+
+          // Emit to room by SLUG (for WaitingRoom)
+          io.of("/student").to(roomBySlug).emit("student:rescued", eventData);
+
+
+        }
+
         const judges = await UserService.ListJudgeByMatchId(match.id);
         if (judges) {
-          judges.forEach(async judge => {
+          judges.forEach(async (judge) => {
             const judgeRoom = `match-${payload.match}-judge-${judge.id}`;
             const data =
               await GroupDivisionService.getContestantByJudgeIdAndMatchId(
@@ -109,7 +128,6 @@ export const registerUpdateStatusByAdminEvents = (
           success: true,
         });
       } catch (error) {
-        console.error("Lỗi khi xử lý cập nhật trạng thái:", error);
         callback({ success: false, message: "Đã xảy ra lỗi nội bộ" });
       }
     }

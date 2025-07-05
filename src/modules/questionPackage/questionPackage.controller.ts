@@ -15,6 +15,8 @@ import {
   QuestionPackageIdInput,
   BatchDeleteQuestionPackagesInput,
 } from "./questionPackage.schema";
+import { prisma } from "@/config/database";
+import { count } from "console";
 
 export default class QuestionPackageController {
   /**
@@ -233,7 +235,9 @@ export default class QuestionPackageController {
       }
 
       // Check if question package exists
-      const exists = await QuestionPackageService.questionPackageExists(id);
+      const exists = await prisma.questionPackage.findUnique({
+        where: { id },
+      });
       if (!exists) {
         throw new CustomError(
           "Không tìm thấy gói câu hỏi",
@@ -242,7 +246,39 @@ export default class QuestionPackageController {
         );
       }
 
-      await QuestionPackageService.deleteQuestionPackage(id);
+      const questionDetailsCount = await prisma.questionDetail.count({
+        where: { questionPackageId: id },
+      });
+
+      if (questionDetailsCount > 0) {
+        throw new CustomError(
+          `Gói câu hỏi ${exists.name} hiện có ${questionDetailsCount} câu không thể xóa`,
+          400,
+          ERROR_CODES.RECORD_NOT_FOUND
+        );
+      }
+
+      const matchesCount = await prisma.match.count({
+        where: { questionPackageId: id },
+      });
+      if (matchesCount > 0) {
+        throw new CustomError(
+          `Gói câu hỏi ${exists.name} hiện có ${matchesCount} trận đấu không thể xóa`,
+          400,
+          ERROR_CODES.RECORD_NOT_FOUND
+        );
+      }
+
+      const deletedQuestionPackage =
+        await QuestionPackageService.deleteQuestionPackage(id);
+
+      if (!deletedQuestionPackage) {
+        throw new CustomError(
+          "Xóa câu hỏi thất bại",
+          500,
+          ERROR_CODES.INTERNAL_SERVER_ERROR
+        );
+      }
 
       logger.info(`Question package deleted successfully: ${id}`, {
         questionPackageId: id,
@@ -425,6 +461,103 @@ export default class QuestionPackageController {
       }
       logger.info(`Lấy thông tin gói câu hỏi thành công`);
       res.json(successResponse(round, `Lấy danh sách gói câu hỏi thành công`));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async toggleActive(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const packages = await prisma.questionPackage.findUnique({
+        where: { id: Number(id) },
+      });
+      if (!packages) {
+        throw new Error("Không tìm thấy gói câu hỏi");
+      }
+      const updated = await QuestionPackageService.updateQuestionPackage(
+        packages.id,
+        {
+          isActive: !packages.isActive,
+        }
+      );
+      if (!updated) {
+        throw new Error("Cập nhật trạng thái thất bại");
+      }
+      res.json(
+        successResponse(updated, "Cập nhật trạng thái hoạt động thành công")
+      );
+      logger.info(`Cập nhật trạng thái hoạt động ${packages.name} thành công`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async deletes(req: Request, res: Response): Promise<void> {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
+      const messages: { status: "success" | "error"; msg: string }[] = [];
+      for (const id of ids) {
+        const packages = await prisma.questionPackage.findUnique({
+          where: { id: Number(id) },
+        });
+        if (!packages) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy gói câu hỏi với ID = ${id}`,
+          });
+          continue;
+        }
+
+        const countQuestion = await prisma.questionDetail.count({
+          where: { questionPackageId: packages.id },
+        });
+
+        if (countQuestion > 0) {
+          messages.push({
+            status: "error",
+            msg: `Gói câu hỏi "${packages.name}" hiện có ${countQuestion} câu hỏi không thể xóa`,
+          });
+          continue;
+        }
+
+        const countMatch = await prisma.match.count({
+          where: { questionPackageId: packages.id },
+        });
+
+        if (countMatch > 0) {
+          messages.push({
+            status: "error",
+            msg: `Gói câu hỏi "${packages.name}" hiện có ${countMatch} trận đấu không thể xóa`,
+          });
+          continue;
+        }
+
+        const deleted = await prisma.match.delete({
+          where: { id: packages.id },
+        });
+        if (!deleted) {
+          messages.push({
+            status: "error",
+            msg: `Xóa gói câu hỏi "${packages.name}" thất bại`,
+          });
+          continue;
+        }
+        messages.push({
+          status: "success",
+          msg: `Xóa gói câu hỏi "${packages.name}" thành công`,
+        });
+        logger.info(`Xóa gói câu hỏi "${packages.name}" thành công`);
+      }
+      res.json({
+        success: true,
+        messages,
+      });
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

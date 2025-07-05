@@ -82,7 +82,6 @@ export default class ClassController {
       if (!Class) {
         throw new Error("Không tìm thấy lớp");
       }
-      console.log("đ", Class);
       const updateClass = await ClassService.updateClass(Number(id), input);
       if (!updateClass) {
         throw new Error("Cập nhật lớp thất bại");
@@ -233,12 +232,26 @@ export default class ClassController {
 
       // Nếu id không hợp lệ (không phải số), trả về tất cả lớp
       if (isNaN(Number(id))) {
-        classes = await prisma.class.findMany({
+        const classesRaw = await prisma.class.findMany({
           select: {
             id: true,
             name: true,
+            school: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+          where: {
+            isActive: true,
           },
         });
+
+        classes = classesRaw.map(key => ({
+          id: key.id,
+          name: key.name + " - " + key.school.name,
+        }));
 
         logger.info("Lấy danh sách tất cả lớp thành công");
         res.json(
@@ -262,7 +275,10 @@ export default class ClassController {
     }
   }
 
-  static async listClassesWithSchool(req: Request, res: Response): Promise<void> {
+  static async listClassesWithSchool(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const search = req.query.search as string;
 
@@ -270,6 +286,19 @@ export default class ClassController {
 
       logger.info(`Lấy danh sách lớp với thông tin trường thành công`);
       res.json(successResponse(classes, "Lấy danh sách lớp thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  static async listClass(req: Request, res: Response): Promise<void> {
+    try {
+      const classes = await ClassService.listClass();
+      if (!classes) {
+        throw new Error("Không tìm thấy lớp học");
+      }
+
+      res.json(successResponse(classes, `Lấy danh sách lớp thành công`));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

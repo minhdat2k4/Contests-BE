@@ -142,13 +142,24 @@ export default class ClassService {
   }
 
   static async getClassBySchoolId(schoolId: number) {
-    return prisma.class.findMany({
-      where: { schoolId: schoolId },
+    const classRaw = await prisma.class.findMany({
+      where: { schoolId: schoolId, isActive: true },
       select: {
         id: true,
         name: true,
+        school: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
+    const classes = classRaw.map(key => ({
+      id: key.id,
+      name: key.name + " - " + key.school.name,
+    }));
+    return classes;
   }
 
   static async listClassesWithSchool(search?: string) {
@@ -179,10 +190,30 @@ export default class ClassService {
           },
         },
       },
-      orderBy: [
-        { school: { name: 'asc' } },
-        { name: 'asc' },
-      ],
+      orderBy: [{ school: { name: "asc" } }, { name: "asc" }],
     });
+  }
+  static async listClass() {
+    const classRaw = await prisma.class.findMany({
+      select: {
+        id: true,
+        name: true,
+        school: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      where: {
+        isActive: true,
+      },
+    });
+    const classes = classRaw.map(key => ({
+      id: key.id,
+      name: key.name + " - " + key.school.name,
+    }));
+
+    return classes;
   }
 }

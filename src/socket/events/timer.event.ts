@@ -79,23 +79,19 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
           io.of("/match-control").to(roomName).emit("timer:update", {
             timeRemaining: matchTimer!.timeRemaining,
             isActive: true,
-            isPaused: false
+            isPaused: false,
           });
 
-          console.log(`⏰ [TIMER] Broadcasting timer:update to student namespace. Room: ${roomName}, Time: ${matchTimer!.timeRemaining}`);
-          
           // Log số lượng client trong room student
           const studentNamespace = io.of("/student");
           const room = studentNamespace.adapter.rooms.get(roomName);
           const clientCount = room ? room.size : 0;
-          console.log(`🔍 [TIMER] Room ${roomName} trong student namespace có ${clientCount} clients`);
 
           io.of("/student").to(roomName).emit("timer:update", {
             timeRemaining: matchTimer!.timeRemaining,
             isActive: true,
-            isPaused: false
+            isPaused: false,
           });
-
         } else {
           clearInterval(matchTimer!.intervalId!);
           matchTimer!.intervalId = null;
@@ -151,13 +147,13 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
       io.of("/match-control").to(roomName).emit("timer:update", {
         timeRemaining: matchTimer.timeRemaining,
         isActive: false,
-        isPaused: true
+        isPaused: true,
       });
 
       io.of("/student").to(roomName).emit("timer:update", {
         timeRemaining: matchTimer.timeRemaining,
         isActive: false,
-        isPaused: true
+        isPaused: true,
       });
 
       callback?.(null, {
@@ -221,13 +217,13 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
       io.of("/match-control").to(roomName).emit("timer:update", {
         timeRemaining: matchTimer.timeRemaining,
         isActive: false,
-        isPaused: false
+        isPaused: false,
       });
 
       io.of("/student").to(roomName).emit("timer:update", {
         timeRemaining: matchTimer.timeRemaining,
         isActive: false,
-        isPaused: false
+        isPaused: false,
       });
 
       callback?.(null, {
@@ -283,13 +279,13 @@ export const registerTimerEvents = (io: Server, socket: Socket) => {
       io.of("/match-control").to(roomName).emit("timer:update", {
         timeRemaining: matchTimer.timeRemaining,
         isActive: false,
-        isPaused: false
+        isPaused: false,
       });
 
       io.of("/student").to(roomName).emit("timer:update", {
         timeRemaining: matchTimer.timeRemaining,
         isActive: false,
-        isPaused: false
+        isPaused: false,
       });
 
       callback?.(null, {

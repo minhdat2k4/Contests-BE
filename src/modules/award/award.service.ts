@@ -11,6 +11,7 @@ import {
   AwardListResponse,
   BatchDeleteResult,
 } from "./award.schema";
+import { prisma } from "@/config/database";
 
 export default class AwardService {
   private prisma: PrismaClient;
@@ -34,7 +35,7 @@ export default class AwardService {
           404,
           ERROR_CODES.CONTEST_NOT_FOUND
         );
-      }      // Check if contestant exists (if provided)
+      } // Check if contestant exists (if provided)
       if (data.contestantId !== null && data.contestantId !== undefined) {
         const contestant = await this.prisma.contestant.findUnique({
           where: { id: data.contestantId },
@@ -111,7 +112,7 @@ export default class AwardService {
           404,
           ERROR_CODES.CONTEST_NOT_FOUND
         );
-      }      // Check if contestant exists (if provided)
+      } // Check if contestant exists (if provided)
       if (data.contestantId !== null && data.contestantId !== undefined) {
         const contestant = await this.prisma.contestant.findUnique({
           where: { id: data.contestantId },
@@ -191,7 +192,6 @@ export default class AwardService {
           contestant: {
             select: {
               id: true,
-
               student: {
                 select: {
                   id: true,
@@ -228,163 +228,84 @@ export default class AwardService {
 
   /**
    * Get awards by contest slug
+   *
+   *
    */
-  async getAwardsByContestSlug(contestSlug: string): Promise<AwardResponse[]> {
-    try {
-      // Find contest by slug
-      const contest = await this.prisma.contest.findUnique({
-        where: { slug: contestSlug },
-      });
-      if (!contest) {
-        throw new CustomError(
-          "Contest không tồn tại",
-          404,
-          ERROR_CODES.CONTEST_NOT_FOUND
-        );
-      }
 
-      const awards = await this.prisma.award.findMany({
-        where: { contestId: contest.id },
-        orderBy: { createdAt: "desc" },
-        include: {
-          contest: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
-          },
-          contestant: {
-            select: {
-              id: true,
+  async getAll(
+    query: GetAwardsQuery,
+    contestId: number
+  ): Promise<{
+    awards: AwardResponse[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
 
-              student: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  studentCode: true,
-                },
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { name: { contains: keyword } },
+      ]);
+    }
+
+    const awardRaw = await prisma.award.findMany({
+      where: {
+        ...whereClause,
+        contestId: contestId,
+      },
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        contestant: {
+          select: {
+            student: {
+              select: {
+                fullName: true,
               },
             },
           },
         },
-      });
-
-      logger.info(
-        `Retrieved ${awards.length} awards for contest: ${contestSlug}`
-      );
-      return awards;
-    } catch (error) {
-      logger.error("Error getting awards by contest slug:", error);
-      if (error instanceof CustomError) {
-        throw error;
-      }
-      throw new CustomError(
-        "Lỗi khi lấy danh sách giải thưởng",
-        500,
-        ERROR_CODES.INTERNAL_SERVER_ERROR
-      );
-    }
+      },
+    });
+    const awards = awardRaw.map(key => ({
+      id: key.id,
+      name: key.name,
+      type: key.type,
+      fullName: key.contestant?.student.fullName ?? "Không có",
+    }));
+    const total = await prisma.award.count({
+      where: { contestId: contestId, ...whereClause },
+    });
+    const totalPages = Math.ceil(total / limit);
+    return {
+      awards: awards,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 
   /**
    * Get awards with pagination and filtering
    */
-  async getAwards(query: GetAwardsQuery): Promise<AwardListResponse> {
-    try {
-      const {
-        page = 1,
-        limit = 10,
-        contestId,
-        type,
-        search,
-        hasContestant,
-      } = query;
-      const skip = (page - 1) * limit;
-
-      // Build where clause
-      const where: any = {};
-
-      if (contestId) {
-        where.contestId = contestId;
-      }
-
-      if (type) {
-        where.type = type;
-      }
-
-      if (search) {
-        where.name = {
-          contains: search,
-          mode: "insensitive",
-        };
-      }
-
-      if (hasContestant !== undefined) {
-        if (hasContestant) {
-          where.contestantId = { not: null };
-        } else {
-          where.contestantId = null;
-        }
-      }
-
-      // Get total count
-      const total = await this.prisma.award.count({ where });
-
-      // Get awards
-      const awards = await this.prisma.award.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          contest: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
-          },
-          contestant: {
-            select: {
-              id: true,
-
-              student: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  studentCode: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      const totalPages = Math.ceil(total / limit);
-      const hasNext = page < totalPages;
-      const hasPrev = page > 1;
-
-      return {
-        awards,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNext,
-          hasPrev,
-        },
-      };
-    } catch (error) {
-      logger.error("Error getting awards:", error);
-      throw new CustomError(
-        "Lỗi khi lấy danh sách giải thưởng",
-        500,
-        ERROR_CODES.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
 
   /**
    * Update award
@@ -414,7 +335,7 @@ export default class AwardService {
             ERROR_CODES.CONTEST_NOT_FOUND
           );
         }
-      }      // Check if contestant exists (if provided)
+      } // Check if contestant exists (if provided)
       if (data.contestantId !== null && data.contestantId !== undefined) {
         const contestant = await this.prisma.contestant.findUnique({
           where: { id: data.contestantId },

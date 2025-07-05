@@ -11,8 +11,9 @@ import {
   GetSponsorsQuery,
   SponsorResponse,
   SponsorListResponse,
-  BatchDeleteResult
+  BatchDeleteResult,
 } from "./sponsor.schema";
+import { prisma } from "@/config/database";
 
 export class SponsorService {
   private prisma: PrismaClient;
@@ -24,71 +25,6 @@ export class SponsorService {
   /**
    * Get sponsors with pagination and filtering
    */
-  async getSponsors(query: GetSponsorsQuery): Promise<SponsorListResponse> {
-    try {
-      const {
-        page,
-        limit,
-        search,
-        contestId,
-        sortBy,
-        sortOrder
-      } = query;
-
-      const skip = (page - 1) * limit;
-      const where: any = {};
-
-      // Apply filters
-      if (search) {
-        where.name = {
-          contains: search,
-          mode: 'insensitive'
-        };
-      }
-
-      if (contestId) {
-        where.contestId = contestId;
-      }
-
-      // Get total count
-      const total = await this.prisma.sponsor.count({ where });
-
-      // Get sponsors
-      const sponsors = await this.prisma.sponsor.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
-        include: {
-          contest: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              status: true
-            }
-          }
-        }
-      });
-
-      const totalPages = Math.ceil(total / limit);
-
-      return {
-        sponsors: sponsors as SponsorResponse[],
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1
-        }
-      };
-    } catch (error) {
-      logger.error("Error getting sponsors:", error);
-      throw new CustomError("Lỗi khi lấy danh sách nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
-    }
-  }
 
   /**
    * Get sponsor by ID
@@ -103,14 +39,18 @@ export class SponsorService {
               id: true,
               name: true,
               slug: true,
-              status: true
-            }
-          }
-        }
+              status: true,
+            },
+          },
+        },
       });
 
       if (!sponsor) {
-        throw new CustomError("Nhà tài trợ không tìm thấy", 404, ERROR_CODES.SPONSOR_NOT_FOUND);
+        throw new CustomError(
+          "Nhà tài trợ không tìm thấy",
+          404,
+          ERROR_CODES.SPONSOR_NOT_FOUND
+        );
       }
 
       return sponsor as SponsorResponse;
@@ -119,50 +59,82 @@ export class SponsorService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi lấy thông tin nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi lấy thông tin nhà tài trợ",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
   /**
    * Get sponsors by contest slug
    */
-  async getSponsorsByContestSlug(slug: string): Promise<SponsorResponse[]> {
-    try {
-      // First find contest by slug
-      const contest = await this.prisma.contest.findUnique({
-        where: { slug }
-      });
+  async getAll(
+    query: GetSponsorsQuery,
+    contestId: number
+  ): Promise<{
+    sponsors: SponsorResponse[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
 
-      if (!contest) {
-        throw new CustomError("Contest không tìm thấy", 404, ERROR_CODES.CONTEST_NOT_FOUND);
-      }
-
-      // Get sponsors for this contest
-      const sponsors = await this.prisma.sponsor.findMany({
-        where: { contestId: contest.id },
-        include: {
-          contest: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              status: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      return sponsors as SponsorResponse[];
-    } catch (error) {
-      logger.error("Error getting sponsors by contest slug:", error);
-      if (error instanceof CustomError) {
-        throw error;
-      }
-      throw new CustomError("Lỗi khi lấy nhà tài trợ theo contest", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { name: { contains: keyword } },
+      ]);
     }
-  }
 
+    const sponsorRaw = await prisma.sponsor.findMany({
+      where: {
+        ...whereClause,
+        contestId: contestId,
+      },
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        logo: true,
+        images: true,
+        videos: true,
+      },
+    });
+
+    const sponsors = sponsorRaw.map(key => ({
+      id: key.id,
+      name: key.name,
+      logo: key.logo,
+      images: key.images,
+      videos: key.videos,
+    }));
+    const total = await this.prisma.sponsor.count({
+      where: { contestId: contestId, ...whereClause },
+    });
+    const totalPages = Math.ceil(total / limit);
+    return {
+      sponsors: sponsors,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
   /**
    * Create new sponsor
    */
@@ -171,19 +143,23 @@ export class SponsorService {
       // Validate contest if provided
       if (data.contestId) {
         const contest = await this.prisma.contest.findUnique({
-          where: { id: data.contestId }
+          where: { id: data.contestId },
         });
         if (!contest) {
-          throw new CustomError("Contest không tồn tại", 404, ERROR_CODES.CONTEST_NOT_FOUND);
+          throw new CustomError(
+            "Contest không tồn tại",
+            404,
+            ERROR_CODES.CONTEST_NOT_FOUND
+          );
         }
-      }      // Create sponsor
+      } // Create sponsor
       const sponsor = await this.prisma.sponsor.create({
         data: {
           name: data.name,
           logo: data.logo || null,
           images: data.images || null,
           videos: data.videos || "", // Required field, default empty string
-          contestId: data.contestId || null
+          contestId: data.contestId || null,
         },
         include: {
           contest: {
@@ -191,10 +167,10 @@ export class SponsorService {
               id: true,
               name: true,
               slug: true,
-              status: true
-            }
-          }
-        }
+              status: true,
+            },
+          },
+        },
       });
 
       logger.info(`Sponsor created successfully with ID: ${sponsor.id}`);
@@ -204,30 +180,41 @@ export class SponsorService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi tạo nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi tạo nhà tài trợ",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
   /**
    * Create sponsor by contest slug
    */
-  async createSponsorByContestSlug(slug: string, data: Omit<CreateSponsorData, 'contestId'>): Promise<SponsorResponse> {
+  async createSponsorByContestSlug(
+    slug: string,
+    data: Omit<CreateSponsorData, "contestId">
+  ): Promise<SponsorResponse> {
     try {
       // Find contest by slug
       const contest = await this.prisma.contest.findUnique({
-        where: { slug }
+        where: { slug },
       });
 
       if (!contest) {
-        throw new CustomError("Contest không tìm thấy", 404, ERROR_CODES.CONTEST_NOT_FOUND);
-      }      // Create sponsor with contest ID
+        throw new CustomError(
+          "Contest không tìm thấy",
+          404,
+          ERROR_CODES.CONTEST_NOT_FOUND
+        );
+      } // Create sponsor with contest ID
       const sponsor = await this.prisma.sponsor.create({
         data: {
           name: data.name,
           logo: data.logo || null,
           images: data.images || null,
           videos: data.videos || "", // Required field, default empty string
-          contestId: contest.id
+          contestId: contest.id,
         },
         include: {
           contest: {
@@ -235,10 +222,10 @@ export class SponsorService {
               id: true,
               name: true,
               slug: true,
-              status: true
-            }
-          }
-        }
+              status: true,
+            },
+          },
+        },
       });
 
       logger.info(`Sponsor created for contest ${slug} with ID: ${sponsor.id}`);
@@ -248,41 +235,56 @@ export class SponsorService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi tạo nhà tài trợ cho contest", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi tạo nhà tài trợ cho contest",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
   /**
    * Update sponsor (PATCH method)
    */
-  async updateSponsor(id: number, data: UpdateSponsorData): Promise<SponsorResponse> {
+  async updateSponsor(
+    id: number,
+    data: UpdateSponsorData
+  ): Promise<SponsorResponse> {
     try {
       // Check if sponsor exists
       const existingSponsor = await this.prisma.sponsor.findUnique({
-        where: { id }
+        where: { id },
       });
       if (!existingSponsor) {
-        throw new CustomError("Nhà tài trợ không tìm thấy", 404, ERROR_CODES.SPONSOR_NOT_FOUND);
+        throw new CustomError(
+          "Nhà tài trợ không tìm thấy",
+          404,
+          ERROR_CODES.SPONSOR_NOT_FOUND
+        );
       }
 
       // Validate contest if provided
       if (data.contestId !== undefined && data.contestId !== null) {
         const contest = await this.prisma.contest.findUnique({
-          where: { id: data.contestId }
+          where: { id: data.contestId },
         });
         if (!contest) {
-          throw new CustomError("Contest không tồn tại", 404, ERROR_CODES.CONTEST_NOT_FOUND);
+          throw new CustomError(
+            "Contest không tồn tại",
+            404,
+            ERROR_CODES.CONTEST_NOT_FOUND
+          );
         }
-      }      // Store old file URLs for cleanup
+      } // Store old file URLs for cleanup
       const oldFiles = {
         logo: existingSponsor.logo,
         images: existingSponsor.images,
-        videos: existingSponsor.videos
+        videos: existingSponsor.videos,
       };
 
       // Update sponsor
       const updatePayload: any = {};
-      
+
       if (data.name !== undefined) updatePayload.name = data.name;
       if (data.logo !== undefined) {
         updatePayload.logo = data.logo || null;
@@ -297,14 +299,16 @@ export class SponsorService {
         if (!data.images && oldFiles.images) {
           this.cleanupFileUrl(oldFiles.images);
         }
-      }      if (data.videos !== undefined) {
+      }
+      if (data.videos !== undefined) {
         updatePayload.videos = data.videos || null;
         // If setting to null and had previous file, mark for cleanup
         if (!data.videos && oldFiles.videos) {
           this.cleanupFileUrl(oldFiles.videos);
         }
       }
-      if (data.contestId !== undefined) updatePayload.contestId = data.contestId;
+      if (data.contestId !== undefined)
+        updatePayload.contestId = data.contestId;
 
       const sponsor = await this.prisma.sponsor.update({
         where: { id },
@@ -315,10 +319,10 @@ export class SponsorService {
               id: true,
               name: true,
               slug: true,
-              status: true
-            }
-          }
-        }
+              status: true,
+            },
+          },
+        },
       });
 
       logger.info(`Sponsor updated successfully: ${sponsor.id}`);
@@ -328,7 +332,11 @@ export class SponsorService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi cập nhật nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi cập nhật nhà tài trợ",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -339,15 +347,19 @@ export class SponsorService {
     try {
       // Check if sponsor exists
       const existingSponsor = await this.prisma.sponsor.findUnique({
-        where: { id }
+        where: { id },
       });
       if (!existingSponsor) {
-        throw new CustomError("Nhà tài trợ không tìm thấy", 404, ERROR_CODES.SPONSOR_NOT_FOUND);
+        throw new CustomError(
+          "Nhà tài trợ không tìm thấy",
+          404,
+          ERROR_CODES.SPONSOR_NOT_FOUND
+        );
       }
 
       // Hard delete sponsor
       await this.prisma.sponsor.delete({
-        where: { id }
+        where: { id },
       });
 
       logger.info(`Sponsor hard deleted: ${id}`);
@@ -356,76 +368,36 @@ export class SponsorService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi xóa nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi xóa nhà tài trợ",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
   /**
    * Batch delete sponsors
    */
-  async batchDeleteSponsors(ids: number[]): Promise<BatchDeleteResult> {
-    const successIds: number[] = [];
-    const failedIds: number[] = [];
-    const errors: Array<{ id: number; error: string }> = [];
-
-    try {
-      for (const id of ids) {
-        try {
-          // Check if sponsor exists
-          const existingSponsor = await this.prisma.sponsor.findUnique({
-            where: { id }
-          });
-
-          if (!existingSponsor) {
-            failedIds.push(id);
-            errors.push({ id, error: "Sponsor not found" });
-            continue;
-          }
-
-          // Delete sponsor
-          await this.prisma.sponsor.delete({
-            where: { id }
-          });
-
-          successIds.push(id);
-          logger.info(`Sponsor ${id} deleted successfully in batch operation`);
-        } catch (error) {
-          failedIds.push(id);
-          errors.push({ 
-            id, 
-            error: error instanceof Error ? error.message : "Unknown error" 
-          });
-          logger.error(`Error deleting sponsor ${id} in batch:`, error);
-        }
-      }
-
-      return {
-        successIds,
-        failedIds,
-        errors,
-        summary: {
-          total: ids.length,
-          success: successIds.length,
-          failed: failedIds.length
-        }
-      };
-    } catch (error) {
-      logger.error("Error in batch delete sponsors:", error);
-      throw new CustomError("Lỗi khi xóa hàng loạt nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
-    }
-  }
 
   /**
    * Update sponsor media files
    */
-  async updateSponsorMedia(id: number, mediaUrls: { logo?: string; images?: string; videos?: string }): Promise<SponsorResponse> {
+  async updateSponsorMedia(
+    id: number,
+    mediaUrls: { logo?: string; images?: string; videos?: string }
+  ): Promise<SponsorResponse> {
     try {
       // Check if sponsor exists
       const existingSponsor = await this.prisma.sponsor.findUnique({
-        where: { id }
+        where: { id },
       });
       if (!existingSponsor) {
-        throw new CustomError("Nhà tài trợ không tìm thấy", 404, ERROR_CODES.SPONSOR_NOT_FOUND);
+        throw new CustomError(
+          "Nhà tài trợ không tìm thấy",
+          404,
+          ERROR_CODES.SPONSOR_NOT_FOUND
+        );
       }
 
       // Update media fields
@@ -443,10 +415,10 @@ export class SponsorService {
               id: true,
               name: true,
               slug: true,
-              status: true
-            }
-          }
-        }
+              status: true,
+            },
+          },
+        },
       });
 
       logger.info(`Sponsor media updated successfully: ${sponsor.id}`);
@@ -456,7 +428,11 @@ export class SponsorService {
       if (error instanceof CustomError) {
         throw error;
       }
-      throw new CustomError("Lỗi khi cập nhật media nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
+      throw new CustomError(
+        "Lỗi khi cập nhật media nhà tài trợ",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
     }
   }
 
@@ -470,24 +446,23 @@ export class SponsorService {
     totalContests: number;
   }> {
     try {
-      const [
-        totalSponsors,
-        sponsorsWithContest,
-        totalContests
-      ] = await Promise.all([
-        this.prisma.sponsor.count(),
-        this.prisma.sponsor.count({
-          where: {
-            contestId: { not: null }
-          }
-        }),
-        this.prisma.sponsor.groupBy({
-          by: ['contestId'],
-          where: {
-            contestId: { not: null }
-          }
-        }).then(groups => groups.length)
-      ]);
+      const [totalSponsors, sponsorsWithContest, totalContests] =
+        await Promise.all([
+          this.prisma.sponsor.count(),
+          this.prisma.sponsor.count({
+            where: {
+              contestId: { not: null },
+            },
+          }),
+          this.prisma.sponsor
+            .groupBy({
+              by: ["contestId"],
+              where: {
+                contestId: { not: null },
+              },
+            })
+            .then(groups => groups.length),
+        ]);
 
       const sponsorsWithoutContest = totalSponsors - sponsorsWithContest;
 
@@ -495,28 +470,33 @@ export class SponsorService {
         totalSponsors,
         sponsorsWithContest,
         sponsorsWithoutContest,
-        totalContests
+        totalContests,
       };
     } catch (error) {
       logger.error("Error getting sponsors statistics:", error);
-      throw new CustomError("Lỗi khi lấy thống kê nhà tài trợ", 500, ERROR_CODES.INTERNAL_SERVER_ERROR);
-    }  }
+      throw new CustomError(
+        "Lỗi khi lấy thống kê nhà tài trợ",
+        500,
+        ERROR_CODES.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
   /**
    * Cleanup file from URL
    */
   private cleanupFileUrl(fileUrl: string): void {
     try {
       if (!fileUrl) return;
-      
+
       // Extract file path from URL
       // Assuming URL format: http://localhost:3000/uploads/sponsors/filename.ext
-      const urlParts = fileUrl.split('/');
+      const urlParts = fileUrl.split("/");
       const filename = urlParts[urlParts.length - 1];
       const directory = urlParts[urlParts.length - 2];
-      
-      if (filename && directory === 'sponsors') {
-        const filePath = path.join(CONFIG.UPLOAD_DIR, 'sponsors', filename);
-        
+
+      if (filename && directory === "sponsors") {
+        const filePath = path.join(CONFIG.UPLOAD_DIR, "sponsors", filename);
+
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
           logger.info(`Cleaned up file: ${filePath}`);

@@ -96,7 +96,7 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
   // Event để cập nhật status rescue dựa vào câu hỏi hiện tại
   socket.on("rescue:updateStatusByQuestion", async (data, callback) => {
     try {
-      const { matchId, currentQuestionOrder } = data;
+      const { matchId, currentQuestionOrder, match } = data;
 
       if (!matchId || currentQuestionOrder === undefined) {
         return callback({
@@ -107,7 +107,7 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
 
       // Gọi service để cập nhật trạng thái rescue
       const result = await RescueService.updateRescueStatusByCurrentQuestion(
-        Number(matchId),
+        Number(matchId),  
         Number(currentQuestionOrder)
       );
 
@@ -118,7 +118,7 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
         });
       }
 
-      const roomName = `match-${matchId}`;
+      const roomName = `match-${match}`;
 
       // Trả về kết quả thông qua callback
       callback(null, {

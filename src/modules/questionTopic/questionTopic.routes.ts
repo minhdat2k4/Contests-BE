@@ -1,6 +1,10 @@
 import { Router } from "express";
-import { validateBody, validateParams, validateQuery } from "@/utils/validation";
-import { authenticate } from "@/middlewares/auth";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "@/utils/validation";
+import { authenticate, role } from "@/middlewares/auth";
 import QuestionTopicController from "./questionTopic.controller";
 import {
   CreateQuestionTopicSchema,
@@ -14,6 +18,7 @@ const questionRouter = Router();
 
 // Apply authentication middleware to all routes
 questionRouter.use(authenticate);
+questionRouter.use(role("Admin"));
 
 /**
  * @route POST /api/question-topics
@@ -24,6 +29,11 @@ questionRouter.post(
   "/",
   validateBody(CreateQuestionTopicSchema),
   QuestionTopicController.createQuestionTopic
+);
+
+questionRouter.patch(
+  "/:id/toggle-active",
+  QuestionTopicController.toggleActive
 );
 
 /**
@@ -42,10 +52,7 @@ questionRouter.get(
  * @description Get all active question topics (for dropdown)
  * @access Private (Admin/Judge)
  */
-questionRouter.get(
-  "/active",
-  QuestionTopicController.getActiveQuestionTopics
-);
+questionRouter.get("/active", QuestionTopicController.getActiveQuestionTopics);
 
 /**
  * @route GET /api/question-topics/:id

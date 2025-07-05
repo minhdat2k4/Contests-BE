@@ -7,7 +7,6 @@ import {
 import {
   ClassVideoIdSchema,
   deleteClassVideosSchema,
-  CreateClassVideoSchema,
 } from "./classVideo.schema";
 import { ClassVideoController } from "@/modules/classVideo";
 import { authenticate, role } from "@/middlewares/auth";
@@ -16,6 +15,22 @@ const classVideoRouter = Router();
 const uploads = createMulter("ClassVideo");
 
 // private
+
+classVideoRouter.post(
+  "/contest/:slug",
+  authenticate,
+  role("Admin"),
+  uploads.single("videos"),
+  // validateBody(CreateClassVideoSchema),
+  ClassVideoController.create
+);
+
+classVideoRouter.get(
+  "/contest/:slug",
+  authenticate,
+  role("Admin"),
+  ClassVideoController.getAlls
+);
 
 classVideoRouter.get(
   "/contest/list-video/:slug",
@@ -30,15 +45,6 @@ classVideoRouter.get(
   role("Admin"),
   // validateQuery(ClassVideoIdSchema),
   ClassVideoController.getById
-);
-
-classVideoRouter.post(
-  "/contest/:slug",
-  authenticate,
-  role("Admin"),
-  validateBody(CreateClassVideoSchema),
-  uploads.single("videos"),
-  ClassVideoController.create
 );
 
 classVideoRouter.patch(

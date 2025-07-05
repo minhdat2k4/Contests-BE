@@ -269,19 +269,14 @@ export class ResultController {
    */
   async submitAnswer(req: Request, res: Response): Promise<void> {
     try {
-      console.log('🚀 [CONTROLLER] Submit answer request từ student');
-      console.log('🚀 [CONTROLLER] Request body:', req.body);
       // Lấy contestantId từ req.user (đã authenticate)
       const contestantId = (req as any).user?.contestantId;
       
       if (!contestantId) {
-        console.log('❌ [CONTROLLER] Không tìm thấy contestantId trong token');
         res.status(401).json(errorResponse("Không tìm thấy thông tin thí sinh", ERROR_CODES.UNAUTHORIZED));
         return;
       }
 
-      console.log('📋 [CONTROLLER] ContestantId từ token:', contestantId);
-      console.log('📋 [CONTROLLER] Request body:', req.body);
 
       const result = await this.resultService.submitAnswer(contestantId, req.body);
 
@@ -293,7 +288,6 @@ export class ResultController {
         res.status(400).json(errorResponse(result.message, "SUBMIT_FAILED"));
       }
     } catch (error) {
-      console.error('💥 [CONTROLLER] Lỗi trong submitAnswer controller:', error);
       logger.error("Error in submitAnswer controller:", error);
       
       if (error instanceof CustomError) {
@@ -310,20 +304,15 @@ export class ResultController {
    */
   async banContestant(req: Request, res: Response): Promise<void> {
     try {
-      console.log('🚨 [CONTROLLER] Ban contestant request từ system');
-      console.log('🚨 [CONTROLLER] Request body:', req.body);
       
       // Lấy contestantId từ req.user (đã authenticate)
       const contestantId = (req as any).user?.contestantId;
       
       if (!contestantId) {
-        console.log('❌ [CONTROLLER] Không tìm thấy contestantId trong token');
         res.status(401).json(errorResponse("Không tìm thấy thông tin thí sinh", ERROR_CODES.UNAUTHORIZED));
         return;
       }
 
-      console.log('📋 [CONTROLLER] ContestantId từ token:', contestantId);
-      console.log('📋 [CONTROLLER] Ban request body:', req.body);
 
       const result = await this.resultService.banContestant(contestantId, req.body);
 
@@ -335,7 +324,6 @@ export class ResultController {
         res.status(400).json(errorResponse(result.message, "BAN_FAILED"));
       }
     } catch (error) {
-      console.error('💥 [CONTROLLER] Lỗi trong banContestant controller:', error);
       logger.error("Error in banContestant controller:", error);
       
       if (error instanceof CustomError) {

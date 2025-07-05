@@ -1,6 +1,10 @@
 import express from "express";
 import AwardController from "./award.controller";
-import { validateBody, validateParams, validateQuery } from "@/utils/validation";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "@/utils/validation";
 import { authenticate, role } from "@/middlewares/auth";
 import {
   createAwardSchema,
@@ -10,7 +14,7 @@ import {
   getAwardByIdSchema,
   deleteAwardSchema,
   getAwardsQuerySchema,
-  batchDeleteAwardsSchema
+  batchDeleteAwardsSchema,
 } from "./award.schema";
 
 const router = express.Router();
@@ -50,12 +54,6 @@ router.get(
  * @desc Get awards with pagination and filtering
  * @access Public
  */
-router.get(
-  "/",
-  validateQuery(getAwardsQuerySchema),
-  awardController.getAwards.bind(awardController)
-);
-
 /**
  * @route GET /api/awards/:id
  * @desc Get award by ID

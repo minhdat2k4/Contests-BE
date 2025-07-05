@@ -8,19 +8,16 @@ import {
   CreateSponsorData,
   UpdateSponsorData,
   GetSponsorsQuery,
-  BatchDeleteSponsorsData,
   UploadResult,
 } from "./sponsor.schema";
 import {
   getFileUrl,
   getFileNameFromUrl,
-  deleteFile,
   getFilePath,
 } from "@/middlewares/imageUpload";
 import { processSponsorFiles, cleanupUploadedFiles } from "./sponsor.upload";
 import { prisma } from "@/config/database";
-import { contestantRouter } from '@/modules/contestant';
-
+import { deleteFile } from "@/utils/uploadFile";
 export class SponsorController {
   private sponsorService: SponsorService;
 
@@ -31,41 +28,6 @@ export class SponsorController {
   /**
    * Get sponsors with pagination and filtering
    */
-  async getSponsors(req: Request, res: Response): Promise<void> {
-    try {
-      // Parse query parameters with defaults
-      const query: GetSponsorsQuery = {
-        page: parseInt(req.query.page as string) || 1,
-        limit: parseInt(req.query.limit as string) || 10,
-        search: (req.query.search as string) || undefined,
-        contestId: req.query.contestId
-          ? parseInt(req.query.contestId as string)
-          : undefined,
-        sortBy:
-          (req.query.sortBy as "createdAt" | "updatedAt" | "name") ||
-          "createdAt",
-        sortOrder: (req.query.sortOrder as "asc" | "desc") || "desc",
-      };
-
-      const result = await this.sponsorService.getSponsors(query);
-
-      logger.info(`Retrieved ${result.sponsors.length} sponsors`);
-      res.json(successResponse(result, "Lấy danh sách nhà tài trợ thành công"));
-    } catch (error) {
-      logger.error("Error in getSponsors controller:", error);
-      if (error instanceof CustomError) {
-        res
-          .status(error.statusCode)
-          .json(errorResponse(error.message, error.code));
-      } else {
-        res
-          .status(500)
-          .json(
-            errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR)
-          );
-      }
-    }
-  }
 
   /**
    * Get sponsor by ID
@@ -101,11 +63,30 @@ export class SponsorController {
   async getSponsorsByContestSlug(req: Request, res: Response): Promise<void> {
     try {
       const { slug } = req.params;
-      const sponsors = await this.sponsorService.getSponsorsByContestSlug(slug);
 
-      logger.info(`Retrieved ${sponsors.length} sponsors for contest ${slug}`);
+      const query: GetSponsorsQuery = {
+        page: Number(req.query.page) || 1,
+        limit: Number(req.query.limit) || 10,
+        search: (req.query.search as string) || undefined,
+      };
+
+      const contest = await prisma.contest.findUnique({
+        where: { slug },
+      });
+
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi");
+      }
+      const sponsors = await this.sponsorService.getAll(query, contest?.id);
+
       res.json(
-        successResponse(sponsors, "Lấy nhà tài trợ theo contest thành công")
+        successResponse(
+          {
+            sponsors: sponsors.sponsors,
+            pagination: sponsors.pagination,
+          },
+          "Lấy nhà tài trợ theo contest thành công"
+        )
       );
     } catch (error) {
       logger.error("Error in getSponsorsByContestSlug controller:", error);
@@ -325,6 +306,12 @@ export class SponsorController {
 
       await this.sponsorService.deleteSponsor(Number(id));
 
+      Promise.all([
+        await deleteFile(sponsor.logo),
+        await deleteFile(sponsor.images),
+        await deleteFile(sponsor.videos),
+      ]);
+
       // Clean up associated files
       this.cleanupSponsorFiles(sponsor);
 
@@ -346,83 +333,60 @@ export class SponsorController {
     }
   }
 
-  /**
-   * Batch delete sponsors
-   */
-  async batchDeleteSponsors(req: Request, res: Response): Promise<void> {
+  async deletes(req: Request, res: Response): Promise<void> {
     try {
-      const data: BatchDeleteSponsorsData = req.body;
+      console.log(req.body);
+      const { ids } = req.body;
 
-      // Get sponsors for file cleanup
-      const sponsorsToDelete = await Promise.all(
-        data.ids.map(async id => {
-          try {
-            return await this.sponsorService.getSponsorById(id);
-          } catch {
-            return null;
-          }
-        })
-      );
+      console.log("Received IDs for deletion:", ids);
 
-      const result = await this.sponsorService.batchDeleteSponsors(data.ids);
+      if (!Array.isArray(ids)) {
+        throw new Error("Danh sách không hợp lệ");
+      }
 
-      // Clean up files for successfully deleted sponsors
-      sponsorsToDelete.forEach((sponsor, index) => {
-        if (sponsor && result.successIds.includes(data.ids[index])) {
-          this.cleanupSponsorFiles(sponsor);
+      const messages: { status: "success" | "error"; msg: string }[] = [];
+
+      for (const id of ids) {
+        const sponsor = await prisma.sponsor.findUnique({
+          where: { id: Number(id) },
+        });
+
+        if (!sponsor) {
+          messages.push({
+            status: "error",
+            msg: `Không tìm thấy nhà tài trợ với ID = ${id}`,
+          });
+          continue;
         }
+        const deleted = await prisma.sponsor.delete({
+          where: { id: sponsor.id },
+        });
+        if (!deleted) {
+          messages.push({
+            status: "error",
+            msg: `Xóa nhà tài trợ thất bại`,
+          });
+          continue;
+        }
+
+        messages.push({
+          status: "success",
+          msg: `Xóa nhà tài trợ thành công`,
+        });
+        logger.info(`Xóa nhà tài trợ thành công`);
+        await Promise.all([
+          deleteFile(sponsor.logo),
+          deleteFile(sponsor.images),
+          deleteFile(sponsor.videos),
+        ]);
+      }
+      res.json({
+        success: true,
+        messages,
       });
-
-      const { successIds, failedIds } = result;
-
-      if (failedIds.length === 0) {
-        logger.info(
-          `Batch delete successful: ${successIds.length} sponsors deleted`
-        );
-        res.json(
-          successResponse(
-            result,
-            `Xóa thành công ${successIds.length} nhà tài trợ`
-          )
-        );
-      } else if (successIds.length === 0) {
-        logger.warn(
-          `Batch delete failed: All ${failedIds.length} sponsors failed to delete`
-        );
-        res
-          .status(400)
-          .json(
-            errorResponse(
-              `Không thể xóa bất kỳ nhà tài trợ nào`,
-              ERROR_CODES.VALIDATION_ERROR
-            )
-          );
-      } else {
-        logger.info(
-          `Batch delete partial success: ${successIds.length} success, ${failedIds.length} failed`
-        );
-        res
-          .status(207)
-          .json(
-            successResponse(
-              result,
-              `Batch delete hoàn thành: ${successIds.length}/${data.ids.length} thành công, ${failedIds.length} thất bại`
-            )
-          );
-      }
     } catch (error) {
-      logger.error("Error in batchDeleteSponsors controller:", error);
-      if (error instanceof CustomError) {
-        res
-          .status(error.statusCode)
-          .json(errorResponse(error.message, error.code));
-      } else {
-        res
-          .status(500)
-          .json(
-            errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR)
-          );
-      }
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
 
@@ -595,18 +559,18 @@ export class SponsorController {
   }
 
   static async SponsorsByContestSlug(
-    req: Request, res: Response
-  ) : Promise<void> {
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
-       const { slug } = req.params;
-       const contest = await prisma.contest.findUnique({
+      const { slug } = req.params;
+      const contest = await prisma.contest.findUnique({
         where: { slug },
-      }); 
+      });
 
       if (!contest) {
         throw new Error("Không tìm thấy cuộc thi");
       }
-
 
       const sponsors = await prisma.sponsor.findMany({
         where: { contestId: contest.id },
@@ -621,7 +585,9 @@ export class SponsorController {
         throw new Error("Không tìm thấy nhà tài trợ");
       }
 
-      res.json(successResponse(sponsors,"Lấy danh sách nhà tài trợ thành công"));
+      res.json(
+        successResponse(sponsors, "Lấy danh sách nhà tài trợ thành công")
+      );
     } catch (error) {
       logger.error("Error fetching sponsors by contest slug:", error);
       res.status(500).json(errorResponse((error as Error).message));

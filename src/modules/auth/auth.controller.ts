@@ -203,14 +203,20 @@ export default class AuthController {
       });
 
       if (!student) {
-        logger.error(`Không tìm thấy thông tin Student cho User ID: ${user.id}`);
-        res.status(400).json(errorResponse("Không tìm thấy thông tin thí sinh"));
+        logger.error(
+          `Không tìm thấy thông tin Student cho User ID: ${user.id}`
+        );
+        res
+          .status(400)
+          .json(errorResponse("Không tìm thấy thông tin thí sinh"));
         return;
       }
 
       if (!student.isActive) {
         logger.error(`Student ID ${student.id} đã bị vô hiệu hóa`);
-        res.status(400).json(errorResponse("Tài khoản thí sinh đã bị vô hiệu hóa"));
+        res
+          .status(400)
+          .json(errorResponse("Tài khoản thí sinh đã bị vô hiệu hóa"));
         return;
       }
 
@@ -218,7 +224,15 @@ export default class AuthController {
       const contestant = await prisma.contestant.findFirst({
         where: {
           studentId: student.id,
-          contest: { status: { in: [ContestStatus.ongoing, ContestStatus.upcoming, ContestStatus.finished] } },
+          contest: {
+            status: {
+              in: [
+                ContestStatus.ongoing,
+                ContestStatus.upcoming,
+                ContestStatus.finished,
+              ],
+            },
+          },
         },
         include: {
           contest: true,
@@ -226,8 +240,14 @@ export default class AuthController {
       });
 
       if (!contestant) {
-        logger.error(`Không tìm thấy thông tin Contestant cho Student ID: ${student.id}`);
-        res.status(400).json(errorResponse("Không tìm thấy thông tin thí sinh trong cuộc thi"));
+        logger.error(
+          `Không tìm thấy thông tin Contestant cho Student ID: ${student.id}`
+        );
+        res
+          .status(400)
+          .json(
+            errorResponse("Không tìm thấy thông tin thí sinh trong cuộc thi")
+          );
         return;
       }
 
@@ -248,6 +268,21 @@ export default class AuthController {
         },
         orderBy: { createdAt: "desc" },
       });
+
+      // Lấy registrationNumber của thí sinh trong trận đầu tiên (nếu có)
+      let registrationNumber = null;
+      if (activeMatches.length > 0) {
+        const contestantMatch = await prisma.contestantMatch.findFirst({
+          where: {
+            contestantId: contestant.id,
+            matchId: activeMatches[0].id,
+          },
+          select: {
+            registrationNumber: true,
+          },
+        });
+        registrationNumber = contestantMatch?.registrationNumber || null;
+      }
 
       const tokenData = {
         userId: user.id,
@@ -297,6 +332,7 @@ export default class AuthController {
           studentCode: student.studentCode,
           class: student.class?.name || null,
           contestId: contestant.contestId,
+          registrationNumber: registrationNumber,
         },
         contest: {
           id: contestant.contest.id,

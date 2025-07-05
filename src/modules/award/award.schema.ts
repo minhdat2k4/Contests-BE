@@ -13,8 +13,11 @@ export const createAwardSchema = z.object({
     .positive("Contest ID phải là số dương"),
   contestantId: z
     .union([
-      z.number().int("Contestant ID phải là số nguyên").positive("Contestant ID phải là số dương"),
-      z.null()
+      z
+        .number()
+        .int("Contestant ID phải là số nguyên")
+        .positive("Contestant ID phải là số dương"),
+      z.null(),
     ])
     .nullable()
     .optional(),
@@ -38,8 +41,11 @@ export const updateAwardSchema = z
       .optional(),
     contestantId: z
       .union([
-        z.number().int("Contestant ID phải là số nguyên").positive("Contestant ID phải là số dương"),
-        z.null()
+        z
+          .number()
+          .int("Contestant ID phải là số nguyên")
+          .positive("Contestant ID phải là số dương"),
+        z.null(),
       ])
       .nullable()
       .optional(),
@@ -85,25 +91,9 @@ export const getAwardsQuerySchema = z.object({
     .refine(val => val >= 1 && val <= 100, "Limit phải từ 1 đến 100")
     .optional()
     .default("10"),
-  contestId: z
-    .string()
-    .regex(/^\d+$/, "Contest ID phải là số")
-    .transform(Number)
-    .optional(),
-  type: z.nativeEnum(AwardType).optional(),
   search: z
     .string()
     .max(255, "Từ khóa tìm kiếm không được vượt quá 255 ký tự")
-    .optional(),
-  hasContestant: z
-    .string()
-    .refine(
-      val => val === "true" || val === "false" || val === undefined,
-      "hasContestant phải là 'true' hoặc 'false'"
-    )
-    .transform(val =>
-      val === "true" ? true : val === "false" ? false : undefined
-    )
     .optional(),
 });
 
@@ -131,8 +121,11 @@ export const createAwardByContestSlugSchema = z.object({
     ),
   contestantId: z
     .union([
-      z.number().int("Contestant ID phải là số nguyên").positive("Contestant ID phải là số dương"),
-      z.null()
+      z
+        .number()
+        .int("Contestant ID phải là số nguyên")
+        .positive("Contestant ID phải là số dương"),
+      z.null(),
     ])
     .nullable()
     .optional(),
@@ -182,22 +175,10 @@ export type BatchDeleteAwardsData = z.infer<typeof batchDeleteAwardsSchema>;
 export interface AwardResponse {
   id: number;
   name: string;
-  contestId: number;
-  contestantId: number | null;
   type: AwardType;
-  createdAt: Date;
-  updatedAt: Date;
-  contest?: {
-    id: number;
-    name: string;
-    slug: string;
-  };
   contestant?: {
-    id: number;
     student: {
-      id: number;
       fullName: string;
-      studentCode: string | null;
     };
   } | null;
 }

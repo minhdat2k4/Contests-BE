@@ -114,9 +114,8 @@ export default class QuestionPackageService {
   static async deleteQuestionPackage(
     id: number
   ): Promise<QuestionPackage | null> {
-    return prisma.questionPackage.update({
+    return prisma.questionPackage.delete({
       where: { id },
-      data: { isActive: false },
     });
   }
 
@@ -308,8 +307,9 @@ export default class QuestionPackageService {
       } catch (error) {
         failedIds.push({
           id,
-          reason: `Lỗi hệ thống khi xóa gói câu hỏi: ${error instanceof Error ? error.message : "Lỗi không xác định"
-            }`,
+          reason: `Lỗi hệ thống khi xóa gói câu hỏi: ${
+            error instanceof Error ? error.message : "Lỗi không xác định"
+          }`,
         });
       }
     }

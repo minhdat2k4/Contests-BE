@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { MediaService, CreateMediaInput } from "@/modules/media";
+import {
+  MediaService,
+  CreateMediaInput,
+  MediaQueryInput,
+} from "@/modules/media";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
@@ -14,29 +18,26 @@ import {
 
 import { Media } from "@prisma/client";
 import path from "path";
+import { query } from "winston";
 
 export default class mediaController {
   static async getAlls(req: Request, res: Response): Promise<void> {
     try {
       const slug = req.params.slug;
+      const query: MediaQueryInput = {
+        page: Number(req.query.page) || 1,
+        limit: Number(req.query.limit) || 10,
+        type: req.query.type as "logo" | "background" | "images" | undefined,
+      };
+
       const contest = await Contestervice.getBy({ slug: slug });
       if (!contest) throw new Error("Không tìm thấy cuộc thi");
-      const images = await MediaService.getAll(contest.id);
-
-      const logo = await MediaService.getBy({
-        type: "logo",
-        contestId: contest.id,
-      });
-
-      const background = await MediaService.getBy({
-        type: "background",
-        contestId: contest.id,
-      });
+      const medias = await MediaService.getAll(query, contest.id);
 
       logger.info(`Lấy danh sách media thành công`);
       res.json(
         successResponse(
-          { images, logo, background },
+          { medias: medias.medias, pagination: medias.pagination },
           "Lấy danh sách media thành công"
         )
       );

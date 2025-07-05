@@ -16,12 +16,14 @@ import { authenticate, role } from "@/middlewares/auth";
 const classRouter = Router();
 
 // public routes
-classRouter.get(
-  "/list-with-school",
-  ClassController.listClassesWithSchool
-);
+classRouter.get("/list-with-school", ClassController.listClassesWithSchool);
 
-// prive
+classRouter.get(
+  "/list-class",
+  authenticate,
+  role("Admin"),
+  ClassController.listClass
+);
 
 classRouter.get(
   "/",

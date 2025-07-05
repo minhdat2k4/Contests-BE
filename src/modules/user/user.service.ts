@@ -165,7 +165,7 @@ export default class UserService {
         id: true,
         username: true,
       },
-      where: { isActive: true },
+      where: { isActive: true, role: "Judge" },
     });
   }
 
@@ -182,6 +182,47 @@ export default class UserService {
       },
       select: {
         id: true,
+      },
+    });
+  }
+
+  static async getListStudent() {
+    return prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+      },
+      where: { isActive: true, role: "Student", student: null },
+    });
+  }
+
+  static async getListStudentCurrent(id: number) {
+    const student = await prisma.student.findFirst({
+      where: { id: id },
+    });
+
+    if (!student?.userId)
+      return prisma.user.findMany({
+        select: {
+          id: true,
+          username: true,
+        },
+        where: {
+          isActive: true,
+          role: "Student",
+          student: null,
+        },
+      });
+
+    return prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+      },
+      where: {
+        isActive: true,
+        role: "Student",
+        OR: [{ student: null }, { id: student?.userId }],
       },
     });
   }

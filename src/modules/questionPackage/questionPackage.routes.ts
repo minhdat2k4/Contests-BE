@@ -4,7 +4,7 @@ import {
   validateParams,
   validateQuery,
 } from "@/utils/validation";
-import { authenticate } from "@/middlewares/auth";
+import { authenticate, role } from "@/middlewares/auth";
 import QuestionPackageController from "./questionPackage.controller";
 import {
   CreateQuestionPackageSchema,
@@ -18,6 +18,7 @@ const questionPackageRouter = Router();
 
 // Apply authentication middleware to all routes
 questionPackageRouter.use(authenticate);
+questionPackageRouter.use(role("Admin"));
 
 /**
  * @route POST /api/question-packages
@@ -101,5 +102,19 @@ questionPackageRouter.delete(
   validateBody(BatchDeleteQuestionPackagesSchema),
   QuestionPackageController.batchDeleteQuestionPackages
 );
+
+questionPackageRouter.delete(
+  "/:id",
+  validateParams(QuestionPackageIdSchema),
+  QuestionPackageController.deleteQuestionPackage
+);
+
+questionPackageRouter.patch(
+  "/:id/toggle-active",
+  validateParams(QuestionPackageIdSchema),
+  QuestionPackageController.toggleActive
+);
+
+questionPackageRouter.post("/delete-many", QuestionPackageController.deletes);
 
 export { questionPackageRouter };

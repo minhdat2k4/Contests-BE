@@ -38,14 +38,11 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   }
 
   // Tham gia phòng của một trận đấu sử dụng matchId (cho match-control truyền thống)
+
   socket.on(
     "joinMatchRoom",
     (matchId: number, callback?: (response: any) => void) => {
       try {
-        console.log(
-          `🏠 [JOIN ROOM] Socket ${socket.id} wants to join matchId: ${matchId}`
-        );
-
         const roomName = `match-${matchId}`;
         socket.join(roomName);
         logger.info(`✅ Socket ${socket.id} joined room: ${roomName}`);
@@ -75,63 +72,71 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   );
 
   // 🔥 NEW: Thêm event onlineControl:joinMatch sử dụng slug
-  socket.on("onlineControl:joinMatch", async (data: { matchSlug: string }, callback?: (response: any) => void) => {
-    try {
-      console.log(`🏠 [ONLINE CONTROL] Socket ${socket.id} wants to join match slug: ${data.matchSlug}`);
-      
-      if (!user || !["Admin", "Judge"].includes(user.role)) {
+  socket.on(
+    "onlineControl:joinMatch",
+    async (data: { matchSlug: string }, callback?: (response: any) => void) => {
+      try {
+        if (!user || !["Admin", "Judge"].includes(user.role)) {
+          if (callback) {
+            callback({
+              success: false,
+              message:
+                "Unauthorized: Only Admin or Judge can join online control",
+            });
+          }
+          return;
+        }
+
+        // Import MatchService để lấy match từ slug
+        const { MatchService } = await import("@/modules/match");
+        const match = await MatchService.MatchControl(data.matchSlug);
+
+        if (!match) {
+          if (callback) {
+            callback({
+              success: false,
+              message: "Match not found",
+            });
+          }
+          return;
+        }
+
+        const controlRoomName = `match-${match.id}`;
+        socket.join(controlRoomName);
+        (socket as any).matchId = match.id;
+        (socket as any).matchSlug = data.matchSlug;
+
+        logger.info(
+          `✅ [ONLINE CONTROL] Socket ${socket.id} joined room: ${controlRoomName} for slug: ${data.matchSlug}`
+        );
+
+        if (callback) {
+          callback({
+            success: true,
+            message: `Joined control room ${controlRoomName}`,
+            roomName: controlRoomName,
+            matchId: match.id,
+            matchSlug: data.matchSlug,
+          });
+        }
+      } catch (error) {
+        logger.error(
+          `Failed to join online control room for slug ${data.matchSlug}`,
+          error
+        );
         if (callback) {
           callback({
             success: false,
-            message: "Unauthorized: Only Admin or Judge can join online control"
+            message: "Failed to join control room",
           });
         }
-        return;
-      }
-
-      // Import MatchService để lấy match từ slug
-      const { MatchService } = await import("@/modules/match");
-      const match = await MatchService.MatchControl(data.matchSlug);
-      
-      if (!match) {
-        if (callback) {
-          callback({
-            success: false,
-            message: "Match not found"
-          });
-        }
-        return;
-      }
-
-      const controlRoomName = `match-${match.id}`;
-      socket.join(controlRoomName);
-      (socket as any).matchId = match.id;
-      (socket as any).matchSlug = data.matchSlug;
-      
-      logger.info(`✅ [ONLINE CONTROL] Socket ${socket.id} joined room: ${controlRoomName} for slug: ${data.matchSlug}`);
-      
-      if (callback) {
-        callback({
-          success: true,
-          message: `Joined control room ${controlRoomName}`,
-          roomName: controlRoomName,
-          matchId: match.id,
-          matchSlug: data.matchSlug
-        });
-      }
-    } catch (error) {
-      logger.error(`Failed to join online control room for slug ${data.matchSlug}`, error);
-      if (callback) {
-        callback({
-          success: false,
-          message: "Failed to join control room"
-        });
       }
     }
-  });
+  );
 
   socket.on("leaveMatchRoom", (matchId: number) => {
     const roomName = `match-${matchId}`;
+
     socket.leave(roomName);
     logger.info(`🚪 Socket ${socket.id} left room: ${roomName}`);
   });
@@ -150,10 +155,10 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   });
 
   // 🔥 NEW: Handle disconnect for online control
-  socket.on("disconnect", (reason) => {
+  socket.on("disconnect", reason => {
     const matchId = (socket as any).matchId;
     const matchSlug = (socket as any).matchSlug;
-    
+
     if (matchId && user) {
       socket.to(`match-${matchId}`).emit("admin:disconnected", {
         adminId: user.userId,
@@ -161,10 +166,12 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
         matchId: matchId,
         matchSlug: matchSlug,
         reason: reason,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
-      logger.info(`❌ [ONLINE CONTROL] Admin ${user.username} disconnected from match ${matchSlug} (${matchId}). Reason: ${reason}`);
+
+      logger.info(
+        `❌ [ONLINE CONTROL] Admin ${user.username} disconnected from match ${matchSlug} (${matchId}). Reason: ${reason}`
+      );
     }
   });
 
@@ -174,7 +181,7 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   registerTimerEvents(io, socket);
   registerUpdateStatusByAdminEvents(io, socket);
   registerUpdateStatusByJudgeEvents(io, socket);
-  
+
   // 🔥 NEW: Register match events cho cả match-control và online-control
   if (user && ["Admin", "Judge"].includes(user.role)) {
     registerMatchEvents(io, socket as any);

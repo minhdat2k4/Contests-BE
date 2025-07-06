@@ -75,6 +75,7 @@ enum RescueStatus {
   used
   passed
   notEligible    
+  proposed
 }
 
 enum AwardType {

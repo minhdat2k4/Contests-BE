@@ -735,4 +735,28 @@ export default class GroupDivisionService {
       });
     }
   }
+
+  static async getIdsByStatus(matchId: number) {
+    return await prisma.contestantMatch.findMany({
+      where: {
+        matchId: matchId,
+        status: "rescued",
+      },
+      select: {
+        registrationNumber: true,
+      },
+    });
+  }
+
+  static async UpdateContestantStatusByIds(matchId: number) {
+    return await prisma.contestantMatch.updateMany({
+      where: {
+        matchId: matchId,
+        status: "rescued",
+      },
+      data: {
+        status: "in_progress",
+      },
+    });
+  }
 }

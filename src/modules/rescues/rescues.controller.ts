@@ -333,7 +333,7 @@ export default class RescueController {
         throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
       }
 
-      if (rescuese.status === "passed") {
+      if (rescuese.status !== "proposed") {
         throw new Error("Đã hết lượt cứu trợ");
       }
 

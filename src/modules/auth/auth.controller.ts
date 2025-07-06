@@ -585,3 +585,4 @@ export default class AuthController {
     }
   }
 }
+

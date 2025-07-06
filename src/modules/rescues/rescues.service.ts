@@ -97,8 +97,8 @@ export default class RescueService {
         key.status === "notUsed"
           ? "Chưa sử dụng"
           : key.status === "used"
-            ? "Đã sử dụng"
-            : ("Đã qua" as "Chưa sử dụng" | "Đã sử dụng" | "Đã qua"),
+          ? "Đã sử dụng"
+          : ("Đã qua" as "Chưa sử dụng" | "Đã sử dụng" | "Đã qua"),
       matchName: key.match?.name,
     }));
     const total = await prisma.rescue.count({ where: whereClause });
@@ -271,7 +271,6 @@ export default class RescueService {
       questionTo: rescue.questionTo,
     }));
   }
-
 
   /**================================Cập nhật status dựa vào câu hỏi hiện tại ============================== */
   // static async updateRescueStatusByCurrentQuestion(
@@ -454,7 +453,11 @@ export default class RescueService {
       // Lấy tất cả rescue của match
       const rescues = await prisma.rescue.findMany({
         where: { matchId },
-        orderBy: [{ questionFrom: 'asc' }, { questionTo: 'asc' }, { createdAt: 'asc' }]
+        orderBy: [
+          { questionFrom: "asc" },
+          { questionTo: "asc" },
+          { createdAt: "asc" },
+        ],
       });
 
       if (rescues.length === 0) {
@@ -462,14 +465,15 @@ export default class RescueService {
           updatedRescues: [],
           currentEligibleRescues: [],
           totalUpdated: 0,
-          summary: { passed: 0, notEligible: 0, notUsed: 0, unchanged: 0 }
+          summary: { passed: 0, notEligible: 0, notUsed: 0, unchanged: 0 },
         };
       }
 
       // Tìm các rescue thỏa mãn điều kiện hiện tại (có thể sử dụng ở câu hỏi hiện tại)
-      const currentEligibleRescues = rescues.filter(rescue =>
-        rescue.questionFrom <= currentQuestionOrder &&
-        currentQuestionOrder <= rescue.questionTo
+      const currentEligibleRescues = rescues.filter(
+        rescue =>
+          rescue.questionFrom <= currentQuestionOrder &&
+          currentQuestionOrder <= rescue.questionTo
       );
 
       const updates: Promise<any>[] = [];
@@ -503,7 +507,7 @@ export default class RescueService {
           updates.push(
             prisma.rescue.update({
               where: { id: rescue.id },
-              data: { status: newStatus }
+              data: { status: newStatus },
             })
           );
 
@@ -530,7 +534,11 @@ export default class RescueService {
       // Lấy thông tin rescue đã cập nhật
       const updatedRescueDetails = await prisma.rescue.findMany({
         where: { matchId },
-        orderBy: [{ questionFrom: 'asc' }, { questionTo: 'asc' }, { createdAt: 'asc' }],
+        orderBy: [
+          { questionFrom: "asc" },
+          { questionTo: "asc" },
+          { createdAt: "asc" },
+        ],
         select: {
           id: true,
           name: true,
@@ -539,8 +547,8 @@ export default class RescueService {
           questionFrom: true,
           questionTo: true,
           rescueType: true,
-          remainingContestants: true
-        }
+          remainingContestants: true,
+        },
       });
 
       return {
@@ -551,15 +559,31 @@ export default class RescueService {
           index: r.index,
           status: r.status,
           questionFrom: r.questionFrom,
-          questionTo: r.questionTo
+          questionTo: r.questionTo,
         })),
         totalUpdated: updatedRescues.length,
-        summary
+        summary,
       };
-
     } catch (error) {
-      logger.error('Error updating rescue status:', error);
-      throw new Error(`Lỗi cập nhật trạng thái rescue: ${(error as Error).message}`);
+      logger.error("Error updating rescue status:", error);
+      throw new Error(
+        `Lỗi cập nhật trạng thái rescue: ${(error as Error).message}`
+      );
     }
+  }
+
+  static async getListRescue(matchId: number) {
+    return prisma.rescue.findMany({
+      where: { matchId: matchId, rescueType: "lifelineUsed" },
+      select: {
+        id: true,
+        name: true,
+        index: true,
+        status: true,
+        questionFrom: true,
+        questionTo: true,
+        rescueType: true,
+      },
+    });
   }
 }

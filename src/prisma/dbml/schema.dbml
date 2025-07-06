@@ -56,6 +56,8 @@ Table students {
   id Int [pk, increment]
   fullName String [not null]
   studentCode String
+  avatar String
+  bio String
   classId Int [not null]
   class classes [not null]
   userId Int [unique]
@@ -400,6 +402,7 @@ Enum RescueStatus {
   used
   passed
   notEligible
+  proposed
 }
 
 Enum AwardType {
@@ -434,14 +437,13 @@ Enum ControlKey {
   video
   audio
   image
+  chart
 }
 
 Enum ControlValue {
   start
   pause
   reset
-  zoomIn
-  zoomOut
   Eliminated
   Rescued
 }

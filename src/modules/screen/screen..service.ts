@@ -42,6 +42,10 @@ export default class ScreenService {
       updateData.media = data.media;
     }
 
+    if (data.value !== undefined) {
+      updateData.value = data.value;
+    }
+
     return prisma.screenControl.update({
       where: { id: id },
       data: {

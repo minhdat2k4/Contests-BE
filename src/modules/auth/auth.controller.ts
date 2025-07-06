@@ -56,120 +56,44 @@ export default class AuthController {
     }
   }
 
-  //   static async registerStudent(req: Request, res: Response): Promise<void> {
-  //     try {
-  //       const input: StudentRegisterInput = req.body;
-  // <<<<<<< HEAD
+  static async registerStudent(req: Request, res: Response): Promise<void> {
+    try {
+      const input: StudentRegisterInput = req.body;
 
-  //       // Kiểm tra username đã tồn tại chưa
-  //       const existingUserName = await UserService.existingUserName(
-  //         input.username
-  //       );
-  //       if (existingUserName) {
-  //         logger.error(`Tên tài khoản ${input.username} đã tồn tại`);
-  //         res
-  //           .status(400)
-  //           .json(validateData("username", "Tên tài khoản đã tồn tại"));
-  //         return;
-  //       }
+      const result = await AuthService.registerStudent(input);
 
-  //       // Kiểm tra email đã tồn tại chưa
-  //       const existingEmail = await UserService.existingEmail(input.email);
-  //       if (existingEmail) {
-  //         logger.error(`Email ${input.email} đã tồn tại`);
-  //         res.status(400).json(validateData("email", "Email đã tồn tại"));
-  //         return;
-  //       }
+      res.json(
+        successResponse(result, "Đăng ký tài khoản sinh viên thành công")
+      );
+      logger.info(
+        `Đăng ký tài khoản sinh viên thành công cho ${input.username}`
+      );
+    } catch (error) {
+      const errorMessage = (error as Error).message;
 
-  //       // Kiểm tra mã sinh viên đã tồn tại chưa (nếu có)
-  //       if (input.studentCode) {
-  //         const existingStudentCode = await StudentService.getStudentBy({
-  //           studentCode: input.studentCode,
-  //         });
-  //         if (existingStudentCode) {
-  //           logger.error(`Mã sinh viên ${input.studentCode} đã tồn tại`);
-  //           res
-  //             .status(400)
-  //             .json(validateData("studentCode", "Mã sinh viên đã tồn tại"));
-  //           return;
-  //         }
-  //       }
-
-  //       // Kiểm tra lớp có tồn tại không
-  //       const existingClass = await prisma.class.findFirst({
-  //         where: { id: input.classId, isActive: true },
-  //       });
-  //       if (!existingClass) {
-  //         logger.error(`Lớp với ID ${input.classId} không tồn tại`);
-  //         res.status(400).json(validateData("classId", "Lớp không tồn tại"));
-  //         return;
-  //       }
-
-  //       // Mã hóa mật khẩu
-  //       const { confirmPassword, fullName, classId, studentCode, ...userInput } =
-  //         input;
-  //       const hashedPassword = await bcrypt.hash(userInput.password, 10);
-
-  //       // Tạo transaction để đảm bảo tính nhất quán dữ liệu
-  //       const result = await prisma.$transaction(async tx => {
-  //         // Tạo User với role Student
-  //         const user = await tx.user.create({
-  //           data: {
-  //             ...userInput,
-  //             password: hashedPassword,
-  //             role: "Student",
-  //           },
-  //         });
-
-  //         // Tạo Student
-  //         const student = await tx.student.create({
-  //           data: {
-  //             fullName,
-  //             classId,
-  //             studentCode: studentCode || null,
-  //             isActive: true,
-  //           },
-  //         });
-
-  //         return { user, student };
-  //       });
-  // =======
-
-  //       const result = await AuthService.registerStudent(input);
-  // >>>>>>> 273f4e23f2706bcb5a19973aa3419b9133a563fd
-
-  //       res.json(
-  //         successResponse(result, "Đăng ký tài khoản sinh viên thành công")
-  //       );
-  //       logger.info(
-  //         `Đăng ký tài khoản sinh viên thành công cho ${input.username}`
-  //       );
-  //     } catch (error) {
-  //       const errorMessage = (error as Error).message;
-
-  //       // Xử lý các lỗi cụ thể
-  //       switch (errorMessage) {
-  //         case "USERNAME_EXISTS":
-  //           logger.error(`Tên tài khoản ${req.body.username} đã tồn tại`);
-  //           res
-  //             .status(400)
-  //             .json(validateData("username", "Tên tài khoản đã tồn tại"));
-  //           break;
-  //         case "EMAIL_EXISTS":
-  //           logger.error(`Email ${req.body.email} đã tồn tại`);
-  //           res.status(400).json(validateData("email", "Email đã tồn tại"));
-  //           break;
-  //         case "CLASS_NOT_EXISTS":
-  //           logger.error(`Lớp với ID ${req.body.classId} không tồn tại`);
-  //           res.status(400).json(validateData("classId", "Lớp không tồn tại"));
-  //           break;
-  //         default:
-  //           logger.error((error as Error).message);
-  //           res.status(400).json(errorResponse((error as Error).message));
-  //           break;
-  //       }
-  //     }
-  //   }
+      // Xử lý các lỗi cụ thể
+      switch (errorMessage) {
+        case "USERNAME_EXISTS":
+          logger.error(`Tên tài khoản ${req.body.username} đã tồn tại`);
+          res
+            .status(400)
+            .json(validateData("username", "Tên tài khoản đã tồn tại"));
+          break;
+        case "EMAIL_EXISTS":
+          logger.error(`Email ${req.body.email} đã tồn tại`);
+          res.status(400).json(validateData("email", "Email đã tồn tại"));
+          break;
+        case "CLASS_NOT_EXISTS":
+          logger.error(`Lớp với ID ${req.body.classId} không tồn tại`);
+          res.status(400).json(validateData("classId", "Lớp không tồn tại"));
+          break;
+        default:
+          logger.error((error as Error).message);
+          res.status(400).json(errorResponse((error as Error).message));
+          break;
+      }
+    }
+  }
 
   static async login(req: Request, res: Response): Promise<void> {
     try {
@@ -279,14 +203,20 @@ export default class AuthController {
       });
 
       if (!student) {
-        logger.error(`Không tìm thấy thông tin Student cho User ID: ${user.id}`);
-        res.status(400).json(errorResponse("Không tìm thấy thông tin thí sinh"));
+        logger.error(
+          `Không tìm thấy thông tin Student cho User ID: ${user.id}`
+        );
+        res
+          .status(400)
+          .json(errorResponse("Không tìm thấy thông tin thí sinh"));
         return;
       }
 
       if (!student.isActive) {
         logger.error(`Student ID ${student.id} đã bị vô hiệu hóa`);
-        res.status(400).json(errorResponse("Tài khoản thí sinh đã bị vô hiệu hóa"));
+        res
+          .status(400)
+          .json(errorResponse("Tài khoản thí sinh đã bị vô hiệu hóa"));
         return;
       }
 
@@ -294,7 +224,15 @@ export default class AuthController {
       const contestant = await prisma.contestant.findFirst({
         where: {
           studentId: student.id,
-          contest: { status: { in: [ContestStatus.ongoing, ContestStatus.upcoming, ContestStatus.finished] } },
+          contest: {
+            status: {
+              in: [
+                ContestStatus.ongoing,
+                ContestStatus.upcoming,
+                ContestStatus.finished,
+              ],
+            },
+          },
         },
         include: {
           contest: true,
@@ -302,8 +240,14 @@ export default class AuthController {
       });
 
       if (!contestant) {
-        logger.error(`Không tìm thấy thông tin Contestant cho Student ID: ${student.id}`);
-        res.status(400).json(errorResponse("Không tìm thấy thông tin thí sinh trong cuộc thi"));
+        logger.error(
+          `Không tìm thấy thông tin Contestant cho Student ID: ${student.id}`
+        );
+        res
+          .status(400)
+          .json(
+            errorResponse("Không tìm thấy thông tin thí sinh trong cuộc thi")
+          );
         return;
       }
 
@@ -317,12 +261,28 @@ export default class AuthController {
         select: {
           id: true,
           name: true,
+          slug: true,
           status: true,
           currentQuestion: true,
           remainingTime: true,
         },
         orderBy: { createdAt: "desc" },
       });
+
+      // Lấy registrationNumber của thí sinh trong trận đầu tiên (nếu có)
+      let registrationNumber = null;
+      if (activeMatches.length > 0) {
+        const contestantMatch = await prisma.contestantMatch.findFirst({
+          where: {
+            contestantId: contestant.id,
+            matchId: activeMatches[0].id,
+          },
+          select: {
+            registrationNumber: true,
+          },
+        });
+        registrationNumber = contestantMatch?.registrationNumber || null;
+      }
 
       const tokenData = {
         userId: user.id,
@@ -372,6 +332,7 @@ export default class AuthController {
           studentCode: student.studentCode,
           class: student.class?.name || null,
           contestId: contestant.contestId,
+          registrationNumber: registrationNumber,
         },
         contest: {
           id: contestant.contest.id,
@@ -624,3 +585,4 @@ export default class AuthController {
     }
   }
 }
+

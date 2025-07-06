@@ -42,11 +42,11 @@ authRouter.post(
   validateBody(RegisterSchema),
   AuthController.register
 );
-// authRouter.post(
-//   "/register-student",
-//   validateBody(StudentRegisterSchema),
-//   AuthController.registerStudent
-// );
+authRouter.post(
+  "/register-student",
+  validateBody(StudentRegisterSchema),
+  AuthController.registerStudent
+);
 // private
 authRouter.post("/logout", authenticate, AuthController.logout);
 authRouter.get("/refresh-token", AuthController.refreshAccToken);

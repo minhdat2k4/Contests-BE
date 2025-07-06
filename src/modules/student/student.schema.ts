@@ -38,6 +38,8 @@ export const CreateStudentShema = z.object({
     })
     .refine(val => !NaN && val > 0, "User ID là một số nguyên dương"),
   isActive: z.boolean().optional(),
+  avatar: z.string().max(255, "Avatar tối đa 255 kí tự").optional(),
+  bio: z.string().max(1000, "Bio tối đa 1000 kí tự").optional(),
 });
 
 export const StudentIdShame = z.object({
@@ -73,6 +75,9 @@ export const UpdateStundentShema = z.object({
     .optional()
     .optional(),
   isActive: z.boolean().optional(),
+  avatar: z.string().max(255, "Avatar tối đa 255 kí tự").optional(),
+  bio: z.string().max(1000, "Bio tối đa 1000 kí tự").optional(),
+  userId: z.number().min(1, "User ID phải là số nguyên dương").optional(),
 });
 
 export const StudentQuerySchema = z.object({
@@ -106,6 +111,23 @@ export const deleteStudentsSchema = z.object({
     .array(z.number().int().positive("ID phải là số nguyên dương"))
     .min(1, "Phải chọn ít nhất 1 ID để xoá"),
 });
+
+export type StudentType = {
+  id: number;
+  fullName: string;
+  studentCode: string | null;
+  classId: number;
+  isActive: boolean;
+  bio: string | null;
+  avatar: string | null;
+  userId: number | null;
+  class: {
+    name: string;
+  };
+  user: {
+    username: string;
+  } | null;
+};
 
 export type CreateStudentInput = z.infer<typeof CreateStudentShema>;
 export type StudentIdParams = z.infer<typeof StudentIdShame>;

@@ -12,7 +12,6 @@ import { registerMatchEvents } from "./events/match.events";
 import { registerAudienceEvents } from "./events/audience.events";
 import { timerService } from "./services/timer.service";
 import { prisma } from "@/config/database";
-import { registerOnlineControlNamespaceEvents } from "./namespaces/onlineControl.namespace";
 
 // Extend Socket interface to include user and contestant info
 interface AuthenticatedSocket extends Socket {
@@ -29,10 +28,10 @@ export const authMiddleware = async (
   next: (err?: ExtendedError) => void
 ) => {
   try {
-    console.log('🔐 [BE] Bắt đầu xác thực socket ID:', socket.id);
-    
+    console.log("🔐 [BE] Bắt đầu xác thực socket ID:", socket.id);
+
     const rawCookie = socket.handshake.headers.cookie;
-    console.log('🍪 [BE] Cookie raw nhận được từ FE:', rawCookie);
+    console.log("🍪 [BE] Cookie raw nhận được từ FE:", rawCookie);
 
     if (!rawCookie) {
       console.log(`❌ [BE] Không có cookie từ socket ID: ${socket.id}`);
@@ -41,112 +40,147 @@ export const authMiddleware = async (
     }
 
     const parsed = cookie.parse(rawCookie);
-    console.log('📝 [BE] Cookie đã parse:', parsed);
-    
+    console.log("📝 [BE] Cookie đã parse:", parsed);
+
     const token = parsed.accessToken;
-    console.log('🔑 [BE] AccessToken tìm thấy trong cookie:', token ? `${token.substring(0, 30)}...` : 'KHÔNG TÌM THẤY');
+    console.log(
+      "🔑 [BE] AccessToken tìm thấy trong cookie:",
+      token ? `${token.substring(0, 30)}...` : "KHÔNG TÌM THẤY"
+    );
 
     if (!token) {
-      console.log(`❌ [BE] Không tìm thấy accessToken trong cookie. Socket ID: ${socket.id}`);
-      logger.warn(`❌ [BE] Không tìm thấy accessToken trong cookie. Socket ID: ${socket.id}`);
+      console.log(
+        `❌ [BE] Không tìm thấy accessToken trong cookie. Socket ID: ${socket.id}`
+      );
+      logger.warn(
+        `❌ [BE] Không tìm thấy accessToken trong cookie. Socket ID: ${socket.id}`
+      );
       return next(new Error("Authentication error: Token not found"));
     }
 
-    console.log(`✅ [BE] Đã nhận accessToken từ FE cho socket ${socket.id}:`, token.substring(0, 50) + '...');
+    console.log(
+      `✅ [BE] Đã nhận accessToken từ FE cho socket ${socket.id}:`,
+      token.substring(0, 50) + "..."
+    );
     logger.info(`[BE] Đã nhận accessToken từ FE: ${token}`);
 
-    console.log('🔍 [BE] Đang verify token...');
+    console.log("🔍 [BE] Đang verify token...");
     const payload = verifyToken(token) as JwtPayload;
     console.log(`✅ [BE] Payload giải mã thành công:`, {
       userId: payload.userId,
       username: payload.username,
       role: payload.role,
-      email: payload.email
+      email: payload.email,
     });
     logger.info(`[BE] Payload giải mã từ token:`, payload);
-    
-    console.log('👤 [BE] Đang kiểm tra user trong database...');
+
     // Validate user exists and is active
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, role: true, isActive: true }
+      select: { id: true, role: true, isActive: true },
     });
 
-    console.log('🔍 [BE] Kết quả tìm user:', user);
-
     if (!user || !user.isActive) {
-      console.log(`❌ [BE] User không tồn tại hoặc bị vô hiệu hóa. UserId: ${payload.userId}, User found:`, user);
-      logger.warn(`❌ [BE] Không tìm thấy user hoặc user bị vô hiệu hóa: ${payload.userId}`);
-      return next(new Error("Authentication error: User not found or inactive"));
+      console.log(
+        `❌ [BE] User không tồn tại hoặc bị vô hiệu hóa. UserId: ${payload.userId}, User found:`,
+        user
+      );
+      logger.warn(
+        `❌ [BE] Không tìm thấy user hoặc user bị vô hiệu hóa: ${payload.userId}`
+      );
+      return next(
+        new Error("Authentication error: User not found or inactive")
+      );
     }
 
-    console.log(`✅ [BE] User hợp lệ: ID=${user.id}, role=${user.role}, active=${user.isActive}`);
+    console.log(
+      `✅ [BE] User hợp lệ: ID=${user.id}, role=${user.role}, active=${user.isActive}`
+    );
 
     // For Student role, validate contestant exists
     if (payload.role === "Student") {
-      console.log(`🎓 [BE] User là Student, tìm kiếm contestant cho userId: ${payload.userId}`);
-      console.log(`🔍 [BE] Tìm contestant cho Student userId: ${payload.userId}`);
-      
+      console.log(
+        `🎓 [BE] User là Student, tìm kiếm contestant cho userId: ${payload.userId}`
+      );
+      console.log(
+        `🔍 [BE] Tìm contestant cho Student userId: ${payload.userId}`
+      );
+
       const contestant = await prisma.contestant.findFirst({
         where: {
           student: {
-            userId: payload.userId
-          }
+            userId: payload.userId,
+          },
         },
         include: {
           student: {
-            select: { id: true, fullName: true, studentCode: true }
+            select: { id: true, fullName: true, studentCode: true },
           },
           contest: {
             include: {
               round: {
                 include: {
                   matches: {
-                    select: { id: true, name: true }
-                  }
-                }
-              }
-            }
-          }
-        }
+                    select: { id: true, name: true },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
-      console.log('🔍 [BE] Kết quả tìm contestant:', contestant ? {
-        id: contestant.id,
-        studentName: contestant.student.fullName,
-        studentCode: contestant.student.studentCode,
-        contestId: contestant.contestId
-      } : 'KHÔNG TÌM THẤY');
+      console.log(
+        "🔍 [BE] Kết quả tìm contestant:",
+        contestant
+          ? {
+              id: contestant.id,
+              studentName: contestant.student.fullName,
+              studentCode: contestant.student.studentCode,
+              contestId: contestant.contestId,
+            }
+          : "KHÔNG TÌM THẤY"
+      );
 
       if (!contestant) {
-        console.log(`❌ [BE] Không tìm thấy contestant cho student với userId: ${payload.userId}`);
-        logger.warn(`❌ [BE] Không tìm thấy contestant cho student với userId: ${payload.userId}`);
+        console.log(
+          `❌ [BE] Không tìm thấy contestant cho student với userId: ${payload.userId}`
+        );
+        logger.warn(
+          `❌ [BE] Không tìm thấy contestant cho student với userId: ${payload.userId}`
+        );
         return next(new Error("Authentication error: Contestant not found"));
       }
 
-      console.log(`✅ [BE] Đã tìm thấy contestant: ID=${contestant.id} cho student: ${contestant.student.fullName} (${contestant.student.studentCode})`);
+      console.log(
+        `✅ [BE] Đã tìm thấy contestant: ID=${contestant.id} cho student: ${contestant.student.fullName} (${contestant.student.studentCode})`
+      );
 
       // Attach contestant info to socket
       (socket as AuthenticatedSocket).contestantId = contestant.id;
-      
-      console.log('🏆 [BE] Đang tìm trận đấu active cho contestant...');
+
+      console.log("🏆 [BE] Đang tìm trận đấu active cho contestant...");
       // Find active match for this contestant
       const activeMatch = await prisma.match.findFirst({
         where: {
           round: {
-            contestId: contestant.contestId
+            contestId: contestant.contestId,
           },
           // Add more conditions here based on your match logic
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: "desc" },
       });
 
       if (activeMatch) {
-        console.log(`✅ [BE] Đã tìm thấy trận đấu active: ID=${activeMatch.id}, name=${activeMatch.name}`);
-        logger.info(`[BE] Đã tìm thấy trận đấu active cho contestant: ${activeMatch.id}`);
+        console.log(
+          `✅ [BE] Đã tìm thấy trận đấu active: ID=${activeMatch.id}, name=${activeMatch.name}`
+        );
+        logger.info(
+          `[BE] Đã tìm thấy trận đấu active cho contestant: ${activeMatch.id}`
+        );
         (socket as AuthenticatedSocket).matchId = activeMatch.id;
       } else {
-        console.log('ℹ️ [BE] Không có trận đấu active nào cho contestant này');
+        console.log("ℹ️ [BE] Không có trận đấu active nào cho contestant này");
       }
 
       console.log(`🎉 [BE] Student xác thực thành công:`, {
@@ -154,18 +188,24 @@ export const authMiddleware = async (
         userId: payload.userId,
         username: payload.username,
         contestantId: contestant.id,
-        matchId: activeMatch?.id || 'none'
+        matchId: activeMatch?.id || "none",
       });
-      
+
       logger.info(
-        `✅ Student authenticated: ${socket.id} | UserId: ${payload.userId} | Contestant: ${contestant.id} | Match: ${activeMatch?.id || 'none'}`
+        `✅ Student authenticated: ${socket.id} | UserId: ${
+          payload.userId
+        } | Contestant: ${contestant.id} | Match: ${activeMatch?.id || "none"}`
       );
     } else {
-      console.log(`✅ [BE] Non-student user xác thực thành công: ${payload.username} (${payload.role})`);
+      console.log(
+        `✅ [BE] Non-student user xác thực thành công: ${payload.username} (${payload.role})`
+      );
     }
 
     (socket as AuthenticatedSocket).user = payload;
-    console.log(`🎯 [BE] Hoàn thành xác thực cho socket ${socket.id}, chuyển tiếp connection...`);
+    console.log(
+      `🎯 [BE] Hoàn thành xác thực cho socket ${socket.id}, chuyển tiếp connection...`
+    );
     next();
   } catch (err) {
     console.error(`💥 [BE] Lỗi xác thực token cho socket ${socket.id}:`, err);
@@ -182,11 +222,11 @@ export const initializeSocketIO = (io: Server) => {
 
   // Gán instance để dùng toàn cục
   socketService.setIO(io);
-  
+
   // Initialize timer service
   timerService.setIO(io);
 
-  // Namespace điều khiển trận đấu (dành cho Admin/Judge)
+  // Namespace điều khiển trận đấu (dành cho Admin/Judge) - Đã tích hợp online control
   const matchControlNamespace = io.of("/match-control");
 
   // Enable authentication middleware
@@ -200,13 +240,10 @@ export const initializeSocketIO = (io: Server) => {
       `✅ Connected to /match-control: ${socket.id} | User: ${user.username} (${user.userId}) | Role: ${user.role}`
     );
 
-    // Đăng ký các sự kiện riêng cho namespace này
+    // Đăng ký các sự kiện riêng cho namespace này (bao gồm cả online control)
     registerMatchControlEvents(io, authSocket);
     registerTestEvents(io, authSocket);
-    
-    // Register match control events
-    registerMatchEvents(io, authSocket);
-    
+
     // Register audience control events
     registerAudienceEvents(io, authSocket);
 
@@ -220,24 +257,15 @@ export const initializeSocketIO = (io: Server) => {
   // Namespace dành riêng cho Student
   const studentNamespace = io.of("/student");
   studentNamespace.use(authMiddleware);
-  
+
   studentNamespace.on("connection", async (socket: Socket) => {
     const authSocket = socket as AuthenticatedSocket;
-    
+
     // Register all student namespace events using the dedicated namespace handler
     await registerStudentNamespaceEvents(io, authSocket);
   });
 
-  // Namespace mới /online-control
-  const onlineControlNamespace = io.of("/online-control");
-  onlineControlNamespace.use(authMiddleware);
-  
-  onlineControlNamespace.on("connection", async (socket: Socket) => {
-    const authSocket = socket as AuthenticatedSocket;
-    
-    // Register all online control namespace events using the dedicated namespace handler
-    await registerOnlineControlNamespaceEvents(io, authSocket);
-  });
-
-  logger.info("✅ Socket.IO server initialized with /match-control, /student, and /online-control namespaces.");
+  logger.info(
+    "✅ Socket.IO server initialized with /match-control and /student namespaces."
+  );
 };

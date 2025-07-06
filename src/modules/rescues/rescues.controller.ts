@@ -333,7 +333,7 @@ export default class RescueController {
         throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
       }
 
-      if (rescuese.status === "used") {
+      if (rescuese.status !== "proposed") {
         throw new Error("Đã hết lượt cứu trợ");
       }
 
@@ -354,6 +354,129 @@ export default class RescueController {
 
       logger.info(`Cứu trợ thành công`);
       res.json(successResponse(null, "Cứu trợ thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  // API: Lấy danh sách rescue theo matchId và rescueType (mặc định 'resurrected')
+  static async getRescuesByMatchIdAndType(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      const rescueType = (req.query.rescueType as string) || "resurrected";
+
+      if (isNaN(matchId)) {
+        res.status(400).json({
+          message: "Invalid matchId parameter",
+        });
+        return;
+      }
+
+      const rescues = await RescueService.getRescuesByMatchIdAndType(
+        matchId,
+        rescueType
+      );
+
+      res.status(200).json({
+        message: "Rescues retrieved successfully",
+        data: rescues,
+      });
+    } catch (error) {
+      console.error("Error in getRescuesByMatchIdAndType:", error);
+      res.status(500).json({
+        message: "Internal server error",
+        error: process.env.NODE_ENV === "development" ? error : {},
+      });
+    }
+  }
+
+  /**
+   * API cập nhật trạng thái rescue dựa trên câu hỏi hiện tại
+   */
+  static async updateRescueStatusByCurrentQuestion(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { matchId, currentQuestionOrder } = req.body;
+
+      const result = await RescueService.updateRescueStatusByCurrentQuestion(
+        matchId,
+        currentQuestionOrder
+      );
+
+      res.json({
+        success: true,
+        message: `Cập nhật trạng thái rescue thành công. Tổng cộng ${result.totalUpdated} rescue được cập nhật.`,
+        data: {
+          rescues: result.updatedRescues,
+          currentEligible: result.currentEligibleRescues,
+          summary: result.summary,
+          currentQuestionOrder,
+        },
+      });
+    } catch (error) {
+      logger.error("Error in updateRescueStatusByCurrentQuestion:", error);
+      res.status(500).json({
+        success: false,
+        message:
+          (error as Error).message ||
+          "Lỗi server khi cập nhật trạng thái rescue",
+      });
+    }
+  }
+
+  // Lấy danh sách rescue theo matchId và rescueType là "lifelineUsed"
+  static async getListRescue(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+
+      const match = await prisma.match.findFirst({
+        where: { slug: slug },
+      });
+
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu");
+      }
+
+      const rescues = await RescueService.getListRescue(match.id);
+
+      if (!rescues || rescues.length === 0) {
+        throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
+      }
+
+      logger.info(`Lấy danh sách cứu trợ cho trận đấu ${match.id} thành công`);
+      res.json(successResponse(rescues, "Lấy danh sách cứu trợ thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  // Lấy danh sách rescue theo matchId với tất cả rescueType
+  static async getAllRescues(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+
+      const match = await prisma.match.findFirst({
+        where: { slug: slug },
+      });
+
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu");
+      }
+
+      const rescues = await RescueService.getAllRescue(match.id);
+
+      if (!rescues || rescues.length === 0) {
+        throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
+      }
+
+      logger.info(`Lấy danh sách cứu trợ cho trận đấu ${match.id} thành công`);
+      res.json(successResponse(rescues, "Lấy danh sách cứu trợ thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

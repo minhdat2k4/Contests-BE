@@ -1,22 +1,96 @@
 import { prisma } from "@/config/database";
-import { ClassVideo } from "@prisma/client";
 import {
   CreateClassVideoInput,
   UpdateClassVideoInput,
+  ClassVideoQueryInput,
+  ClassVideo,
 } from "./classVideo.schema";
 export default class ClassVideoService {
-  static async getAll(contestId: number): Promise<ClassVideo[] | null> {
-    return prisma.classVideo.findMany({
-      where: {
-        contestId: contestId,
+  static async getAll(
+    query: ClassVideoQueryInput,
+    contestId: number
+  ): Promise<{
+    classVideos: ClassVideo[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, search } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+
+    if (search) {
+      const keywords = search.trim().split(/\s+/);
+      whereClause.OR = keywords.flatMap((keyword: string) => [
+        { name: { contains: keyword } },
+        { class: { is: { name: { contains: keyword } } } },
+      ]);
+    }
+
+    const classVideoRaw = await prisma.classVideo.findMany({
+      where: { ...whereClause, contestId: contestId },
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        slogan: true,
+        videos: true,
+        classId: true,
+        class: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
+    const classVideos = classVideoRaw.map(key => ({
+      id: key.id,
+      name: key.name,
+      slogan: key.slogan ?? null,
+      videos: key.videos,
+      classId: key.classId,
+      className: key.class?.name ?? undefined,
+    }));
+    const total = await prisma.classVideo.count({
+      where: { contestId: contestId, ...whereClause },
+    });
+    const totalPages = Math.ceil(total / limit);
+    return {
+      classVideos: classVideos,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 
   static async getBy(data: any): Promise<ClassVideo | null> {
     return prisma.classVideo.findFirst({
       where: {
         ...data,
+      },
+      select: {
+        id: true,
+        name: true,
+        slogan: true,
+        videos: true,
+        classId: true,
+        class: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
   }

@@ -75,6 +75,7 @@ enum RescueStatus {
   used
   passed
   notEligible    
+  proposed
 }
 
 enum AwardType {
@@ -109,16 +110,15 @@ enum ControlKey {
   video
   audio
   image
+  chart
 }
 
 enum ControlValue {
   start
   pause
   reset
-  zoomIn
-  zoomOut
   Eliminated
-  Rescued
+  Rescued 
 }
 
 model User {
@@ -183,6 +183,8 @@ model Student {
   id           Int      @id @default(autoincrement())
   fullName     String   @db.VarChar(255) @map("full_name")
   studentCode  String?  @db.VarChar(12) @map("student_code")
+  avatar      String?  @db.VarChar(255)
+  bio         String?  @db.Text
   classId      Int     
   class        Class    @relation(fields: [classId], references: [id],onUpdate:Restrict, onDelete:Restrict)
   userId       Int?      @unique

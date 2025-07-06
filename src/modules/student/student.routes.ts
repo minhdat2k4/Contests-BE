@@ -13,16 +13,13 @@ import {
   deleteStudentsSchema,
 } from "./student.schema";
 import { authenticate, role } from "@/middlewares/auth";
+import { createMulter } from "@/utils/multer";
+
+const uploads = createMulter("Student");
 const studentRouter = Router();
 // prive
 
-studentRouter.get(
-  "/",
-  authenticate,
-  role("Admin"),
-  validateQuery(StudentQuerySchema),
-  StudentController.getAlls
-);
+studentRouter.get("/", authenticate, role("Admin"), StudentController.getAlls);
 
 studentRouter.get(
   "/not-contest/:slug",
@@ -44,7 +41,7 @@ studentRouter.post(
   "/",
   authenticate,
   role("Admin"),
-  validateBody(CreateStudentShema),
+  uploads.single("avatar"),
   StudentController.createStudent
 );
 
@@ -52,17 +49,8 @@ studentRouter.patch(
   "/:id",
   authenticate,
   role("Admin"),
-  validateBody(UpdateStundentShema),
-  validateParams(StudentIdShame),
+  uploads.single("avatar"),
   StudentController.updateStudent
-);
-
-studentRouter.patch(
-  "/:id/toggle-active",
-  authenticate,
-  role("Admin"),
-  validateParams(StudentIdShame),
-  StudentController.toggleActive
 );
 studentRouter.delete(
   "/:id",

@@ -1,11 +1,17 @@
 // src/socket/events/question.events.ts
 import { Server, Socket } from "socket.io";
 import { MatchService } from "@/modules/match";
+import { RescueService } from "@/modules/rescues";
+import { logger } from "@/utils/logger";
+import { ScreenService } from "@/modules/screen";
+import { GroupDivisionService } from "@/modules/groupDivision";
 
 import { matchTimers } from "../events/timer.event";
 
 export const registerQuestionEvents = (io: Server, socket: Socket) => {
   socket.on("currentQuestion:get", async (data, callback) => {
+    // console.log("[DEBUG] Admin gửi currentQuestion:get:", data);
+
     const { match, questionOrder } = data;
 
     const matchTimer = matchTimers.get(match);
@@ -14,8 +20,6 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       matchTimer.intervalId = null;
       matchTimer.status = "paused";
     }
-
-    // console.log(data);
 
     const matchRaw = await MatchService.MatchControl(match);
     if (!matchRaw) {
@@ -50,13 +54,123 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       return callback({ success: false, message: "Không tìm thấy trận đấu" });
     }
 
+    const screen = await MatchService.ScreenControl(matchInfo.id);
+    if (!screen) {
+      return callback({
+        success: false,
+        message: "Không tìm thấy màn hình",
+      });
+    }
+
+    await ScreenService.update(screen.id, {
+      controlKey: "question",
+    });
+
+    await GroupDivisionService.UpdateContestantStatusByIds(matchInfo.id);
+
+    const ListContestant = await MatchService.ListContestant(matchInfo.id);
+
+    const isMatchStarted = matchRaw.status === "ongoing";
     callback?.(null, {
       success: true,
       message: `Đã chuyển sang câu ${currentQuestion.questionOrder}`,
     });
+
+    // Admin luôn nhận cập nhật qua match-control (không ảnh hưởng logic cũ)
     io.of("/match-control").to(roomName).emit("currentQuestion:get", {
       currentQuestion,
       matchInfo,
+      ListContestant,
     });
+
+    // 🔥 NEW: CHỈ gửi cho học sinh khi match đã bắt đầu
+    if (isMatchStarted) {
+      io.of("/student")
+        .to(roomName)
+        .emit("match:questionShown", {
+          matchId: matchInfo.id,
+          matchSlug: matchInfo.slug,
+          currentQuestion: questionOrder,
+          remainingTime: currentQuestion.defaultTime,
+          currentQuestionData: {
+            order: questionOrder,
+            question: {
+              id: currentQuestion.id,
+              intro: currentQuestion.intro,
+              content: currentQuestion.content,
+              questionType: currentQuestion.questionType,
+              difficulty: currentQuestion.difficulty,
+              defaultTime: currentQuestion.defaultTime,
+              score: currentQuestion.score,
+              options: Array.isArray(currentQuestion.options)
+                ? currentQuestion.options
+                : typeof currentQuestion.options === "string"
+                ? JSON.parse(currentQuestion.options)
+                : [],
+              media: Array.isArray((currentQuestion as any).media)
+                ? (currentQuestion as any).media
+                : [],
+            },
+          },
+        });
+    } else {
+      console.log(
+        `[DEBUG] ⚠️ KHÔNG gửi câu hỏi cho học sinh (match chưa bắt đầu)`
+      );
+    }
+  });
+
+  // Event để cập nhật status rescue dựa vào câu hỏi hiện tại
+  socket.on("rescue:updateStatusByQuestion", async (data, callback) => {
+    try {
+      const { matchId, currentQuestionOrder, match } = data;
+
+      if (!matchId || currentQuestionOrder === undefined) {
+        return callback({
+          success: false,
+          message: "Thiếu thông tin matchId hoặc currentQuestionOrder",
+        });
+      }
+
+      // Gọi service để cập nhật trạng thái rescue
+      const result = await RescueService.updateRescueStatusByCurrentQuestion(
+        Number(matchId),
+        Number(currentQuestionOrder)
+      );
+
+      if (!result) {
+        return callback({
+          success: false,
+          message: "Cập nhật trạng thái rescue thất bại",
+        });
+      }
+
+      const roomName = `match-${match}`;
+
+      // Trả về kết quả thông qua callback
+      callback(null, {
+        success: true,
+        message: `Đã cập nhật ${result.totalUpdated} rescue`,
+        data: result,
+      });
+
+      io.of("/match-control").to(roomName).emit("rescue:statusUpdated", {
+        success: true,
+        data: result,
+      });
+      const ListRescue = await RescueService.getListRescue(matchId);
+
+      io.of("/match-control").to(roomName).emit("rescue:updateStatus", {
+        ListRescue,
+      });
+    } catch (error) {
+      logger.error("Socket error - rescue:updateStatusByQuestion:", error);
+      callback({
+        success: false,
+        message: `Lỗi khi cập nhật trạng thái rescue: ${
+          (error as Error).message
+        }`,
+      });
+    }
   });
 };

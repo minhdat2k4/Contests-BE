@@ -5,8 +5,8 @@ import {
   StudentQueryInput,
   UpdateStudentInput,
   Students,
+  StudentType,
 } from "@/modules/student";
-import { table } from "console";
 export default class StudentService {
   static async updateStudent(
     id: number,
@@ -25,6 +25,22 @@ export default class StudentService {
     if (data.studentCode !== undefined) {
       updateData.studentCode = data.studentCode;
     }
+
+    if (data.bio !== undefined) {
+      updateData.bio = data.bio;
+    }
+
+    if (data.avatar !== undefined) {
+      updateData.avatar = data.avatar;
+    }
+
+    if (data.avatar === null) {
+      updateData.avatar = null;
+    }
+    if (data.userId !== undefined) {
+      updateData.userId = data.userId;
+    }
+
     return prisma.student.update({
       where: { id: id },
       data: {
@@ -48,10 +64,30 @@ export default class StudentService {
     });
   }
 
-  static async getStudentBy(data: any): Promise<Student | null> {
+  static async getStudentBy(data: any): Promise<StudentType | null> {
     return prisma.student.findFirst({
       where: {
         ...data,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        studentCode: true,
+        isActive: true,
+        classId: true,
+        userId: true,
+        bio: true,
+        avatar: true,
+        class: {
+          select: {
+            name: true,
+          },
+        },
+        user: {
+          select: {
+            username: true,
+          },
+        },
       },
     });
   }
@@ -122,7 +158,9 @@ export default class StudentService {
       },
     };
   }
-  static async createClass(data: CreateStudentInput): Promise<Student | null> {
+  static async createStudent(
+    data: CreateStudentInput
+  ): Promise<Student | null> {
     return prisma.student.create({
       data: {
         ...data,

@@ -169,7 +169,10 @@ export default class GroupService {
       
       for (const groupData of groupsData) {
         const group = await tx.group.create({
-          data: groupData
+          data: {
+            ...groupData,
+            userId: null,
+          },
         });
         createdGroups.push(group);
       }

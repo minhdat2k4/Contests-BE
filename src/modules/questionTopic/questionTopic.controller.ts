@@ -1,5 +1,9 @@
 import { Request, Response } from "express";
-import { successResponse, errorResponse, paginatedResponse } from "@/utils/response";
+import {
+  successResponse,
+  errorResponse,
+  paginatedResponse,
+} from "@/utils/response";
 import { logger } from "@/utils/logger";
 import { CustomError } from "@/middlewares/errorHandler";
 import { ERROR_CODES } from "@/constants/errorCodes";
@@ -11,6 +15,7 @@ import {
   QuestionTopicIdInput,
   BatchDeleteQuestionTopicsInput,
 } from "./questionTopic.schema";
+import { prisma } from "@/config/database";
 
 export default class QuestionTopicController {
   /**
@@ -30,41 +35,49 @@ export default class QuestionTopicController {
         );
       }
 
-      const questionTopic = await QuestionTopicService.createQuestionTopic(data);
+      const questionTopic = await QuestionTopicService.createQuestionTopic(
+        data
+      );
 
       logger.info(`Question topic created successfully: ${questionTopic.id}`, {
         questionTopicId: questionTopic.id,
         name: questionTopic.name,
       });
 
-      res.status(201).json(
-        successResponse(questionTopic, "Tạo chủ đề câu hỏi thành công")
-      );
+      res
+        .status(201)
+        .json(successResponse(questionTopic, "Tạo chủ đề câu hỏi thành công"));
     } catch (error) {
       logger.error("Error creating question topic:", error);
-      
+
       if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
       } else {
-        res.status(500).json(
-          errorResponse(
-            "Lỗi server khi tạo chủ đề câu hỏi",
-            ERROR_CODES.INTERNAL_SERVER_ERROR
-          )
-        );
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              "Lỗi server khi tạo chủ đề câu hỏi",
+              ERROR_CODES.INTERNAL_SERVER_ERROR
+            )
+          );
       }
     }
-  }  /**
+  }
+  /**
    * Get question topic by ID
    */
-  static async getQuestionTopicById(req: Request, res: Response): Promise<void> {
+  static async getQuestionTopicById(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       // Parse ID manually since we disabled middleware validation
       const idParam = req.params.id;
       const id = parseInt(idParam, 10);
-      
+
       if (isNaN(id) || id <= 0) {
         throw new CustomError(
           "ID phải là số nguyên dương",
@@ -84,36 +97,50 @@ export default class QuestionTopicController {
         );
       }
 
-      res.status(200).json(
-        successResponse(questionTopic, "Lấy thông tin chủ đề câu hỏi thành công")
-      );
-    } catch (error) {
-      logger.error("Error getting question topic by ID:", error);
-      
-      if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
-      } else {
-        res.status(500).json(
-          errorResponse(
-            "Lỗi server khi lấy thông tin chủ đề câu hỏi",
-            ERROR_CODES.INTERNAL_SERVER_ERROR
+      res
+        .status(200)
+        .json(
+          successResponse(
+            questionTopic,
+            "Lấy thông tin chủ đề câu hỏi thành công"
           )
         );
+    } catch (error) {
+      logger.error("Error getting question topic by ID:", error);
+
+      if (error instanceof CustomError) {
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
+      } else {
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              "Lỗi server khi lấy thông tin chủ đề câu hỏi",
+              ERROR_CODES.INTERNAL_SERVER_ERROR
+            )
+          );
       }
     }
   }
 
   /**
    * Update question topic
-   */  static async updateQuestionTopic(req: Request, res: Response): Promise<void> {
+   */ static async updateQuestionTopic(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const idParam = req.params.id;
       const id = parseInt(idParam, 10);
-      
+
       if (isNaN(id) || id <= 0) {
-        throw new CustomError("ID phải là số nguyên dương", 400, ERROR_CODES.VALIDATION_ERROR);
+        throw new CustomError(
+          "ID phải là số nguyên dương",
+          400,
+          ERROR_CODES.VALIDATION_ERROR
+        );
       }
 
       const data: UpdateQuestionTopicInput = req.body;
@@ -140,43 +167,58 @@ export default class QuestionTopicController {
         }
       }
 
-      const updatedQuestionTopic = await QuestionTopicService.updateQuestionTopic(id, data);
+      const updatedQuestionTopic =
+        await QuestionTopicService.updateQuestionTopic(id, data);
 
       logger.info(`Question topic updated successfully: ${id}`, {
         questionTopicId: id,
         updates: data,
       });
 
-      res.status(200).json(
-        successResponse(updatedQuestionTopic, "Cập nhật chủ đề câu hỏi thành công")
-      );
-    } catch (error) {
-      logger.error("Error updating question topic:", error);
-      
-      if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
-      } else {
-        res.status(500).json(
-          errorResponse(
-            "Lỗi server khi cập nhật chủ đề câu hỏi",
-            ERROR_CODES.INTERNAL_SERVER_ERROR
+      res
+        .status(200)
+        .json(
+          successResponse(
+            updatedQuestionTopic,
+            "Cập nhật chủ đề câu hỏi thành công"
           )
         );
+    } catch (error) {
+      logger.error("Error updating question topic:", error);
+
+      if (error instanceof CustomError) {
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
+      } else {
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              "Lỗi server khi cập nhật chủ đề câu hỏi",
+              ERROR_CODES.INTERNAL_SERVER_ERROR
+            )
+          );
       }
     }
   }
 
   /**
    * Soft delete question topic
-   */  static async deleteQuestionTopic(req: Request, res: Response): Promise<void> {
+   */ static async deleteQuestionTopic(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const idParam = req.params.id;
       const id = parseInt(idParam, 10);
-      
+
       if (isNaN(id) || id <= 0) {
-        throw new CustomError("ID phải là số nguyên dương", 400, ERROR_CODES.VALIDATION_ERROR);
+        throw new CustomError(
+          "ID phải là số nguyên dương",
+          400,
+          ERROR_CODES.VALIDATION_ERROR
+        );
       }
 
       // Check if question topic exists
@@ -195,94 +237,127 @@ export default class QuestionTopicController {
         questionTopicId: id,
       });
 
-      res.status(200).json(
-        successResponse(null, "Xóa chủ đề câu hỏi thành công")
-      );
+      res
+        .status(200)
+        .json(successResponse(null, "Xóa chủ đề câu hỏi thành công"));
     } catch (error) {
       logger.error("Error deleting question topic:", error);
-      
+
       if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
       } else {
-        res.status(500).json(
-          errorResponse(
-            "Lỗi server khi xóa chủ đề câu hỏi",
-            ERROR_CODES.INTERNAL_SERVER_ERROR
-          )
-        );
+        res
+          .status(500)
+          .json(
+            errorResponse(
+              "Lỗi server khi xóa chủ đề câu hỏi",
+              ERROR_CODES.INTERNAL_SERVER_ERROR
+            )
+          );
       }
     }
   }
   /**
    * Get all question topics with pagination and filtering
    */
-  static async getAllQuestionTopics(req: Request, res: Response): Promise<void> {
+  static async getAllQuestionTopics(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       // Ensure proper validation and defaults
       const queryInput: QuestionTopicQueryInput = {
         page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 10,
         search: req.query.search as string | undefined,
-        isActive: req.query.isActive ? req.query.isActive === "true" : undefined,
-        sortBy: (req.query.sortBy as "name" | "createdAt" | "updatedAt") || "createdAt",
-        sortOrder: (req.query.sortOrder as "asc" | "desc") || "desc"
+        isActive: req.query.isActive
+          ? req.query.isActive === "true"
+          : undefined,
+        sortBy:
+          (req.query.sortBy as "name" | "createdAt" | "updatedAt") ||
+          "createdAt",
+        sortOrder: (req.query.sortOrder as "asc" | "desc") || "desc",
       };
 
-      const result = await QuestionTopicService.getAllQuestionTopics(queryInput);
-
-      res.status(200).json(
-        paginatedResponse(
-          result.questionTopics,
-          result.pagination,
-          "Lấy danh sách chủ đề câu hỏi thành công"
-        )
+      const result = await QuestionTopicService.getAllQuestionTopics(
+        queryInput
       );
+
+      res
+        .status(200)
+        .json(
+          paginatedResponse(
+            result.questionTopics,
+            result.pagination,
+            "Lấy danh sách chủ đề câu hỏi thành công"
+          )
+        );
     } catch (error) {
       logger.error("Error getting all question topics:", error);
-      
-      res.status(500).json(
-        errorResponse(
-          "Lỗi server khi lấy danh sách chủ đề câu hỏi",
-          ERROR_CODES.INTERNAL_SERVER_ERROR
-        )
-      );
+
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            "Lỗi server khi lấy danh sách chủ đề câu hỏi",
+            ERROR_CODES.INTERNAL_SERVER_ERROR
+          )
+        );
     }
   }
   /**
    * Get active question topics for dropdown
    */
-  static async getActiveQuestionTopics(req: Request, res: Response): Promise<void> {
+  static async getActiveQuestionTopics(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
-      const questionTopics = await QuestionTopicService.getActiveQuestionTopics();
+      const questionTopics =
+        await QuestionTopicService.getActiveQuestionTopics();
 
-      res.status(200).json(
-        successResponse(questionTopics, "Lấy danh sách chủ đề câu hỏi hoạt động thành công")
-      );
+      res
+        .status(200)
+        .json(
+          successResponse(
+            questionTopics,
+            "Lấy danh sách chủ đề câu hỏi hoạt động thành công"
+          )
+        );
     } catch (error) {
       logger.error("Error getting active question topics:", error);
-      
-      res.status(500).json(
-        errorResponse(
-          "Lỗi server khi lấy danh sách chủ đề câu hỏi hoạt động",
-          ERROR_CODES.INTERNAL_SERVER_ERROR
-        )
-      );
+
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            "Lỗi server khi lấy danh sách chủ đề câu hỏi hoạt động",
+            ERROR_CODES.INTERNAL_SERVER_ERROR
+          )
+        );
     }
   }
   /**
    * Batch delete question topics
    */
-  static async batchDeleteQuestionTopics(req: Request, res: Response): Promise<void> {
+  static async batchDeleteQuestionTopics(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const data: BatchDeleteQuestionTopicsInput = req.body;
 
-      logger.info(`Attempting to batch delete ${data.ids.length} question topics`);
+      logger.info(
+        `Attempting to batch delete ${data.ids.length} question topics`
+      );
 
       const result = await QuestionTopicService.batchDeleteQuestionTopics(data);
 
-      logger.info(`Batch delete completed: ${result.successful} successful, ${result.failed} failed`);      // Determine appropriate status code and message based on results
+      logger.info(
+        `Batch delete completed: ${result.successful} successful, ${result.failed} failed`
+      ); // Determine appropriate status code and message based on results
       let statusCode: number;
       let message: string;
 
@@ -290,9 +365,7 @@ export default class QuestionTopicController {
         // All items deleted successfully
         statusCode = 200;
         message = `Xóa hàng loạt thành công: ${result.successful}/${result.totalRequested} chủ đề câu hỏi đã được xóa`;
-        res.status(statusCode).json(
-          successResponse(result, message)
-        );
+        res.status(statusCode).json(successResponse(result, message));
       } else if (result.successful === 0) {
         // All items failed
         statusCode = 400;
@@ -307,25 +380,51 @@ export default class QuestionTopicController {
         // Partial success - some succeeded, some failed
         statusCode = 207; // Multi-Status
         message = `Xóa hàng loạt hoàn tất một phần: ${result.successful}/${result.totalRequested} thành công, ${result.failed} thất bại`;
-        res.status(statusCode).json(
-          successResponse(result, message)
-        );
+        res.status(statusCode).json(successResponse(result, message));
       }
     } catch (error) {
       logger.error("Error in batch delete question topics:", error);
-        if (error instanceof CustomError) {
-        res.status(error.statusCode).json(
-          errorResponse(error.message, error.code)
-        );
+      if (error instanceof CustomError) {
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
         return;
       }
 
-      res.status(500).json(
-        errorResponse(
-          "Lỗi server khi xóa hàng loạt chủ đề câu hỏi",
-          ERROR_CODES.INTERNAL_SERVER_ERROR
-        )
+      res
+        .status(500)
+        .json(
+          errorResponse(
+            "Lỗi server khi xóa hàng loạt chủ đề câu hỏi",
+            ERROR_CODES.INTERNAL_SERVER_ERROR
+          )
+        );
+    }
+  }
+  static async toggleActive(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id;
+      const topic = await prisma.questionTopic.findUnique({
+        where: { id: Number(id) },
+      });
+      if (!topic) {
+        throw new Error("Không tìm thấy chủ đề câu hỏi");
+      }
+      const updated = await prisma.questionTopic.update({
+        where: { id: topic.id },
+        data: { isActive: !topic.isActive },
+      });
+      if (!updated) {
+        throw new Error("Cập nhật trạng thái thất bại");
+      }
+
+      res.json(
+        successResponse(updated, "Cập nhật trạng thái hoạt động thành công")
       );
+      logger.info(`Cập nhật trạng thái hoạt động ${topic.name} thành công`);
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
 }

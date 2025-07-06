@@ -3,12 +3,17 @@ import {
   CreateStudentInput,
   StudentService,
   StudentQueryInput,
-  UpdateStudentInput,
 } from "@/modules/student";
-import { ClassService } from "@/modules/class";
 import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
+import {
+  prepareFileInfoCustom,
+  ensureFolderExists,
+  deleteFile,
+  moveUploadedFile,
+} from "@/utils/uploadFile";
+import path from "path";
 export default class StudentController {
   static async toggleActive(req: Request, res: Response): Promise<void> {
     try {
@@ -56,6 +61,7 @@ export default class StudentController {
       if (!deleteStudent) {
         throw new Error(`Xóa sinh viên ${student.fullName} thất bại `);
       }
+      await deleteFile(student?.avatar);
       logger.info(`Xóa sinh viên ${student.fullName} thành công`);
       res.json(
         successResponse(null, `Xóa sinh viên ${student.fullName} thành công`)
@@ -67,33 +73,55 @@ export default class StudentController {
   }
   static async updateStudent(req: Request, res: Response): Promise<void> {
     try {
-      const id = req.params.id;
-      const input: UpdateStudentInput = req.body;
+      const input: any = req.body || {};
+      const id = Number(req.params.id);
+
+      const existing = await StudentService.getStudentBy({ id: id });
+      if (!existing) throw new Error("Không tìm thấy sinh viên");
+
       if (input.classId) {
-        const school = await ClassService.getClassBy({ id: input.classId });
-        if (!school) {
-          throw new Error("Không tìm thấy lớp");
-        }
+        const classExists = await prisma.class.findFirst({
+          where: { id: Number(input.classId) },
+        });
+        if (!classExists) throw new Error("Không tìm thấy lớp học");
+        input.classId = classExists.id;
       }
-      const student = await StudentService.getStudentBy({ id: Number(id) });
-      if (!student) {
-        throw new Error("Không tìm thấy sinh viên");
+
+      // Xử lý file upload nếu có
+      let newUrl: string | undefined | null;
+      if (req.file) {
+        const folderPath = path.resolve(process.cwd(), "uploads", "Student");
+        await ensureFolderExists(folderPath);
+        const info = prepareFileInfoCustom(req.file, folderPath);
+        await moveUploadedFile(info.tempPath!, info.destPath!);
+        newUrl = `/uploads/Student/${info.fileName}`;
       }
-      console.log(input);
-      const updateStudent = await StudentService.updateStudent(
-        Number(id),
-        input
-      );
-      if (!updateStudent) {
-        throw new Error("Cập nhật sinh viên  thất bại");
+
+      if (input.isAvatarDeleted) newUrl = null;
+      const data: any = {};
+
+      if (input.fullName) data.fullName = input.fullName;
+      if (input.classId) data.classId = Number(input.classId);
+      if (input.studentCode) data.studentCode = input.studentCode;
+      if (typeof input.isActive !== "undefined") {
+        data.isActive = input.isActive === "true" || input.isActive === true;
       }
-      logger.info(`Cập nhật sinh viên  ${updateStudent.fullName} thành công`);
-      res.json(
-        successResponse(
-          updateStudent,
-          `Cập nhật sinh viên ${updateStudent.fullName} thành công`
-        )
-      );
+      if (input.bio) data.bio = input.bio;
+      if (input.userId) data.userId = Number(input.userId);
+      if (typeof newUrl !== "undefined") {
+        data.avatar = newUrl;
+        await deleteFile(existing.avatar);
+      }
+
+      const updated = await StudentService.updateStudent(id, data);
+      if (!updated) throw new Error("Cập nhật sinh viên thất bại");
+
+      if (newUrl && existing.avatar) {
+        await deleteFile(existing.avatar);
+      }
+
+      logger.info("Cập nhật sinh viên thành công");
+      res.json(successResponse(updated, "Cập nhật sinh viên thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
@@ -148,28 +176,72 @@ export default class StudentController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
-
   static async createStudent(req: Request, res: Response): Promise<void> {
     try {
-      const input: CreateStudentInput = req.body;
-      const Class = await ClassService.getClassBy({ id: input.classId });
-      if (!Class) {
-        throw new Error("Không tìm thấy lớp học");
-      }
-      const student = await StudentService.createClass(input);
-      if (!student) {
-        throw new Error(`Thêm sinh viên ${input.fullName} thất bại`);
+      const input: Omit<CreateStudentInput, "avatar"> = req.body;
+      const slug = req.params.slug;
+
+      const contest = await prisma.contest.findFirst({
+        where: { slug },
+      });
+
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi");
       }
 
-      logger.info(`Thêm sinh viên ${input.fullName} thành công`);
-      res.json(
-        successResponse(student, `Thêm sinh viên ${input.fullName} thành công`)
-      );
+      const classEx = await prisma.class.findFirst({
+        where: { id: Number(input.classId) },
+      });
+
+      if (!classEx) {
+        throw new Error("Không tìm thấy lớp học");
+      }
+
+      // Kiểm tra userId đã có thí sinh chưa
+      const existingStudent = await prisma.student.findFirst({
+        where: {
+          userId: Number(input.userId),
+        },
+      });
+
+      if (existingStudent) {
+        throw new Error("Tài khoản này đã có thí sinh");
+      }
+
+      let avatarPath: string | undefined;
+
+      if (req.file) {
+        const file = req.file;
+        const folderPath = path.resolve(process.cwd(), "uploads", "Student");
+
+        // Xử lý file
+        const info = prepareFileInfoCustom(file, folderPath);
+        avatarPath = `/uploads/Student/${info.fileName}`;
+
+        // Di chuyển file từ thư mục tạm sang thư mục chính
+        await moveUploadedFile(info.tempPath!, info.destPath!);
+      }
+
+      const data = {
+        avatar: avatarPath,
+        fullName: input.fullName,
+        classId: classEx.id,
+        studentCode: input.studentCode,
+        isActive: Boolean(input.isActive), // convert string -> boolean
+        bio: input.bio ?? "",
+        userId: Number(input.userId),
+      };
+
+      const student = await StudentService.createStudent(data);
+
+      logger.info(`Thêm sinh viên thành công`);
+      res.json(successResponse(student, `Thêm sinh viên thành công`));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
   static async deleteStudents(req: Request, res: Response): Promise<void> {
     try {
       const { ids } = req.body;
@@ -215,6 +287,7 @@ export default class StudentController {
           status: "success",
           msg: `Xóa sinh viên "${student.fullName}" thành công`,
         });
+        await deleteFile(student.avatar);
 
         logger.info(`Xóa sinh viên ${student.fullName} thành công`);
       }

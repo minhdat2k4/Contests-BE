@@ -1,14 +1,58 @@
 import { prisma } from "@/config/database";
 import { Media } from "@prisma/client";
-import { CreateMediaInput, UpdateMediaInput } from "./media.schema";
+import {
+  CreateMediaInput,
+  MediaQueryInput,
+  UpdateMediaInput,
+} from "./media.schema";
 export default class MediaService {
-  static async getAll(contestId: number): Promise<Media[] | null> {
-    return prisma.media.findMany({
+  static async getAll(
+    query: MediaQueryInput,
+    contestId: number
+  ): Promise<{
+    medias: Media[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const { page, limit, type } = query;
+    const skip = (page - 1) * limit;
+    const whereClause: any = {};
+
+    if (type !== undefined) {
+      whereClause.type = type;
+    }
+
+    const medias = await prisma.media.findMany({
       where: {
+        ...whereClause,
         contestId: contestId,
-        type: "images",
       },
+      skip: skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
     });
+
+    const total = await prisma.media.count({
+      where: { ...whereClause, contestId: contestId },
+    });
+    const totalPages = Math.ceil(total / limit);
+    return {
+      medias: medias,
+      pagination: {
+        page: page,
+        limit: limit,
+        total: total,
+        totalPages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 
   static async getBy(data: any): Promise<Media | null> {

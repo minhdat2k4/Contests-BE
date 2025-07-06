@@ -11,6 +11,7 @@ import {
   UpdateRescuesShema,
   deleteRescuesesSchema,
   SupportAnswerSchema,
+  UpdateRescueStatusSchema,
 } from "./rescues.schema";
 import { authenticate, role } from "@/middlewares/auth";
 import requestQueue from "@/middlewares/queue";
@@ -18,6 +19,20 @@ import requestQueue from "@/middlewares/queue";
 const rescueRoute = Router();
 
 rescueRoute.get("/match/:slug/:id", RescuesController.getRescueByMatchSlug);
+
+rescueRoute.get(
+  "/list-lifelineUsed/:slug",
+  authenticate,
+  role("Admin"),
+  RescuesController.getListRescue
+);
+
+rescueRoute.get(
+  "/list-all/:slug",
+  authenticate,
+  role("Admin"),
+  RescuesController.getAllRescues
+);
 
 rescueRoute.get("/chart/:id", RescuesController.RescueChart);
 
@@ -97,6 +112,20 @@ rescueRoute.post(
   role("Admin"),
   validateBody(deleteRescuesesSchema),
   RescuesController.deleteMany
+);
+
+// GET /rescues/match/:matchId - Lấy danh sách rescue theo matchId và rescueType
+rescueRoute.get(
+  "/match/:matchId",
+  RescuesController.getRescuesByMatchIdAndType
+);
+
+rescueRoute.post(
+  "/update-status-by-question",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdateRescueStatusSchema),
+  RescuesController.updateRescueStatusByCurrentQuestion
 );
 
 export { rescueRoute };

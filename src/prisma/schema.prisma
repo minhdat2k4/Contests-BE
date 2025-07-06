@@ -501,5 +501,5 @@ model ScreenControl {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("screen_Controls")
+  @@map("screen_controls")
 }

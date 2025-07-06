@@ -20,6 +20,13 @@ const rescueRoute = Router();
 
 rescueRoute.get("/match/:slug/:id", RescuesController.getRescueByMatchSlug);
 
+rescueRoute.get(
+  "/list-lifelineUsed/:slug",
+  authenticate,
+  role("Admin"),
+  RescuesController.getListRescue
+);
+
 rescueRoute.get("/chart/:id", RescuesController.RescueChart);
 
 rescueRoute.post(

@@ -436,14 +436,13 @@ Enum ControlKey {
   video
   audio
   image
+  chart
 }
 
 Enum ControlValue {
   start
   pause
   reset
-  zoomIn
-  zoomOut
   Eliminated
   Rescued
 }

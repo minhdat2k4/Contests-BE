@@ -11,6 +11,7 @@ import { verifyToken, JwtPayload } from "@/utils/jwt";
 import cookie from "cookie";
 import { registerAwardEvents } from "../events/award.envent";
 import { registerMatchDiagramEvents } from "../events/matchDiagram.event";
+import { registerAudienceEvents } from "../events/audience.events";
 
 const extractUserFromSocket = (socket: Socket): JwtPayload | null => {
   try {
@@ -180,6 +181,7 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
   registerScreenEvents(io, socket);
   registerTimerEvents(io, socket);
   registerUpdateStatusByAdminEvents(io, socket);
+  registerAudienceEvents(io, socket);
   registerUpdateStatusByJudgeEvents(io, socket);
 
   // 🔥 NEW: Register match events cho cả match-control và online-control

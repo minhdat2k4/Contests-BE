@@ -109,16 +109,15 @@ enum ControlKey {
   video
   audio
   image
+  chart
 }
 
 enum ControlValue {
   start
   pause
   reset
-  zoomIn
-  zoomOut
   Eliminated
-  Rescued
+  Rescued 
 }
 
 model User {

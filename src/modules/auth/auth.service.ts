@@ -81,27 +81,27 @@ export default class AuthService {
    */
   static async generateStudentCode(): Promise<string> {
     const currentYear = new Date().getFullYear().toString().slice(-2); // Lấy 2 chữ số cuối của năm
-    
+
     // Sử dụng timestamp để đảm bảo unique
     // Lấy 6 chữ số cuối của timestamp
     const timestamp = Date.now().toString().slice(-6);
-    
+
     const studentCode = `SV${currentYear}${timestamp}`;
-    
+
     // Kiểm tra xem mã này đã tồn tại chưa (để đảm bảo 100% không trùng)
     const existingStudent = await prisma.student.findFirst({
       where: {
         studentCode: studentCode,
       },
     });
-    
+
     // Nếu vẫn trùng (rất hiếm), tạo lại với timestamp mới
     if (existingStudent) {
       // Đợi 1ms và tạo lại
       await new Promise(resolve => setTimeout(resolve, 1));
       return this.generateStudentCode();
     }
-    
+
     return studentCode;
   }
 
@@ -134,7 +134,7 @@ export default class AuthService {
     const hashedPassword = await bcrypt.hash(userInput.password, 10);
 
     // Tạo transaction để đảm bảo tính nhất quán dữ liệu
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async tx => {
       // Tạo User với role Student
       const user = await tx.user.create({
         data: {

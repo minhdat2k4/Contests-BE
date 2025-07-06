@@ -572,6 +572,7 @@ export default class RescueService {
     }
   }
 
+  // Lấy danh sách rescue theo matchId và rescueType là "lifelineUsed"
   static async getListRescue(matchId: number) {
     return prisma.rescue.findMany({
       where: { matchId: matchId, rescueType: "lifelineUsed" },
@@ -584,6 +585,28 @@ export default class RescueService {
         questionTo: true,
         rescueType: true,
       },
+    });
+  }
+
+  // Lấy danh sách rescue theo matchId với tất cả rescueType
+  static async getAllRescue(matchId: number) {
+    return prisma.rescue.findMany({
+      where: { matchId: matchId },
+      select: {
+        id: true,
+        name: true,
+        index: true,
+        status: true,
+        questionFrom: true,
+        questionTo: true,
+        rescueType: true,
+        remainingContestants: true,
+      },
+      orderBy: [
+        { questionFrom: "asc" },
+        { questionTo: "asc" },
+        { createdAt: "asc" },
+      ],
     });
   }
 }

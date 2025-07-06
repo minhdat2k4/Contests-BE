@@ -430,6 +430,7 @@ export default class RescueController {
     }
   }
 
+  // Lấy danh sách rescue theo matchId và rescueType là "lifelineUsed"
   static async getListRescue(req: Request, res: Response): Promise<void> {
     try {
       const slug = req.params.slug;
@@ -443,6 +444,32 @@ export default class RescueController {
       }
 
       const rescues = await RescueService.getListRescue(match.id);
+
+      if (!rescues || rescues.length === 0) {
+        throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
+      }
+
+      logger.info(`Lấy danh sách cứu trợ cho trận đấu ${match.id} thành công`);
+      res.json(successResponse(rescues, "Lấy danh sách cứu trợ thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  // Lấy danh sách rescue theo matchId với tất cả rescueType
+  static async getAllRescues(req: Request, res: Response): Promise<void> {
+    try {
+      const slug = req.params.slug;
+
+      const match = await prisma.match.findFirst({
+        where: { slug: slug },
+      });
+
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu");
+      }
+
+      const rescues = await RescueService.getAllRescue(match.id);
 
       if (!rescues || rescues.length === 0) {
         throw new Error("Không tìm thấy cứu trợ cho trận đấu này");

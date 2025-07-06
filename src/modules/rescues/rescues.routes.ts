@@ -27,6 +27,13 @@ rescueRoute.get(
   RescuesController.getListRescue
 );
 
+rescueRoute.get(
+  "/list-all/:slug",
+  authenticate,
+  role("Admin"),
+  RescuesController.getAllRescues
+);
+
 rescueRoute.get("/chart/:id", RescuesController.RescueChart);
 
 rescueRoute.post(

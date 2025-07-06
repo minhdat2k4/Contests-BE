@@ -56,8 +56,6 @@ export const registerAudienceEvents = (io: Server, socket: Socket) => {
       });
     }
 
-    await RescueService.updateRescue(payload.rescueId, { status: "used" });
-
     const rescue = await RescueService.getRescueBy({
       id: payload.rescueId,
       matchId: matchRaw.id,
@@ -72,7 +70,7 @@ export const registerAudienceEvents = (io: Server, socket: Socket) => {
 
     const updateRescued = await RescueService.updateRescue(rescue.id, {
       questionOrder: payload.questionOrder,
-      status: "used",
+      status: "proposed",
     });
 
     if (!updateRescued) {
@@ -128,7 +126,7 @@ export const registerAudienceEvents = (io: Server, socket: Socket) => {
     }
 
     const rescuse = await RescueService.updateRescue(payload.rescueId, {
-      status: "passed",
+      status: "used",
     });
 
     if (!rescuse) {
@@ -144,7 +142,7 @@ export const registerAudienceEvents = (io: Server, socket: Socket) => {
           (item): item is string => typeof item === "string"
         )
       : [];
-    console.log("supportAnswers", supportAnswers.length);
+
     console.log(typeof (supportAnswers.length === 0));
     if (supportAnswers.length === 0) {
       console.log("Không có câu trả lời hỗ trợ nào cho cứu trợ này");
@@ -228,7 +226,7 @@ export const registerAudienceEvents = (io: Server, socket: Socket) => {
     }
 
     await RescueService.updateRescue(payload.rescuedId, {
-      status: "used",
+      status: "proposed",
     });
 
     let timerLeft = payload.timerLeft;
@@ -242,7 +240,7 @@ export const registerAudienceEvents = (io: Server, socket: Socket) => {
         timerLeft = 0;
 
         await RescueService.updateRescue(payload.rescuedId, {
-          status: "passed",
+          status: "used",
         });
 
         const ListRescue = await RescueService.getListRescue(payload.matchId);

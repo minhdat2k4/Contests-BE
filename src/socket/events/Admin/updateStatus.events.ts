@@ -81,7 +81,6 @@ export const registerUpdateStatusByAdminEvents = (
           ListContestant,
         });
 
-        // 🔥 NEW: Notify rescued students
         if (payload.status === "rescued" && payload.ids.length > 0) {
           const roomById = `match-${match.id}`;
           const roomBySlug = `match-${match.slug}`;
@@ -96,13 +95,11 @@ export const registerUpdateStatusByAdminEvents = (
 
           // Emit to room by SLUG (for WaitingRoom)
           io.of("/student").to(roomBySlug).emit("student:rescued", eventData);
-
-
         }
 
         const judges = await UserService.ListJudgeByMatchId(match.id);
         if (judges) {
-          judges.forEach(async (judge) => {
+          judges.forEach(async judge => {
             const judgeRoom = `match-${payload.match}-judge-${judge.id}`;
             const data =
               await GroupDivisionService.getContestantByJudgeIdAndMatchId(

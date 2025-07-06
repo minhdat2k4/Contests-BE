@@ -482,7 +482,7 @@ export default class RescueService {
       // Xử lý từng rescue dựa trên vị trí của nó so với câu hỏi hiện tại
       for (const rescue of rescues) {
         // Rescue đã được sử dụng thì không thay đổi
-        if (rescue.status === RescueStatus.used) {
+        if (rescue.status === RescueStatus.used || RescueStatus.proposed) {
           summary.unchanged++;
           continue;
         }
@@ -607,6 +607,21 @@ export default class RescueService {
         { questionTo: "asc" },
         { createdAt: "asc" },
       ],
+    });
+  }
+
+  static async ListRescueByMatchId(matchId: number) {
+    return prisma.rescue.findMany({
+      where: {
+        matchId: matchId,
+      },
+      select: {
+        id: true,
+        status: true,
+        questionFrom: true,
+        questionTo: true,
+        remainingContestants: true,
+      },
     });
   }
 }

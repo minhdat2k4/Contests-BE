@@ -547,6 +547,7 @@ export default class RescueService {
           questionFrom: true,
           questionTo: true,
           rescueType: true,
+          remainingContestants: true,
         },
       });
 

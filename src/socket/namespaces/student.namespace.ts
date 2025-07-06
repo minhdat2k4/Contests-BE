@@ -152,9 +152,7 @@ export const registerStudentNamespaceEvents = async (
 
 
 
-        logger.info(
-          `📝 Student ${user.username} joined rooms: ${mainRoomName} & ${answerRoomName}`
-        );
+
 
         if (callback) {
           const response = {
@@ -222,10 +220,6 @@ export const registerStudentNamespaceEvents = async (
           }
         }
 
-
-      logger.info(
-        `🚪 Student ${user.username} left rooms: ${mainRoomName} & ${answerRoomName}`
-      );
     } catch (error) {
 
       logger.error(`Error leaving rooms:`, error);

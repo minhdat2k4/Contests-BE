@@ -3,6 +3,7 @@ import { logger } from "@/utils/logger";
 import { errorResponse, successResponse } from "@/utils/response";
 import { prisma } from "@/config/database";
 import GroupDivisionService from "./groupDivision.service";
+import { exportExcel } from "../../utils/Excel";
 import {
   divideGroupsSchema,
   getAvailableContestantsSchema,
@@ -206,16 +207,23 @@ export default class GroupDivisionController {
   /**
    * Lấy danh sách nhóm hiện tại của trận đấu (không sắp xếp - dành cho frontend)
    */
-  static async getCurrentGroupsUnsorted(req: Request, res: Response): Promise<void> {
+  static async getCurrentGroupsUnsorted(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const matchId = parseInt(req.params.matchId);
       if (!matchId) {
         throw new Error("Match ID không hợp lệ");
       }
 
-      const groups = await GroupDivisionService.getCurrentGroupsUnsorted(matchId);
+      const groups = await GroupDivisionService.getCurrentGroupsUnsorted(
+        matchId
+      );
 
-      logger.info(`Lấy danh sách nhóm không sắp xếp cho trận đấu ${matchId} thành công`);
+      logger.info(
+        `Lấy danh sách nhóm không sắp xếp cho trận đấu ${matchId} thành công`
+      );
       res.json(successResponse({ groups }, "Lấy danh sách nhóm thành công"));
     } catch (error) {
       logger.error((error as Error).message);
@@ -267,9 +275,10 @@ export default class GroupDivisionController {
 
       const result = await GroupDivisionService.deleteGroup(groupId);
 
-      const message = result.deletedContestantsCount > 0
-        ? `Xóa nhóm và ${result.deletedContestantsCount} thí sinh thành công`
-        : "Xóa nhóm thành công";
+      const message =
+        result.deletedContestantsCount > 0
+          ? `Xóa nhóm và ${result.deletedContestantsCount} thí sinh thành công`
+          : "Xóa nhóm thành công";
 
       logger.info(`Xóa nhóm ${groupId} thành công`);
       res.json(successResponse(result, message));
@@ -334,13 +343,52 @@ export default class GroupDivisionController {
   /**
    * Phân bổ thí sinh vào các nhóm đã có sẵn (theo groupId, contestantIds)
    */
-  static async assignContestantsToGroups(req: Request, res: Response): Promise<void> {
+  static async assignContestantsToGroups(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const matchId = parseInt(req.params.matchId);
       if (!matchId) throw new Error("Match ID không hợp lệ");
       const input = assignContestantsToGroupsSchema.parse(req.body);
       await GroupDivisionService.assignContestantsToGroups(matchId, input);
       res.json(successResponse(null, "Phân bổ thí sinh vào nhóm thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async ExportExcel(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = req.body.matchId;
+
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: {
+          id: true,
+          slug: true,
+        },
+      });
+      if (!match) {
+        throw new Error("Trận đấu không tồn tại");
+      }
+      const raw = await GroupDivisionService.ExportExcel(matchId);
+
+      const data = raw.map((item, index) => ({
+        "Số thứ tự": index + 1,
+        "Họ và tên": item.contestant.student.fullName,
+        "Mã sinh viên": item.contestant.student.studentCode,
+        "Số báo danh": item.registrationNumber,
+        "Trường học": item.contestant.student.class.school.name,
+        "Lớp học": item.contestant.student.class.name,
+      }));
+
+      if (!data || data.length === 0) {
+        throw new Error("Không có dữ liệu để xuất");
+      }
+      const fileName = match.slug || req.body.fileName;
+      exportExcel(data, fileName, res);
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

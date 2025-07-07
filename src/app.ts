@@ -34,6 +34,7 @@ import { mediaRouter } from "@/modules/media";
 import { resultRouter } from "@/modules/result";
 import { sponsorRouter } from "@/modules/sponsor";
 import { classVideoRouter } from "@/modules/classVideo";
+import { excelRouter } from "@/modules/excel";
 
 // Load environment variables
 dotenv.config();
@@ -140,6 +141,7 @@ app.use("/api/sponsors", sponsorRouter);
 app.use("/api/contestant", contestantRouter);
 app.use("/api/group-divisions", groupDivisionRoutes);
 app.use("/api/group-division", groupDivisionRoutes);
+app.use("/api/excel", excelRouter);
 
 app.get("/api/v1", (req, res) => {
   res.status(200).json({

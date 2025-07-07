@@ -52,28 +52,16 @@ router.post(
 );
 
 // Tạo nhóm mới trong trận đấu
-router.post(
-  "/matches/:matchId/groups",
-  GroupDivisionController.createGroup
-);
+router.post("/matches/:matchId/groups", GroupDivisionController.createGroup);
 
 // Xóa nhóm
-router.delete(
-  "/groups/:groupId",
-  GroupDivisionController.deleteGroup
-);
+router.delete("/groups/:groupId", GroupDivisionController.deleteGroup);
 
 // Xóa nhiều nhóm cùng lúc
-router.delete(
-  "/groups",
-  GroupDivisionController.deleteAllGroups
-);
+router.delete("/groups", GroupDivisionController.deleteAllGroups);
 
 // Cập nhật tên nhóm
-router.put(
-  "/groups/:groupId/name",
-  GroupDivisionController.updateGroupName
-);
+router.put("/groups/:groupId/name", GroupDivisionController.updateGroupName);
 
 // Lấy danh sách trường học để lọc
 router.get("/schools", GroupDivisionController.getSchools);
@@ -89,5 +77,7 @@ router.post(
   "/matches/:matchId/assign-contestants-to-groups",
   GroupDivisionController.assignContestantsToGroups
 );
+
+router.post("/export/excel", GroupDivisionController.ExportExcel);
 
 export default router;

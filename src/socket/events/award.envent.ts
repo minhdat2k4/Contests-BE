@@ -1,6 +1,7 @@
 // src/socket/events/question.events.ts
 import { Server, Socket } from "socket.io";
 import { MatchService } from "@/modules/match";
+import { GroupDivisionService } from "@/modules/groupDivision";
 
 import { StudentService } from "@/modules/student";
 
@@ -57,9 +58,19 @@ export const registerAwardEvents = (io: Server, socket: Socket) => {
         });
       }
 
+      await GroupDivisionService.UpdateStatusGold(
+        match.id,
+        payload.registrationNumber
+      );
+
+      const ListContestant = await MatchService.ListContestant(match.id);
+
       const matchInfo = await MatchService.MatchControl(payload.match);
 
       const roomName = `match-${payload.match}`;
+      io.of("/match-control").to(roomName).emit("contestant:status-update", {
+        ListContestant,
+      });
       io.of("/match-control")
         .to(roomName)
         .emit("update:winGold", { matchInfo });

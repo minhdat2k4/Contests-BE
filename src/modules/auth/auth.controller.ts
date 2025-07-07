@@ -196,94 +196,6 @@ export default class AuthController {
         return;
       }
 
-      // Get student information using the direct relationship
-      const student = await prisma.student.findUnique({
-        where: { userId: user.id },
-        include: { class: true },
-      });
-
-      if (!student) {
-        logger.error(
-          `Không tìm thấy thông tin Student cho User ID: ${user.id}`
-        );
-        res
-          .status(400)
-          .json(errorResponse("Không tìm thấy thông tin thí sinh"));
-        return;
-      }
-
-      if (!student.isActive) {
-        logger.error(`Student ID ${student.id} đã bị vô hiệu hóa`);
-        res
-          .status(400)
-          .json(errorResponse("Tài khoản thí sinh đã bị vô hiệu hóa"));
-        return;
-      }
-
-      // Tìm thông tin thí sinh trong cuộc thi
-      const contestant = await prisma.contestant.findFirst({
-        where: {
-          studentId: student.id,
-          contest: {
-            status: {
-              in: [
-                ContestStatus.ongoing,
-                ContestStatus.upcoming,
-                ContestStatus.finished,
-              ],
-            },
-          },
-        },
-        include: {
-          contest: true,
-        },
-      });
-
-      if (!contestant) {
-        logger.error(
-          `Không tìm thấy thông tin Contestant cho Student ID: ${student.id}`
-        );
-        res
-          .status(400)
-          .json(
-            errorResponse("Không tìm thấy thông tin thí sinh trong cuộc thi")
-          );
-        return;
-      }
-
-      // Find active matches for this contestant
-      const activeMatches = await prisma.match.findMany({
-        where: {
-          round: {
-            contestId: contestant.contestId,
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          status: true,
-          currentQuestion: true,
-          remainingTime: true,
-        },
-        orderBy: { createdAt: "desc" },
-      });
-
-      // Lấy registrationNumber của thí sinh trong trận đầu tiên (nếu có)
-      let registrationNumber = null;
-      if (activeMatches.length > 0) {
-        const contestantMatch = await prisma.contestantMatch.findFirst({
-          where: {
-            contestantId: contestant.id,
-            matchId: activeMatches[0].id,
-          },
-          select: {
-            registrationNumber: true,
-          },
-        });
-        registrationNumber = contestantMatch?.registrationNumber || null;
-      }
-
       const tokenData = {
         userId: user.id,
         username: user.username,
@@ -323,16 +235,118 @@ export default class AuthController {
         maxAge: 30 * 60 * 60 * 1000 * 24, // 30 days
       });
 
+      res.json(
+        successResponse(
+          { role: user.role, accessToken },
+          "Đăng nhập thành công"
+        )
+      );
+      logger.info(
+        `Thí sinh ${input.identifier} đăng nhập thành công | User ID: ${user.id}`
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(500).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async profileStudent(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      const user = req.user;
+
+      // Kiểm tra role
+      if (user.role !== "Student") {
+        res.status(400).json(errorResponse("Tài khoản không phải là thí sinh"));
+        return;
+      }
+
+      // Lấy thông tin student
+      const student = await prisma.student.findUnique({
+        where: { userId: user.userId },
+        include: { class: true },
+      });
+      if (!student) {
+        res
+          .status(400)
+          .json(errorResponse("Không tìm thấy thông tin thí sinh"));
+        return;
+      }
+      if (!student.isActive) {
+        res
+          .status(400)
+          .json(errorResponse("Tài khoản thí sinh đã bị vô hiệu hóa"));
+        return;
+      }
+
+      // Lấy contestant
+      const contestant = await prisma.contestant.findFirst({
+        where: {
+          studentId: student.id,
+          contest: {
+            status: {
+              in: [
+                ContestStatus.ongoing,
+                ContestStatus.upcoming,
+                ContestStatus.finished,
+              ],
+            },
+          },
+        },
+        include: { contest: true },
+      });
+      if (!contestant) {
+        res
+          .status(400)
+          .json(
+            errorResponse("Không tìm thấy thông tin thí sinh trong cuộc thi")
+          );
+        return;
+      }
+
+      // Lấy matches
+      const activeMatches = await prisma.match.findMany({
+        where: {
+          round: {
+            contestId: contestant.contestId,
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          status: true,
+          currentQuestion: true,
+          remainingTime: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Lấy registrationNumber
+      let registrationNumber = null;
+      if (activeMatches.length > 0) {
+        const contestantMatch = await prisma.contestantMatch.findFirst({
+          where: {
+            contestantId: contestant.id,
+            matchId: activeMatches[0].id,
+          },
+          select: {
+            registrationNumber: true,
+          },
+        });
+        registrationNumber = contestantMatch?.registrationNumber || null;
+      }
+
       const responseData = {
         role: user.role,
-        accessToken,
         contestant: {
           id: contestant.id,
           fullName: student.fullName,
           studentCode: student.studentCode,
           class: student.class?.name || null,
           contestId: contestant.contestId,
-          registrationNumber: registrationNumber,
         },
         contest: {
           id: contestant.contest.id,
@@ -343,17 +357,62 @@ export default class AuthController {
         socket: `student-${student.id}`,
       };
 
-      res.json(successResponse(responseData, "Đăng nhập thí sinh thành công"));
-
-      logger.info(
-        `Thí sinh ${input.identifier} đăng nhập thành công | Contestant ID: ${contestant.id}`
+      res.json(
+        successResponse(responseData, "Lấy thông tin thí sinh thành công")
       );
     } catch (error) {
       logger.error((error as Error).message);
       res.status(500).json(errorResponse((error as Error).message));
     }
   }
+  /**
+   * @description Lấy registrationNumber
+   * @returns
+   */
+  static async getRegistrationNumber(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      if (!req.user) {
+        throw new Error("Không tìm thấy người dùng");
+      }
+      const { contestantId, matchId } = req.query; // hoặc req.body nếu dùng POST
 
+      if (!contestantId || !matchId) {
+        res.status(400).json(errorResponse("Thiếu contestantId hoặc matchId"));
+        return;
+      }
+
+      // Lấy registrationNumber
+      const contestantMatch = await prisma.contestantMatch.findFirst({
+        where: {
+          contestantId: Number(contestantId),
+          matchId: Number(matchId),
+        },
+        select: {
+          registrationNumber: true,
+        },
+      });
+
+      if (!contestantMatch) {
+        res
+          .status(404)
+          .json(errorResponse("Không tìm thấy registrationNumber"));
+        return;
+      }
+
+      res.json(
+        successResponse(
+          { registrationNumber: contestantMatch.registrationNumber },
+          "Lấy registrationNumber thành công"
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(500).json(errorResponse((error as Error).message));
+    }
+  }
   static async logout(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {
@@ -585,4 +644,3 @@ export default class AuthController {
     }
   }
 }
-

@@ -333,7 +333,7 @@ export default class RescueController {
         throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
       }
 
-      if (rescuese.status === "passed") {
+      if (rescuese.status !== "proposed") {
         throw new Error("Đã hết lượt cứu trợ");
       }
 
@@ -444,10 +444,6 @@ export default class RescueController {
       }
 
       const rescues = await RescueService.getListRescue(match.id);
-
-      if (!rescues || rescues.length === 0) {
-        throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
-      }
 
       logger.info(`Lấy danh sách cứu trợ cho trận đấu ${match.id} thành công`);
       res.json(successResponse(rescues, "Lấy danh sách cứu trợ thành công"));

@@ -735,4 +735,79 @@ export default class GroupDivisionService {
       });
     }
   }
+
+  static async getIdsByStatus(matchId: number) {
+    return await prisma.contestantMatch.findMany({
+      where: {
+        matchId: matchId,
+        status: "rescued",
+      },
+      select: {
+        registrationNumber: true,
+      },
+    });
+  }
+
+  static async UpdateContestantStatusByIds(matchId: number) {
+    return await prisma.contestantMatch.updateMany({
+      where: {
+        matchId: matchId,
+        status: "rescued",
+      },
+      data: {
+        status: "in_progress",
+      },
+    });
+  }
+
+  static async ExportExcel(matchId: number) {
+    return await prisma.contestantMatch.findMany({
+      where: { matchId },
+      select: {
+        contestant: {
+          select: {
+            student: {
+              select: {
+                fullName: true,
+                studentCode: true,
+                class: {
+                  select: {
+                    name: true,
+                    school: {
+                      select: {
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        status: true,
+        registrationNumber: true,
+        match: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        registrationNumber: "asc",
+      },
+    });
+  }
+
+  static async UpdateStatusGold(matchId: number, registrationNumber: number) {
+    return await prisma.contestantMatch.updateMany({
+      where: {
+        matchId: matchId,
+        status: { not: { in: ["banned"] } },
+        registrationNumber: { not: registrationNumber },
+      },
+      data: {
+        status: "eliminated",
+      },
+    });
+  }
 }

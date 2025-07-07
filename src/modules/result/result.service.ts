@@ -826,7 +826,6 @@ export class ResultService {
     data: SubmitAnswerData
   ): Promise<SubmitAnswerResponse> {
     try {
-
       // 1. Kiểm tra contestant tồn tại và trạng thái
       const contestant = await this.prisma.contestant.findUnique({
         where: { id: contestantId },
@@ -847,7 +846,6 @@ export class ResultService {
         );
       }
 
-
       // 2. 🚫 KIỂM TRA TRẠNG THÁI CONTESTANT_MATCH (eliminated/banned)
       const contestantMatch = await this.prisma.contestantMatch.findFirst({
         where: {
@@ -857,11 +855,8 @@ export class ResultService {
       });
 
       if (contestantMatch) {
-
-
         // 🚫 Chặn nếu chưa bắt đầu
         if (contestantMatch.status === "not_started") {
-
           return {
             success: false,
             message: "Trận đấu chưa bắt đầu, bạn chưa thể trả lời câu hỏi",
@@ -870,7 +865,6 @@ export class ResultService {
 
         // Chặn nếu đã bị eliminated
         if (contestantMatch.status === "eliminated") {
-
           return {
             success: false,
             message: `Bạn đã bị loại tại câu hỏi số ${
@@ -881,13 +875,12 @@ export class ResultService {
 
         // Chặn nếu đã bị banned
         if (contestantMatch.status === "banned") {
-
           return {
             success: false,
             message: "Bạn đã bị cấm tham gia trận đấu này do vi phạm quy định",
           };
         }
-      } 
+      }
 
       // 3. Kiểm tra match tồn tại và active
       const match = await this.prisma.match.findUnique({
@@ -908,8 +901,6 @@ export class ResultService {
           ERROR_CODES.MATCH_NOT_FOUND
         );
       }
-
-
 
       if (match.status !== "ongoing") {
         return {
@@ -937,8 +928,6 @@ export class ResultService {
           ERROR_CODES.QUESTION_NOT_FOUND
         );
       }
-
-
 
       // 5. Kiểm tra đã trả lời chưa
       const existingResult = await this.prisma.result.findFirst({
@@ -969,20 +958,121 @@ export class ResultService {
 
       // 🔧 XỬ LÝ: Trường hợp không chọn đáp án nào
       if (data.answer === "[KHÔNG CHỌN ĐÁP ÁN]") {
-
         isCorrect = false; // Luôn coi như sai
       } else {
-        // Logic kiểm tra bình thường
+        // 🔥 NEW: Logic kiểm tra cải tiến theo loại câu hỏi
         if (question.questionType === "multiple_choice") {
+          // Câu hỏi trắc nghiệm: so sánh trực tiếp
           isCorrect =
             data.answer.toLowerCase() === question.correctAnswer?.toLowerCase();
+        } else if (question.questionType === "essay") {
+          // 🔥 NEW: Xử lý câu hỏi tự luận
+          const studentAnswer = data.answer.toLowerCase().trim();
+
+          // 🔥 NEW: Kiểm tra nếu học sinh gửi format option (có thể do lỗi UI)
+          const optionPatterns = [
+            /^option\s*[a-d]$/i, // "Option A", "option a", "OptionA"
+            /^[a-d]$/i, // "A", "a", "B", "b"
+            /^[a-d]\./i, // "A.", "a."
+          ];
+
+          const isOptionFormat = optionPatterns.some((pattern) =>
+            pattern.test(studentAnswer)
+          );
+
+          if (isOptionFormat) {
+            // 🔥 NEW: Nếu học sinh gửi format option cho câu hỏi tự luận
+            // Có thể do lỗi UI hoặc nhầm lẫn - xử lý nhẹ nhàng hơn
+            console.warn(
+              `⚠️ [API SUBMIT] Học sinh gửi format option "${data.answer}" cho câu hỏi tự luận. ContestantId: ${contestantId}`
+            );
+
+            // 🔥 OPTION 1: Coi như không trả lời (không bị loại ngay)
+            isCorrect = false;
+            // 🔥 OPTION 2: Có thể cho phép học sinh trả lời lại (cần thêm logic)
+          } else {
+            // 🔥 NEW: So sánh thông minh cho câu hỏi tự luận
+            const correctAnswer =
+              question.correctAnswer?.toLowerCase().trim() || "";
+
+            // 🔥 NEW: Chuẩn hóa đáp án - loại bỏ ký tự đặc biệt và dấu câu
+            const normalizeAnswer = (text: string): string => {
+              // Bước 1: Loại bỏ khoảng trắng thừa và chuyển về lowercase
+              let normalized = text.toLowerCase().trim();
+
+              // Bước 2: Loại bỏ các ký tự đặc biệt ở đầu câu
+              normalized = normalized.replace(/^[@#$%^&*+=|\\<>/`~]+/, "");
+
+              // Bước 3: Tách và xử lý dấu chấm cuối câu
+              let hasDot = false;
+              if (normalized.endsWith(".")) {
+                hasDot = true;
+                normalized = normalized.slice(0, -1).trim();
+              }
+
+              // Bước 4: Loại bỏ các ký tự đặc biệt không phải dấu câu
+              normalized = normalized.replace(/[@#$%^&*+=|\\<>/`~]/g, " ");
+
+              // Bước 5: Chuẩn hóa khoảng trắng
+              normalized = normalized.replace(/\s+/g, " ").trim();
+
+              // Bước 6: Thêm lại dấu chấm cuối câu nếu có
+              if (hasDot) {
+                normalized = normalized + ".";
+              }
+
+              return normalized;
+            };
+
+            const normalizedStudentAnswer = normalizeAnswer(studentAnswer);
+            const normalizedCorrectAnswer = normalizeAnswer(correctAnswer);
+
+            // So sánh bỏ qua dấu chấm cuối câu
+            const compareWithoutEndDot = (a: string, b: string): boolean => {
+              const stripDot = (s: string) =>
+                s.endsWith(".") ? s.slice(0, -1) : s;
+              return stripDot(a) === stripDot(b);
+            };
+
+            // So sánh trực tiếp sau khi chuẩn hóa
+            if (
+              compareWithoutEndDot(
+                normalizedStudentAnswer,
+                normalizedCorrectAnswer
+              )
+            ) {
+              isCorrect = true;
+            } else {
+              // So sánh từng từ (giữ nguyên dấu câu giữa câu)
+              const studentWords = normalizedStudentAnswer
+                .split(/\s+/)
+                .filter((word) => word.length > 0);
+              const correctWords = normalizedCorrectAnswer
+                .split(/\s+/)
+                .filter((word) => word.length > 0);
+
+              // So sánh từng từ và dấu câu
+              if (studentWords.length === correctWords.length) {
+                // Chỉ đúng khi tất cả các từ và dấu câu giữa câu đều giống nhau
+                isCorrect = studentWords.every((word, index) => {
+                  // Nếu là từ cuối cùng, bỏ qua dấu chấm
+                  if (index === studentWords.length - 1) {
+                    return compareWithoutEndDot(word, correctWords[index]);
+                  }
+                  // Các từ khác phải giống hệt nhau
+                  return word === correctWords[index];
+                });
+              } else {
+                isCorrect = false;
+              }
+            }
+          }
         } else {
+          // Fallback cho các loại câu hỏi khác
           isCorrect =
             data.answer.toLowerCase() === question.correctAnswer?.toLowerCase();
         }
       }
-
-
 
       // 7. Lưu kết quả vào database
       const result = await this.prisma.result.create({
@@ -1003,17 +1093,25 @@ export class ResultService {
         },
       });
 
-
-
       // 8. Xử lý elimination nếu trả lời sai
       let isEliminated = false;
       if (!isCorrect) {
-        const eliminationReason =
-          data.answer === "[KHÔNG CHỌN ĐÁP ÁN]"
-            ? "no_answer_selected"
-            : "incorrect_answer"; // 🔧 Phân biệt lý do elimination
+        let eliminationReason = "incorrect_answer"; // Default reason
 
+        // 🔥 NEW: Phân biệt lý do elimination cụ thể hơn
+        if (data.answer === "[KHÔNG CHỌN ĐÁP ÁN]") {
+          eliminationReason = "no_answer_selected";
+        } else if (question.questionType === "essay") {
+          const studentAnswer = data.answer.toLowerCase().trim();
+          const optionPatterns = [/^option\s*[a-d]$/i, /^[a-d]$/i, /^[a-d]\./i];
+          const isOptionFormat = optionPatterns.some((pattern) =>
+            pattern.test(studentAnswer)
+          );
 
+          if (isOptionFormat) {
+            eliminationReason = "essay_option_format_error"; // 🔥 NEW: Lý do cụ thể
+          }
+        }
 
         try {
           // Cập nhật trạng thái contestant thành eliminate
@@ -1036,14 +1134,12 @@ export class ResultService {
 
           isEliminated = true;
 
-
           // Tạo elimination log với lý do cụ thể
           try {
             await this.prisma.$executeRaw`
               INSERT INTO elimination_logs (contestant_id, question_order, elimination_reason, eliminated_at)
               VALUES (${contestantId}, ${data.questionOrder}, ${eliminationReason}, NOW())
             `;
-
           } catch (logError) {
             console.warn(
               "⚠️ [API SUBMIT] Không thể tạo elimination log:",
@@ -1061,9 +1157,24 @@ export class ResultService {
       // 9. Chuẩn bị response với thông báo phù hợp
       let responseMessage = "";
       if (isCorrect) {
-        responseMessage = "Câu trả lời chính xác! 🎉";
+        responseMessage = "Câu trả lời chính xác! ";
       } else if (data.answer === "[KHÔNG CHỌN ĐÁP ÁN]") {
-        responseMessage = "Bạn không chọn đáp án nào và đã bị loại! 😔";
+        responseMessage = "Bạn không chọn đáp án nào và đã bị loại! ";
+      } else if (question.questionType === "essay") {
+        // 🔥 NEW: Thông báo đặc biệt cho câu hỏi tự luận
+        const studentAnswer = data.answer.toLowerCase().trim();
+        const optionPatterns = [/^option\s*[a-d]$/i, /^[a-d]$/i, /^[a-d]\./i];
+        const isOptionFormat = optionPatterns.some((pattern) =>
+          pattern.test(studentAnswer)
+        );
+
+        if (isOptionFormat) {
+          responseMessage =
+            "⚠️ Phát hiện lỗi: Bạn đã gửi format lựa chọn cho câu hỏi tự luận. Vui lòng trả lời bằng văn bản! ";
+        } else {
+          responseMessage =
+            "Câu trả lời tự luận không chính xác. Hãy kiểm tra lại nội dung! ";
+        }
       } else {
         responseMessage = "Câu trả lời không chính xác 😔";
       }
@@ -1083,8 +1194,6 @@ export class ResultService {
             : undefined,
         },
       };
-
-
 
       return response;
     } catch (error) {
@@ -1129,8 +1238,6 @@ export class ResultService {
     };
   }> {
     try {
-
-
       // 1. Kiểm tra contestant tồn tại
       const contestant = await this.prisma.contestant.findUnique({
         where: { id: contestantId },
@@ -1149,8 +1256,6 @@ export class ResultService {
         );
       }
 
-
-
       // 2. Kiểm tra match tồn tại
       const match = await this.prisma.match.findUnique({
         where: { id: data.matchId },
@@ -1164,8 +1269,6 @@ export class ResultService {
           ERROR_CODES.MATCH_NOT_FOUND
         );
       }
-
-
 
       // 3. Kiểm tra đã bị ban chưa - kiểm tra trong contestantMatch
       const existingMatch = await this.prisma.contestantMatch.findFirst({
@@ -1192,8 +1295,6 @@ export class ResultService {
         },
       });
 
-
-
       // 5. Cập nhật trạng thái contestant_match thành banned
       await this.prisma.contestantMatch.updateMany({
         where: {
@@ -1204,7 +1305,6 @@ export class ResultService {
           status: "banned",
         },
       });
-
 
       // 6. Tạo anti-cheat violation log
       try {
@@ -1246,8 +1346,6 @@ export class ResultService {
           violationCount: data.violationCount,
         },
       };
-
-
 
       return response;
     } catch (error) {

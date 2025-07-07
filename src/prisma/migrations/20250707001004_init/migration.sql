@@ -61,6 +61,8 @@ CREATE TABLE `students` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `full_name` VARCHAR(255) NOT NULL,
     `student_code` VARCHAR(12) NULL,
+    `avatar` VARCHAR(255) NULL,
+    `bio` TEXT NULL,
     `classId` INTEGER NOT NULL,
     `userId` INTEGER NULL,
     `isActive` BOOLEAN NOT NULL DEFAULT true,
@@ -281,7 +283,7 @@ CREATE TABLE `rescues` (
     `remainingContestants` INTEGER NOT NULL,
     `questionOrder` INTEGER NULL,
     `index` INTEGER NOT NULL,
-    `status` ENUM('notUsed', 'used', 'passed', 'notEligible') NOT NULL,
+    `status` ENUM('notUsed', 'used', 'passed', 'notEligible', 'proposed') NOT NULL,
     `match_id` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
@@ -331,17 +333,17 @@ CREATE TABLE `class_Videos` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `screen_Controls` (
+CREATE TABLE `screen_controls` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `controlKey` ENUM('wingold', 'qrcode', 'background', 'question', 'questionIntro', 'questionInfo', 'answer', 'matchDiagram', 'explanation', 'firstPrize', 'secondPrize', 'thirdPrize', 'fourthPrize', 'impressiveVideo', 'excellentVideo', 'allPrize', 'topWin', 'listEliminated', 'listRescued', 'video', 'audio', 'image') NOT NULL DEFAULT 'background',
-    `controlValue` ENUM('start', 'pause', 'reset', 'zoomIn', 'zoomOut', 'Eliminated', 'Rescued') NULL,
+    `controlKey` ENUM('wingold', 'qrcode', 'background', 'question', 'questionIntro', 'questionInfo', 'answer', 'matchDiagram', 'explanation', 'firstPrize', 'secondPrize', 'thirdPrize', 'fourthPrize', 'impressiveVideo', 'excellentVideo', 'allPrize', 'topWin', 'listEliminated', 'listRescued', 'video', 'audio', 'image', 'chart') NOT NULL DEFAULT 'background',
+    `controlValue` ENUM('start', 'pause', 'reset', 'Eliminated', 'Rescued') NULL,
     `matchId` INTEGER NOT NULL,
     `media` VARCHAR(255) NULL,
     `value` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `screen_Controls_matchId_key`(`matchId`),
+    UNIQUE INDEX `screen_controls_matchId_key`(`matchId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -433,4 +435,4 @@ ALTER TABLE `class_Videos` ADD CONSTRAINT `class_Videos_classId_fkey` FOREIGN KE
 ALTER TABLE `class_Videos` ADD CONSTRAINT `class_Videos_contestId_fkey` FOREIGN KEY (`contestId`) REFERENCES `contests`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 -- AddForeignKey
-ALTER TABLE `screen_Controls` ADD CONSTRAINT `screen_Controls_matchId_fkey` FOREIGN KEY (`matchId`) REFERENCES `matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE `screen_controls` ADD CONSTRAINT `screen_controls_matchId_fkey` FOREIGN KEY (`matchId`) REFERENCES `matches`(`id`) ON DELETE RESTRICT ON UPDATE RESTRICT;

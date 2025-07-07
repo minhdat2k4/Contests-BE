@@ -47,6 +47,7 @@ authRouter.post(
   validateBody(StudentRegisterSchema),
   AuthController.registerStudent
 );
+
 // private
 authRouter.post("/logout", authenticate, AuthController.logout);
 authRouter.get("/refresh-token", AuthController.refreshAccToken);
@@ -65,7 +66,19 @@ authRouter.post(
   validateBody(ChangeInfoShema),
   AuthController.changeInfo
 );
+authRouter.get(
+  "/registration-number",
+  authenticate,
+  role("Student"),
+  AuthController.getRegistrationNumber
+);
 authRouter.get("/profile", authenticate, AuthController.profile);
+authRouter.get(
+  "/profile-student",
+  authenticate,
+  role("Student"),
+  AuthController.profileStudent
+);
 // Admin
 authRouter.get("/admin", authenticate, role("Admin"), (req, res) => {
   res.json("Chào Admin");

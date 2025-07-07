@@ -4,6 +4,7 @@ import { MatchService } from "@/modules/match";
 import { GroupDivisionService } from "@/modules/groupDivision";
 import { ResultService } from "@/modules/result";
 import { ScreenService } from "@/modules/screen";
+import { RescueService } from "@/modules/rescues";
 
 import { z } from "zod";
 import { UserService } from "@/modules/user";
@@ -138,13 +139,6 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
         });
       }
 
-      console.log(
-        "Updated Screen:",
-        updatedScreen,
-        ListContestant,
-        countInProgress
-      );
-
       const roomName = `match-${payload.match}`;
       io.of("/match-control").to(roomName).emit("update:Eliminated", {
         ListContestant,
@@ -179,6 +173,30 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
         message: "Hiển thị thí sinh loại thành công",
         success: true,
       });
+
+      const result = await RescueService.updateRescueStatusByCurrentQuestion(
+        Number(match.id),
+        Number(payload.questionOrder)
+      );
+
+      if (!result) {
+        return callback({
+          success: false,
+          message: "Cập nhật trạng thái rescue thất bại",
+        });
+      }
+
+      // // Trả về kết quả thông qua callback
+      // callback(null, {
+      //   success: true,
+      //   message: `Đã cập nhật ${result.totalUpdated} rescue`,
+      //   data: result,
+      // });
+
+      io.of("/match-control").to(roomName).emit("rescue:statusUpdated", {
+        success: true,
+        data: result,
+      });
     } catch (error) {
       console.error("Lỗi khi xử lý cập nhật trạng thái:", error);
       callback(new Error("Đã xảy ra lỗi nội bộ"));
@@ -186,6 +204,7 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
   });
 
   socket.on("update:Rescued", async (rawData: unknown, callback) => {
+    console.log("update:Rescued event received", rawData);
     const validation = updateRescued.safeParse(rawData);
     if (!validation.success) {
       return callback({
@@ -205,7 +224,16 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
         });
       }
 
-      const updateScreen = await ScreenService.update(match.id, {
+      const screen = await MatchService.ScreenControl(match.id);
+
+      if (!screen) {
+        return callback({
+          success: false,
+          message: "Không tìm thấy màn hình",
+        });
+      }
+
+      const updateScreen = await ScreenService.update(screen.id, {
         controlValue: "Rescued",
       });
       if (!updateScreen) {
@@ -224,6 +252,20 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
       }
 
       const countInProgress = await MatchService.countIn_progress(match.id);
+
+      const ids = GroupDivisionService.getIdsByStatus(match.id);
+      const eventData = {
+        rescuedContestantIds: ids,
+        message: "Bạn đã được cứu trợ! Hãy tiếp tục thi đấu.",
+      };
+      const roomById = `match-${match.id}`;
+      const roomBySlug = `match-${match.slug}`;
+
+      // Emit to room by ID (for Dashboard)
+      io.of("/student").to(roomById).emit("student:rescued", eventData);
+
+      // Emit to room by SLUG (for WaitingRoom)
+      io.of("/student").to(roomBySlug).emit("student:rescued", eventData);
 
       const roomName = `match-${payload.match}`;
       io.of("/match-control").to(roomName).emit("update:Rescused", {

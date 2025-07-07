@@ -454,7 +454,7 @@ export default class MatchService {
 
   static async Total(matchId: number) {
     return prisma.contestantMatch.count({
-      where: { matchId: matchId, status: { notIn: ["eliminated", "banned"] } },
+      where: { matchId: matchId, status: { notIn: ["banned"] } },
     });
   }
 

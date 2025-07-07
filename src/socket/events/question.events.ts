@@ -3,6 +3,8 @@ import { Server, Socket } from "socket.io";
 import { MatchService } from "@/modules/match";
 import { RescueService } from "@/modules/rescues";
 import { logger } from "@/utils/logger";
+import { ScreenService } from "@/modules/screen";
+import { GroupDivisionService } from "@/modules/groupDivision";
 
 import { matchTimers } from "../events/timer.event";
 
@@ -18,8 +20,6 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       matchTimer.intervalId = null;
       matchTimer.status = "paused";
     }
-
-    // console.log(data);
 
     const matchRaw = await MatchService.MatchControl(match);
     if (!matchRaw) {
@@ -54,9 +54,23 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       return callback({ success: false, message: "Không tìm thấy trận đấu" });
     }
 
-    // 🔥 NEW: Kiểm tra trạng thái match trước khi gửi cho học sinh
+    const screen = await MatchService.ScreenControl(matchInfo.id);
+    if (!screen) {
+      return callback({
+        success: false,
+        message: "Không tìm thấy màn hình",
+      });
+    }
+
+    await ScreenService.update(screen.id, {
+      controlKey: "question",
+    });
+
+    await GroupDivisionService.UpdateContestantStatusByIds(matchInfo.id);
+
+    const ListContestant = await MatchService.ListContestant(matchInfo.id);
+
     const isMatchStarted = matchRaw.status === "ongoing";
-    // ✅ Admin luôn nhận feedback (không ảnh hưởng logic cũ)
     callback?.(null, {
       success: true,
       message: `Đã chuyển sang câu ${currentQuestion.questionOrder}`,
@@ -66,6 +80,7 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
     io.of("/match-control").to(roomName).emit("currentQuestion:get", {
       currentQuestion,
       matchInfo,
+      ListContestant,
     });
 
     // 🔥 NEW: CHỈ gửi cho học sinh khi match đã bắt đầu
@@ -99,7 +114,9 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
           },
         });
     } else {
-      console.log(`[DEBUG] ⚠️ KHÔNG gửi câu hỏi cho học sinh (match chưa bắt đầu)`);
+      console.log(
+        `[DEBUG] ⚠️ KHÔNG gửi câu hỏi cho học sinh (match chưa bắt đầu)`
+      );
     }
   });
 
@@ -117,7 +134,7 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
 
       // Gọi service để cập nhật trạng thái rescue
       const result = await RescueService.updateRescueStatusByCurrentQuestion(
-        Number(matchId),  
+        Number(matchId),
         Number(currentQuestionOrder)
       );
 
@@ -137,16 +154,22 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
         data: result,
       });
 
-      // Emit event tới tất cả client trong room
       io.of("/match-control").to(roomName).emit("rescue:statusUpdated", {
         success: true,
         data: result,
+      });
+      const ListRescue = await RescueService.getListRescue(matchId);
+
+      io.of("/match-control").to(roomName).emit("rescue:updateStatus", {
+        ListRescue,
       });
     } catch (error) {
       logger.error("Socket error - rescue:updateStatusByQuestion:", error);
       callback({
         success: false,
-        message: `Lỗi khi cập nhật trạng thái rescue: ${(error as Error).message}`,
+        message: `Lỗi khi cập nhật trạng thái rescue: ${
+          (error as Error).message
+        }`,
       });
     }
   });

@@ -177,8 +177,8 @@ export default class ContestantService {
           },
           where: matchId
             ? {
-                matchId: matchId,
-              }
+              matchId: matchId,
+            }
             : undefined,
         },
       },
@@ -606,8 +606,8 @@ export default class ContestantService {
           },
           where: matchId
             ? {
-                matchId: matchId,
-              }
+              matchId: matchId,
+            }
             : undefined,
         },
       },
@@ -1290,7 +1290,7 @@ export default class ContestantService {
         const arr = JSON.parse(rescue.studentIds);
         if (Array.isArray(arr))
           studentIds = arr.map(Number).filter(x => !isNaN(x));
-      } catch {}
+      } catch { }
     } else if (rescue.studentIds && typeof rescue.studentIds === "object") {
       // Nếu là object kiểu JsonArray
       studentIds = Object.values(rescue.studentIds)
@@ -1382,7 +1382,7 @@ export default class ContestantService {
         const arr = JSON.parse(rescue.studentIds);
         if (Array.isArray(arr))
           currentStudentIds = arr.map(Number).filter(x => !isNaN(x));
-      } catch {}
+      } catch { }
     } else if (rescue.studentIds && typeof rescue.studentIds === "object") {
       currentStudentIds = Object.values(rescue.studentIds)
         .map(Number)
@@ -1425,7 +1425,7 @@ export default class ContestantService {
         const arr = JSON.parse(rescue.studentIds);
         if (Array.isArray(arr))
           currentStudentIds = arr.map(Number).filter(x => !isNaN(x));
-      } catch {}
+      } catch { }
     } else if (rescue.studentIds && typeof rescue.studentIds === "object") {
       currentStudentIds = Object.values(rescue.studentIds)
         .map(Number)
@@ -1473,5 +1473,514 @@ export default class ContestantService {
     }));
 
     return contestant;
+  }
+
+  /**====================================== thí sinh qua vòng ==============================*/
+  // Lấy thông tin đầy đủ về thí sinh vàng (gold contestant) trong trận đấu
+  static async getGoldContestantInMatch(matchId: number) {
+    try {
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: { studentId: true },
+      });
+
+      const goldStudentId = match?.studentId;
+      if (!goldStudentId) {
+        return null;
+      }
+
+      // Tìm thí sinh vàng trong trận đấu này
+      const goldContestant = await prisma.contestantMatch.findFirst({
+        where: {
+          matchId,
+          contestant: {
+            studentId: goldStudentId,
+          },
+        },
+        select: {
+          contestantId: true,
+          eliminatedAtQuestionOrder: true,
+          registrationNumber: true,
+          status: true,
+          contestant: {
+            select: {
+              id: true,
+              status: true,
+              student: {
+                select: {
+                  fullName: true,
+                  studentCode: true,
+                  class: {
+                    select: {
+                      id: true,
+                      name: true,
+                      school: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              round: { select: { name: true } },
+            },
+          },
+        },
+      });
+
+      return goldContestant;
+    } catch (error) {
+      console.error('Error getting gold contestant in match:', error);
+      return null;
+    }
+  }
+  // Lấy danh sách thí sinh ứng cử viên và tự động cập nhật trạng thái thành "completed"
+  static async getCandidatesList(
+    matchId: number,
+    limit?: number
+  ) {
+    // Tái sử dụng hàm lấy danh sách bị loại
+    const eliminatedContestants = await this.getEliminatedContestants(matchId);
+
+    // Lấy thông tin về gold contestant (thí sinh vàng)
+    const goldContestant = await this.getGoldContestantInMatch(matchId);
+
+    // Lấy số câu đúng của từng thí sinh trong trận đấu này
+    const contestantIds = eliminatedContestants.map(e => e.contestantId);
+
+    // Nếu có gold contestant và chưa có trong danh sách eliminated, thêm vào danh sách để tính toán
+    const allContestantIds = [...contestantIds];
+    if (goldContestant && !contestantIds.includes(goldContestant.contestantId)) {
+      allContestantIds.push(goldContestant.contestantId);
+    }
+
+    const results = await prisma.result.groupBy({
+      by: ["contestantId"],
+      where: {
+        matchId,
+        contestantId: { in: allContestantIds },
+        isCorrect: true,
+      },
+      _count: { id: true },
+    });
+
+    // Map contestantId -> correctAnswers
+    const correctAnswersMap = new Map<number, number>();
+    results.forEach(r => {
+      correctAnswersMap.set(r.contestantId, r._count.id);
+    });
+
+    // Kết hợp dữ liệu và sắp xếp
+    const candidates = eliminatedContestants.map(e => ({
+      contestantId: e.contestantId,
+      fullName: e.contestant.student.fullName,
+      studentCode: e.contestant.student.studentCode,
+      schoolId: e.contestant.student.class.school.id,
+      schoolName: e.contestant.student.class.school.name,
+      classId: e.contestant.student.class.id,
+      className: e.contestant.student.class.name,
+      roundName: e.contestant.round?.name || "",
+      status: e.contestant.status,
+      correctAnswers: correctAnswersMap.get(e.contestantId) || 0,
+      eliminatedAtQuestionOrder: e.eliminatedAtQuestionOrder,
+      registrationNumber: e.registrationNumber,
+    }));
+
+    // Nếu có gold contestant và chưa có trong danh sách candidates, thêm vào
+    if (goldContestant && !candidates.find(c => c.contestantId === goldContestant.contestantId)) {
+      candidates.push({
+        contestantId: goldContestant.contestantId,
+        fullName: goldContestant.contestant.student.fullName,
+        studentCode: goldContestant.contestant.student.studentCode,
+        schoolId: goldContestant.contestant.student.class.school.id,
+        schoolName: goldContestant.contestant.student.class.school.name,
+        classId: goldContestant.contestant.student.class.id,
+        className: goldContestant.contestant.student.class.name,
+        roundName: goldContestant.contestant.round?.name || "",
+        status: goldContestant.contestant.status,
+        correctAnswers: correctAnswersMap.get(goldContestant.contestantId) || 0,
+        eliminatedAtQuestionOrder: goldContestant.eliminatedAtQuestionOrder,
+        registrationNumber: goldContestant.registrationNumber,
+      });
+    }
+
+    // candidates.sort((a, b) => {
+    //   if (b.correctAnswers !== a.correctAnswers) {
+    //     return b.correctAnswers - a.correctAnswers;
+    //   }
+    //   return (
+    //     (b.eliminatedAtQuestionOrder || 0) - (a.eliminatedAtQuestionOrder || 0)
+    //   );
+    // });
+    candidates.sort((a, b) => {
+      // Ưu tiên gold contestant lên đầu
+      const aIsGold = goldContestant && a.contestantId === goldContestant.contestantId;
+      const bIsGold = goldContestant && b.contestantId === goldContestant.contestantId;
+
+      if (aIsGold && !bIsGold) return -1; // a (gold) lên trước
+      if (!aIsGold && bIsGold) return 1;  // b (gold) lên trước
+
+      // Nếu cả hai đều không phải gold hoặc cả hai đều là gold, sắp xếp theo logic cũ
+      if (b.correctAnswers !== a.correctAnswers) {
+        return b.correctAnswers - a.correctAnswers;
+      }
+      return (
+        (b.eliminatedAtQuestionOrder || 0) - (a.eliminatedAtQuestionOrder || 0)
+      );
+    });
+
+    // Xử lý limit với logic đặc biệt cho gold contestant
+    let limitedCandidates = candidates;
+    const maxAvailable = candidates.length;
+    let actualLimit = maxAvailable;
+    let goldIncluded = false;
+
+    if (limit !== undefined && limit > 0) {
+      actualLimit = Math.min(limit, maxAvailable);
+
+      // Nếu có gold contestant, đảm bảo nó luôn được bao gồm
+      if (goldContestant) {
+        const goldCandidateIndex = candidates.findIndex(c => c.contestantId === goldContestant.contestantId);
+
+        if (goldCandidateIndex !== -1) {
+          if (goldCandidateIndex < actualLimit) {
+            // Gold contestant đã nằm trong top limit, lấy top limit bình thường
+            limitedCandidates = candidates.slice(0, actualLimit);
+            goldIncluded = true;
+          } else {
+            // Gold contestant không nằm trong top limit, lấy top (limit-1) + gold contestant
+            const topCandidates = candidates.slice(0, actualLimit - 1);
+            const goldCandidate = candidates[goldCandidateIndex];
+            limitedCandidates = [...topCandidates, goldCandidate];
+            goldIncluded = true;
+          }
+        } else {
+          // Gold contestant không tồn tại trong danh sách (trường hợp bất thường)
+          limitedCandidates = candidates.slice(0, actualLimit);
+        }
+      } else {
+        // Không có gold contestant, lấy top limit bình thường
+        limitedCandidates = candidates.slice(0, actualLimit);
+      }
+    } else {
+      // Không có limit, lấy tất cả
+      goldIncluded = goldContestant ? candidates.some(c => c.contestantId === goldContestant.contestantId) : false;
+    }
+
+    // Tự động cập nhật trạng thái thành "completed" cho các thí sinh được chọn
+    // let updateResult = null;
+    // if (limitedCandidates.length > 0) {
+    //   const candidateIds = limitedCandidates.map(c => c.contestantId);
+    //   try {
+    //     updateResult = await this.updateToCompleted(matchId, candidateIds);
+    //   } catch (error) {
+    //     console.error('Lỗi khi cập nhật trạng thái completed:', error);
+    //     // Không throw error để không làm gián đoạn việc trả về danh sách
+    //   }
+    // }
+
+    return {
+      candidates: limitedCandidates,
+      // updateResult,
+      meta: {
+        requestedLimit: limit,
+        actualLimit,
+        maxAvailable,
+        totalCandidates: candidates.length,
+        goldIncluded,
+        goldContestantId: goldContestant?.contestantId || null,
+        // autoUpdated: updateResult?.success || false,
+        // updatedCount: updateResult?.updatedCount || 0,
+      },
+    };
+  }
+
+  // API lấy danh sách thí sinh đã hoàn thành trong trận đấu với format tương tự như getCandidatesList
+  static async getCompletedContestants(
+    matchId: number,
+    limit?: number
+  ) {
+    // Lấy danh sách thí sinh đã hoàn thành trong trận đấu
+    const completedContestants = await prisma.contestantMatch.findMany({
+      where: {
+        matchId,
+        status: "completed",
+      },
+      select: {
+        contestantId: true,
+        registrationNumber: true,
+        eliminatedAtQuestionOrder: true,
+        contestant: {
+          select: {
+            id: true,
+            status: true,
+            student: {
+              select: {
+                fullName: true,
+                studentCode: true,
+                class: {
+                  select: {
+                    id: true,
+                    name: true,
+                    school: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            round: { select: { name: true } },
+          },
+        },
+      },
+      take: limit || undefined, // Nếu limit không được cung cấp, lấy tất cả
+    });
+
+    // Lấy số câu đúng của từng thí sinh trong trận đấu này
+    const contestantIds = completedContestants.map(c => c.contestantId);
+    const results = await prisma.result.groupBy({
+      by: ["contestantId"],
+      where: {
+        matchId,
+        contestantId: { in: contestantIds },
+        isCorrect: true,
+      },
+      _count: { id: true },
+    });
+
+    // Map contestantId -> correctAnswers
+    const correctAnswersMap = new Map<number, number>();
+    results.forEach(r => {
+      correctAnswersMap.set(r.contestantId, r._count.id);
+    });
+
+    // Kết hợp dữ liệu và sắp xếp theo số câu đúng (giảm dần)
+    const candidates = completedContestants.map(item => ({
+      contestantId: item.contestantId,
+      registrationNumber: item.registrationNumber,
+      eliminatedAtQuestionOrder: item.eliminatedAtQuestionOrder,
+      fullName: item.contestant.student.fullName,
+      studentCode: item.contestant.student.studentCode,
+      schoolId: item.contestant.student.class.school.id,
+      schoolName: item.contestant.student.class.school.name,
+      classId: item.contestant.student.class.id,
+      className: item.contestant.student.class.name,
+      roundName: item.contestant.round?.name || "",
+      status: item.contestant.status,
+      correctAnswers: correctAnswersMap.get(item.contestantId) || 0,
+    }));
+
+    // Sắp xếp theo số câu đúng (giảm dần)
+    candidates.sort((a, b) => {
+      if (b.correctAnswers !== a.correctAnswers) {
+        return b.correctAnswers - a.correctAnswers;
+      }
+      return (
+        (b.eliminatedAtQuestionOrder || 0) - (a.eliminatedAtQuestionOrder || 0)
+      );
+    });
+
+    return {
+      candidates,
+      meta: {
+        requestedLimit: limit,
+        actualLimit: candidates.length,
+        maxAvailable: candidates.length,
+        totalCandidates: candidates.length,
+      },
+    };
+  }
+
+
+  // Cập nhật trạng thái thành completed cho các thí sinh trong trận đấu
+  static async updateToCompleted(
+    matchId: number,
+    contestantIds: number[]
+  ) {
+    try {
+      // Kiểm tra xem matchId có tồn tại không
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: { id: true }
+      });
+
+      if (!match) {
+        throw new Error(`Không tìm thấy trận đấu với ID: ${matchId}`);
+      }
+
+      // Kiểm tra xem các contestantMatch có tồn tại không
+      const existingContestantMatches = await prisma.contestantMatch.findMany({
+        where: {
+          matchId,
+          contestantId: { in: contestantIds },
+        },
+        select: { contestantId: true }
+      });
+
+      const existingIds = existingContestantMatches.map(cm => cm.contestantId);
+      const notFoundIds = contestantIds.filter(id => !existingIds.includes(id));
+
+      if (notFoundIds.length > 0) {
+        console.warn(`Không tìm thấy ContestantMatch cho các contestant IDs: ${notFoundIds.join(', ')} trong match ${matchId}`);
+      }
+
+      // Cập nhật status thành "completed" cho các contestantMatch tồn tại
+      const result = await prisma.contestantMatch.updateMany({
+        where: {
+          matchId,
+          contestantId: { in: existingIds },
+        },
+        data: {
+          status: "completed",
+        },
+      });
+
+      return {
+        success: true,
+        updatedCount: result.count,
+        requestedIds: contestantIds,
+        updatedIds: existingIds,
+        notFoundIds,
+        message: `Đã cập nhật ${result.count} thí sinh thành trạng thái completed`
+      };
+
+    } catch (error) {
+      console.error('Error updating contestant matches to completed:', error);
+      throw error;
+    }
+  }
+
+  // Cập nhật trạng thái thành eliminated cho các thí sinh trong trận đấu (từ completed về eliminated)
+  static async updateToEliminated(
+    matchId: number,
+    contestantIds: number[]
+  ) {
+    try {
+      // Kiểm tra xem matchId có tồn tại không
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: { id: true }
+      });
+
+      if (!match) {
+        throw new Error(`Không tìm thấy trận đấu với ID: ${matchId}`);
+      }
+
+      // Kiểm tra xem các contestantMatch có tồn tại và đang ở trạng thái completed không
+      const existingContestantMatches = await prisma.contestantMatch.findMany({
+        where: {
+          matchId,
+          contestantId: { in: contestantIds },
+          status: "completed" // Chỉ cho phép cập nhật những thí sinh đang ở trạng thái completed
+        },
+        select: { contestantId: true }
+      });
+
+      const existingIds = existingContestantMatches.map(cm => cm.contestantId);
+      const notFoundIds = contestantIds.filter(id => !existingIds.includes(id));
+
+      if (notFoundIds.length > 0) {
+        console.warn(`Không tìm thấy ContestantMatch với trạng thái completed cho các contestant IDs: ${notFoundIds.join(', ')} trong match ${matchId}`);
+      }
+
+      // Cập nhật status thành "eliminated" cho các contestantMatch tồn tại và đang completed
+      const result = await prisma.contestantMatch.updateMany({
+        where: {
+          matchId,
+          contestantId: { in: existingIds },
+          status: "completed"
+        },
+        data: {
+          status: "eliminated",
+        },
+      });
+
+      return {
+        success: true,
+        updatedCount: result.count,
+        requestedIds: contestantIds,
+        updatedIds: existingIds,
+        notFoundIds,
+        message: `Đã cập nhật ${result.count} thí sinh từ completed về eliminated`
+      };
+
+    } catch (error) {
+      console.error('Error updating contestant matches to eliminated:', error);
+      throw error;
+    }
+  }
+
+  // API: Tìm tất cả thí sinh có trạng thái completed trong trận đấu và cập nhật về eliminated
+  static async updateAllCompletedToEliminated(matchId: number) {
+    try {
+      // Kiểm tra xem matchId có tồn tại không
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: { id: true }
+      });
+
+      if (!match) {
+        throw new Error(`Không tìm thấy trận đấu với ID: ${matchId}`);
+      }
+
+      // Tìm tất cả các contestantMatch có trạng thái completed trong trận đấu
+      const completedContestantMatches = await prisma.contestantMatch.findMany({
+        where: {
+          matchId,
+          status: "completed"
+        },
+        select: {
+          contestantId: true,
+          contestant: {
+            select: {
+              student: {
+                select: {
+                  fullName: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (completedContestantMatches.length === 0) {
+        return {
+          success: true,
+          updatedCount: 0,
+          completedIds: [],
+          message: "Không tìm thấy thí sinh nào có trạng thái completed để cập nhật"
+        };
+      }
+
+      const completedIds = completedContestantMatches.map(cm => cm.contestantId);
+
+      // Cập nhật tất cả từ completed về eliminated
+      const result = await prisma.contestantMatch.updateMany({
+        where: {
+          matchId,
+          status: "completed"
+        },
+        data: {
+          status: "eliminated",
+        },
+      });
+
+      return {
+        success: true,
+        updatedCount: result.count,
+        completedIds,
+        contestantNames: completedContestantMatches.map(cm => cm.contestant.student.fullName),
+        message: `Đã cập nhật ${result.count} thí sinh từ completed về eliminated`
+      };
+
+    } catch (error) {
+      console.error('Error updating all completed contestants to eliminated:', error);
+      throw error;
+    }
   }
 }

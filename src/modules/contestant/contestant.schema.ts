@@ -341,6 +341,18 @@ export const RemoveStudentFromRescueSchema = z.object({
   studentId: z.number().int().positive("ID sinh viên phải là số nguyên dương"),
 });
 
+// Schema cho API cập nhật trạng thái thành completed
+export const UpdateToCompletedSchema = z.object({
+  contestantIds: z.array(z.number().int().positive("ID thí sinh phải là số nguyên dương")).min(1, "Phải chọn ít nhất 1 thí sinh"),
+});
+
+// Schema cho API cập nhật trạng thái thành eliminated (từ completed về eliminated)
+export const UpdateToEliminatedSchema = z.object({
+  contestantIds: z.array(z.number().int().positive("ID thí sinh phải là số nguyên dương")).min(1, "Phải chọn ít nhất 1 thí sinh"),
+});
+
 export type RescueManyInput = z.infer<typeof RescueManySchema>;
 export type AddStudentsToRescueInput = z.infer<typeof AddStudentsToRescueSchema>;
 export type RemoveStudentFromRescueInput = z.infer<typeof RemoveStudentFromRescueSchema>;
+export type UpdateToCompletedInput = z.infer<typeof UpdateToCompletedSchema>;
+export type UpdateToEliminatedInput = z.infer<typeof UpdateToEliminatedSchema>;

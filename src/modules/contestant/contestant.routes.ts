@@ -18,6 +18,8 @@ import {
   RescueManySchema,
   AddStudentsToRescueSchema,
   RemoveStudentFromRescueSchema,
+  UpdateToCompletedSchema,
+  UpdateToEliminatedSchema,
 } from "./contestant.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const contestantRouter = Router();
@@ -187,6 +189,48 @@ contestantRouter.delete(
   role("Admin"),
   validateBody(RemoveStudentFromRescueSchema),
   ContestantController.removeStudentFromRescue
+);
+
+// API cập nhật trạng thái thành completed cho các thí sinh trong trận đấu
+contestantRouter.put(
+  "/update-to-completed/:matchId",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdateToCompletedSchema),
+  ContestantController.updateToCompleted
+);
+
+// API cập nhật trạng thái thành eliminated cho các thí sinh trong trận đấu (từ completed về eliminated)
+contestantRouter.put(
+  "/update-to-eliminated/:matchId",
+  authenticate,
+  role("Admin"),
+  validateBody(UpdateToEliminatedSchema),
+  ContestantController.updateToEliminated
+);
+
+// API lấy danh sách thí sinh ứng cử viên cứu trợ (chỉ lấy dữ liệu, không cập nhật bảng rescue)
+contestantRouter.get(
+  "/candidates-list/:matchId",
+  authenticate,
+  role("Admin"),
+  ContestantController.getCandidatesList
+);
+
+// API lấy danh sách thí sinh đã hoàn thành (completed) trong trận đấu
+contestantRouter.get(
+  "/completed-contestants/:matchId",
+  authenticate,
+  role("Admin"),
+  ContestantController.getCompletedContestants
+);
+
+// API cập nhật tất cả thí sinh completed về eliminated trong trận đấu
+contestantRouter.put(
+  "/update-all-completed-to-eliminated/:matchId",
+  authenticate,
+  role("Admin"),
+  ContestantController.updateAllCompletedToEliminated
 );
 
 export { contestantRouter };

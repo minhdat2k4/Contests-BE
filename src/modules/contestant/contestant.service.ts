@@ -1474,6 +1474,25 @@ export default class ContestantService {
 
     return contestant;
   }
+  //** BỔ SUNG SERVICE CỨU TRỢ */
+  // lấy số thí sinh còn lại trong trận đấu (tức trạng thái in-progress hoặc rescued)
+  static async getRemainingContestantsCount(matchId: number): Promise<number> {
+    try {
+      const count = await prisma.contestantMatch.count({
+        where: {
+          matchId,
+          status: {
+            in: ['in_progress', 'rescued']
+          }
+        }
+      });
+
+      return count;
+    } catch (error) {
+      console.error('Error getting remaining contestants count:', error);
+      throw new Error(`Lỗi khi lấy số thí sinh còn lại: ${(error as Error).message}`);
+    }
+  }
 
   /**====================================== thí sinh qua vòng ==============================*/
   // Lấy thông tin đầy đủ về thí sinh vàng (gold contestant) trong trận đấu

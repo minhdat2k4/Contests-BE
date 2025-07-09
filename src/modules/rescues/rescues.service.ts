@@ -8,6 +8,7 @@ import {
 } from "@/modules/rescues";
 import { logger } from "@/utils/logger";
 import { Rescue, RescueStatus } from "@prisma/client";
+import { ContestantService } from "../contestant";
 
 export default class RescueService {
   static async getAll(
@@ -97,8 +98,8 @@ export default class RescueService {
         key.status === "notUsed"
           ? "Chưa sử dụng"
           : key.status === "used"
-          ? "Đã sử dụng"
-          : ("Đã qua" as "Chưa sử dụng" | "Đã sử dụng" | "Đã qua"),
+            ? "Đã sử dụng"
+            : ("Đã qua" as "Chưa sử dụng" | "Đã sử dụng" | "Đã qua"),
       matchName: key.match?.name,
     }));
     const total = await prisma.rescue.count({
@@ -452,6 +453,9 @@ export default class RescueService {
     };
   }> {
     try {
+      // số thí sinh còn lại trong trận đấu
+      const remainingContestantsCount = await ContestantService.getRemainingContestantsCount(matchId);
+
       // Lấy tất cả rescue của match
       const rescues = await prisma.rescue.findMany({
         where: { matchId },
@@ -553,16 +557,46 @@ export default class RescueService {
         },
       });
 
+      // Map kết quả với trường isEffect
+      const updatedRescuesWithEffect = updatedRescueDetails.map(rescue => {
+        // Kiểm tra điều kiện để hiển thị effect:
+        // 1. Rescue phải có status 'notUsed'
+        // 2. Rescue phải trong range câu hỏi hiện tại
+        // 3. Số thí sinh còn lại phải <= remainingContestants của rescue
+        const isInRange = rescue.questionFrom <= currentQuestionOrder &&
+          currentQuestionOrder <= rescue.questionTo;
+        const hasEnoughContestants = remainingContestantsCount <= rescue.remainingContestants;
+        const isNotUsed = rescue.status === 'notUsed';
+
+        const isEffect = isInRange && hasEnoughContestants && isNotUsed;
+
+        return {
+          ...rescue,
+          isEffect,
+          currentContestantsCount: remainingContestantsCount // Thêm thông tin để debug
+        };
+      });
+
       return {
-        updatedRescues: updatedRescueDetails,
-        currentEligibleRescues: currentEligibleRescues.map(r => ({
-          id: r.id,
-          name: r.name,
-          index: r.index,
-          status: r.status,
-          questionFrom: r.questionFrom,
-          questionTo: r.questionTo,
-        })),
+        updatedRescues: updatedRescuesWithEffect,
+        currentEligibleRescues: currentEligibleRescues.map(r => {
+          // Tính toán isEffect cho currentEligibleRescues
+          const hasEnoughContestants = remainingContestantsCount <= r.remainingContestants;
+          const isNotUsed = r.status === 'notUsed';
+          const isEffect = hasEnoughContestants && isNotUsed;
+
+          return {
+            id: r.id,
+            name: r.name,
+            index: r.index,
+            status: r.status,
+            questionFrom: r.questionFrom,
+            questionTo: r.questionTo,
+            remainingContestants: r.remainingContestants,
+            isEffect,
+            currentContestantsCount: remainingContestantsCount
+          };
+        }),
         totalUpdated: updatedRescues.length,
         summary,
       };
@@ -591,25 +625,64 @@ export default class RescueService {
   }
 
   // Lấy danh sách rescue theo matchId với tất cả rescueType
-  static async getAllRescue(matchId: number) {
-    return prisma.rescue.findMany({
-      where: { matchId: matchId },
-      select: {
-        id: true,
-        name: true,
-        index: true,
-        status: true,
-        questionFrom: true,
-        questionTo: true,
-        rescueType: true,
-        remainingContestants: true,
-      },
-      orderBy: [
-        { questionFrom: "asc" },
-        { questionTo: "asc" },
-        { createdAt: "asc" },
-      ],
-    });
+  static async getAllRescue(matchId: number, currentQuestionOrder?: number) {
+    try {
+      // Lấy số thí sinh còn lại
+      const remainingContestantsCount = await ContestantService.getRemainingContestantsCount(matchId);
+
+      const rescues = await prisma.rescue.findMany({
+        where: { matchId: matchId },
+        select: {
+          id: true,
+          name: true,
+          index: true,
+          status: true,
+          questionFrom: true,
+          questionTo: true,
+          rescueType: true,
+          remainingContestants: true,
+        },
+        orderBy: [
+          { questionFrom: "asc" },
+          { questionTo: "asc" },
+          { createdAt: "asc" },
+        ],
+      });
+
+      // Map kết quả với trường isEffect
+      return rescues.map(rescue => {
+        let isEffect = false;
+
+        if (currentQuestionOrder !== undefined) {
+          // Kiểm tra điều kiện để hiển thị effect:
+          // 1. Rescue phải có status 'notUsed'
+          // 2. Rescue phải trong range câu hỏi hiện tại
+          // 3. Số thí sinh còn lại phải <= remainingContestants của rescue
+          const isInRange = rescue.questionFrom <= currentQuestionOrder &&
+            currentQuestionOrder <= rescue.questionTo;
+          const hasEnoughContestants = remainingContestantsCount <= rescue.remainingContestants;
+          const isNotUsed = rescue.status === 'notUsed';
+
+          isEffect = isInRange && hasEnoughContestants && isNotUsed;
+        }
+
+        return {
+          id: rescue.id,
+          name: rescue.name,
+          index: rescue.index,
+          status: rescue.status,
+          questionFrom: rescue.questionFrom,
+          questionTo: rescue.questionTo,
+          rescueType: rescue.rescueType,
+          remainingContestants: rescue.remainingContestants,
+          isEffect,
+          currentContestantsCount: remainingContestantsCount
+        };
+      });
+    } catch (error) {
+      logger.error("Error getting all rescues with effect:", error);
+      throw new Error(`Lỗi lấy danh sách rescue: ${(error as Error).message}`);
+    }
   }
 
   static async ListRescueByMatchId(matchId: number) {

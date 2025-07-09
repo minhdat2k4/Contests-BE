@@ -456,6 +456,9 @@ export default class RescueController {
   static async getAllRescues(req: Request, res: Response): Promise<void> {
     try {
       const slug = req.params.slug;
+      const { currentQuestionOrder } = req.query;
+
+      const questionOrder = currentQuestionOrder ? Number(currentQuestionOrder) : undefined;
 
       const match = await prisma.match.findFirst({
         where: { slug: slug },
@@ -465,7 +468,7 @@ export default class RescueController {
         throw new Error("Không tìm thấy trận đấu");
       }
 
-      const rescues = await RescueService.getAllRescue(match.id);
+      const rescues = await RescueService.getAllRescue(match.id, questionOrder);
 
       if (!rescues || rescues.length === 0) {
         throw new Error("Không tìm thấy cứu trợ cho trận đấu này");

@@ -687,7 +687,10 @@ export default class GroupDivisionService {
     });
   }
 
-  static async UpdateContestantStatusEliminated(matchId: number) {
+  static async UpdateContestantStatusEliminated(
+    matchId: number,
+    questionOrder: number
+  ) {
     return await prisma.contestantMatch.updateMany({
       where: {
         matchId: matchId,
@@ -695,6 +698,7 @@ export default class GroupDivisionService {
       },
       data: {
         status: "eliminated",
+        eliminatedAtQuestionOrder: questionOrder,
       },
     });
   }

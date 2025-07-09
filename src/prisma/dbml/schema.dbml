@@ -438,6 +438,7 @@ Enum ControlKey {
   audio
   image
   chart
+  top20Winner
 }
 
 Enum ControlValue {

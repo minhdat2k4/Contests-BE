@@ -5,6 +5,7 @@ import { RescueService } from "@/modules/rescues";
 import { logger } from "@/utils/logger";
 import { ScreenService } from "@/modules/screen";
 import { GroupDivisionService } from "@/modules/groupDivision";
+import ContestantService from "@/modules/contestant/contestant.service";
 
 import { matchTimers } from "../events/timer.event";
 
@@ -170,6 +171,130 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
         message: `Lỗi khi cập nhật trạng thái rescue: ${
           (error as Error).message
         }`,
+      });
+    }
+  });
+
+  // Event để gửi danh sách Top20 Winner lên màn chiếu
+  socket.on("winner:showTop20", async (data, callback) => {
+    try {
+      const { matchId, match } = data;
+
+      if (!matchId) {
+        return callback({
+          success: false,
+          message: "Thiếu thông tin matchId",
+        });
+      }
+
+      // Lấy danh sách thí sinh đã hoàn thành (completed)
+      const result = await ContestantService.getCompletedContestants(
+        Number(matchId),
+        // Number(limit) // không cần giới hạn, lấy tất cả thí sinh đã hoàn thành
+      );
+
+      if (!result) {
+        return callback({
+          success: false,
+          message: "Không thể lấy danh sách thí sinh qua vòng",
+        });
+      }
+
+      const roomName = `match-${match}`;
+
+      // Cập nhật screen control để hiển thị Top20 Winner
+      const matchInfo = await MatchService.MatchControl(match);
+      if (matchInfo) {
+        const screen = await MatchService.ScreenControl(matchInfo.id);
+        if (screen) {
+          await ScreenService.update(screen.id, {
+            controlKey: "top20Winner",
+          });
+        }
+      }
+
+      // Trả về kết quả thông qua callback
+      callback(null, {
+        success: true,
+        message: `Đã gửi Top thí sinh qua vòng lên màn chiếu`,
+        data: result,
+      });
+
+      // Gửi dữ liệu lên màn chiếu cho tất cả client đang xem
+      io.emit("winner:top20Updated", {
+        success: true,
+        data: result,
+        matchId,
+        // limit,
+      });
+
+      // Gửi cập nhật screen control cho admin
+      io.of("/match-control").to(roomName).emit("screen:update", {
+        updatedScreen: {
+          controlKey: "top20Winner",
+        },
+      });
+
+      logger.info(`Đã gửi Top Winner cho match ${matchId}`);
+    } catch (error) {
+      logger.error("Socket error - winner:showTop20:", error);
+      callback({
+        success: false,
+        message: `Lỗi khi gửi Top20 Winner: ${(error as Error).message}`,
+      });
+    }
+  });
+
+  // Event để ẩn Top20 Winner trên màn chiếu
+  socket.on("winner:hideTop20", async (data, callback) => {
+    try {
+      const { matchId, match } = data;
+
+      if (!matchId) {
+        return callback({
+          success: false,
+          message: "Thiếu thông tin matchId",
+        });
+      }
+
+      const roomName = `match-${match}`;
+
+      // Cập nhật screen control về trạng thái mặc định
+      const matchInfo = await MatchService.MatchControl(match);
+      if (matchInfo) {
+        const screen = await MatchService.ScreenControl(matchInfo.id);
+        if (screen) {
+          await ScreenService.update(screen.id, {
+            controlKey: "question", // hoặc controlKey mặc định khác
+          });
+        }
+      }
+
+      // Trả về kết quả thông qua callback
+      callback(null, {
+        success: true,
+        message: "Đã ẩn Top20 Winner khỏi màn chiếu",
+      });
+
+      // Gửi event ẩn Top20 Winner
+      io.emit("winner:top20Hidden", {
+        success: true,
+        matchId,
+      });
+
+      // Gửi cập nhật screen control cho admin
+      io.of("/match-control").to(roomName).emit("screen:update", {
+        updatedScreen: {
+          controlKey: "question",
+        },
+      });
+
+      logger.info(`Đã ẩn Top20 Winner cho match ${matchId}`);
+    } catch (error) {
+      logger.error("Socket error - winner:hideTop20:", error);
+      callback({
+        success: false,
+        message: `Lỗi khi ẩn Top20 Winner: ${(error as Error).message}`,
       });
     }
   });

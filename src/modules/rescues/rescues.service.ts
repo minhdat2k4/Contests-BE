@@ -101,7 +101,9 @@ export default class RescueService {
           : ("Đã qua" as "Chưa sử dụng" | "Đã sử dụng" | "Đã qua"),
       matchName: key.match?.name,
     }));
-    const total = await prisma.rescue.count({ where: whereClause });
+    const total = await prisma.rescue.count({
+      where: { ...whereClause, match: { contestId: contestId } },
+    });
     const totalPages = Math.ceil(total / limit);
     return {
       rescues: rescues,
@@ -482,7 +484,7 @@ export default class RescueService {
       // Xử lý từng rescue dựa trên vị trí của nó so với câu hỏi hiện tại
       for (const rescue of rescues) {
         // Rescue đã được sử dụng thì không thay đổi
-        if (rescue.status === RescueStatus.used || RescueStatus.proposed) {
+        if (rescue.status === RescueStatus.used) {
           summary.unchanged++;
           continue;
         }

@@ -12,6 +12,7 @@ import cookie from "cookie";
 import { registerAwardEvents } from "../events/award.envent";
 import { registerMatchDiagramEvents } from "../events/matchDiagram.event";
 import { registerAudienceEvents } from "../events/audience.events";
+import { registerStatisticsEvents } from "../events/chart.envents";
 
 const extractUserFromSocket = (socket: Socket): JwtPayload | null => {
   try {
@@ -191,4 +192,5 @@ export const registerMatchControlEvents = (io: Server, socket: Socket) => {
 
   registerAwardEvents(io, socket);
   registerMatchDiagramEvents(io, socket);
+  registerStatisticsEvents(io, socket);
 };

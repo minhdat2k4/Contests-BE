@@ -28,19 +28,14 @@ export const authMiddleware = async (
   next: (err?: ExtendedError) => void
 ) => {
   try {
-    console.log("🔐 [BE] Bắt đầu xác thực socket ID:", socket.id);
-
     const rawCookie = socket.handshake.headers.cookie;
-    console.log("🍪 [BE] Cookie raw nhận được từ FE:", rawCookie);
 
     if (!rawCookie) {
-      console.log(`❌ [BE] Không có cookie từ socket ID: ${socket.id}`);
       logger.warn(`❌ [BE] Không có cookie. Socket ID: ${socket.id}`);
       return next(new Error("Authentication error: No cookie"));
     }
 
     const parsed = cookie.parse(rawCookie);
-    console.log("📝 [BE] Cookie đã parse:", parsed);
 
     const token = parsed.accessToken;
     console.log(

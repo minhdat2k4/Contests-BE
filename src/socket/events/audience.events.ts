@@ -70,7 +70,6 @@ export const registerAudienceEvents = (io: Server, socket: Socket) => {
 
     const updateRescued = await RescueService.updateRescue(rescue.id, {
       questionOrder: payload.questionOrder,
-      status: "proposed",
     });
 
     if (!updateRescued) {

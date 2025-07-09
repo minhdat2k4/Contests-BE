@@ -111,6 +111,7 @@ enum ControlKey {
   audio
   image
   chart
+  statistic 
 }
 
 enum ControlValue {

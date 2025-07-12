@@ -64,4 +64,55 @@ export const registerStatisticsEvents = (io: Server, socket: Socket) => {
       statistics,
     });
   });
+  socket.on("statisticsContestant:update", async (data, callback) => {
+    const validation = updatestatistics.safeParse(data);
+    if (!validation.success) {
+      return callback({ success: false, message: "Dữ liệu không hợp lệ" });
+    }
+
+    const payload = validation.data;
+
+    const matchRaw = await MatchService.MatchControl(payload.match);
+    if (!matchRaw) {
+      return callback({ success: false, message: "Không tìm thấy trận đấu" });
+    }
+
+    const screen = await MatchService.ScreenControl(matchRaw.id);
+    if (!screen) {
+      return callback({
+        success: false,
+        message: "Cập nhật màn hình thất bại",
+      });
+    }
+
+    const roomName = `match-${payload.match}`;
+
+    const updatePayload: UpdateScreenInput = {
+      controlKey: "chartContestant",
+    };
+
+    const updatedScreen = await ScreenService.update(screen.id, updatePayload);
+    if (!updatedScreen) {
+      return callback({
+        success: false,
+        message: "Cập nhật màn hình thất bại",
+      });
+    }
+
+    const statisticRaw = await ResultService.chartContestant(matchRaw.id);
+
+    const statisticsContestant = statisticRaw.map(stat => ({
+      label: stat.registrationNumber,
+      value: stat.correctCount,
+    }));
+
+    callback(null, {
+      message: "Cập nhật màn hình thành công",
+    });
+
+    io.of("/match-control").to(roomName).emit("statisticsContestant:update", {
+      updatedScreen,
+      statisticsContestant,
+    });
+  });
 };

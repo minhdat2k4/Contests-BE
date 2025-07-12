@@ -571,4 +571,61 @@ export class ResultController {
       }
     }
   }
+
+  static async statisticalsContestant(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { matchSlug } = req.params;
+
+      const match = await prisma.match.findFirst({
+        where: { slug: matchSlug },
+      });
+
+      if (!match) {
+        throw new CustomError(
+          "Trận đấu không tồn tại",
+          404,
+          ERROR_CODES.MATCH_NOT_FOUND
+        );
+      }
+      const statistics = await ResultService.chartContestant(match?.id);
+
+      if (!statistics) {
+        res
+          .status(404)
+          .json(
+            errorResponse(
+              "Không tìm thấy thống kê cho trận đấu này",
+              ERROR_CODES.NOT_FOUND
+            )
+          );
+        return;
+      }
+
+      const data = statistics.map(stat => ({
+        label: stat.registrationNumber,
+        value: stat.correctCount,
+        fullName: stat.fullName,
+        contestantId: stat.contestantId,
+      }));
+
+      logger.info(`Retrieved statistics for match ${matchSlug}`);
+      res.json(successResponse(data, "Lấy thống kê trận đấu thành công"));
+    } catch (error) {
+      logger.error("Error in statisticals controller:", error);
+      if (error instanceof CustomError) {
+        res
+          .status(error.statusCode)
+          .json(errorResponse(error.message, error.code));
+      } else {
+        res
+          .status(500)
+          .json(
+            errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR)
+          );
+      }
+    }
+  }
 }

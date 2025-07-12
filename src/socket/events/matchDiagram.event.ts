@@ -101,8 +101,6 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
           payload.questionOrder
         );
 
-      console.log(eliminatedRaw);
-
       if (!eliminatedRaw) {
         return callback({
           success: false,

@@ -93,13 +93,13 @@ export default class RescueService {
       supportAnswers: key.supportAnswers,
       remainingContestants: key.remainingContestants,
       questionOrder: key.questionOrder,
-      index: key.index,
+      index: key.index ?? undefined,
       status:
         key.status === "notUsed"
           ? "Chưa sử dụng"
           : key.status === "used"
-            ? "Đã sử dụng"
-            : ("Đã qua" as "Chưa sử dụng" | "Đã sử dụng" | "Đã qua"),
+          ? "Đã sử dụng"
+          : ("Đã qua" as "Chưa sử dụng" | "Đã sử dụng" | "Đã qua"),
       matchName: key.match?.name,
     }));
     const total = await prisma.rescue.count({
@@ -454,7 +454,8 @@ export default class RescueService {
   }> {
     try {
       // số thí sinh còn lại trong trận đấu
-      const remainingContestantsCount = await ContestantService.getRemainingContestantsCount(matchId);
+      const remainingContestantsCount =
+        await ContestantService.getRemainingContestantsCount(matchId);
 
       // Lấy tất cả rescue của match
       const rescues = await prisma.rescue.findMany({
@@ -563,17 +564,19 @@ export default class RescueService {
         // 1. Rescue phải có status 'notUsed'
         // 2. Rescue phải trong range câu hỏi hiện tại
         // 3. Số thí sinh còn lại phải <= remainingContestants của rescue
-        const isInRange = rescue.questionFrom <= currentQuestionOrder &&
+        const isInRange =
+          rescue.questionFrom <= currentQuestionOrder &&
           currentQuestionOrder <= rescue.questionTo;
-        const hasEnoughContestants = remainingContestantsCount <= rescue.remainingContestants;
-        const isNotUsed = rescue.status === 'notUsed';
+        const hasEnoughContestants =
+          remainingContestantsCount <= rescue.remainingContestants;
+        const isNotUsed = rescue.status === "notUsed";
 
         const isEffect = isInRange && hasEnoughContestants && isNotUsed;
 
         return {
           ...rescue,
           isEffect,
-          currentContestantsCount: remainingContestantsCount // Thêm thông tin để debug
+          currentContestantsCount: remainingContestantsCount, // Thêm thông tin để debug
         };
       });
 
@@ -581,8 +584,9 @@ export default class RescueService {
         updatedRescues: updatedRescuesWithEffect,
         currentEligibleRescues: currentEligibleRescues.map(r => {
           // Tính toán isEffect cho currentEligibleRescues
-          const hasEnoughContestants = remainingContestantsCount <= r.remainingContestants;
-          const isNotUsed = r.status === 'notUsed';
+          const hasEnoughContestants =
+            remainingContestantsCount <= r.remainingContestants;
+          const isNotUsed = r.status === "notUsed";
           const isEffect = hasEnoughContestants && isNotUsed;
 
           return {
@@ -594,7 +598,7 @@ export default class RescueService {
             questionTo: r.questionTo,
             remainingContestants: r.remainingContestants,
             isEffect,
-            currentContestantsCount: remainingContestantsCount
+            currentContestantsCount: remainingContestantsCount,
           };
         }),
         totalUpdated: updatedRescues.length,
@@ -628,7 +632,8 @@ export default class RescueService {
   static async getAllRescue(matchId: number, currentQuestionOrder?: number) {
     try {
       // Lấy số thí sinh còn lại
-      const remainingContestantsCount = await ContestantService.getRemainingContestantsCount(matchId);
+      const remainingContestantsCount =
+        await ContestantService.getRemainingContestantsCount(matchId);
 
       const rescues = await prisma.rescue.findMany({
         where: { matchId: matchId },
@@ -658,10 +663,12 @@ export default class RescueService {
           // 1. Rescue phải có status 'notUsed'
           // 2. Rescue phải trong range câu hỏi hiện tại
           // 3. Số thí sinh còn lại phải <= remainingContestants của rescue
-          const isInRange = rescue.questionFrom <= currentQuestionOrder &&
+          const isInRange =
+            rescue.questionFrom <= currentQuestionOrder &&
             currentQuestionOrder <= rescue.questionTo;
-          const hasEnoughContestants = remainingContestantsCount <= rescue.remainingContestants;
-          const isNotUsed = rescue.status === 'notUsed';
+          const hasEnoughContestants =
+            remainingContestantsCount <= rescue.remainingContestants;
+          const isNotUsed = rescue.status === "notUsed";
 
           isEffect = isInRange && hasEnoughContestants && isNotUsed;
         }
@@ -676,7 +683,7 @@ export default class RescueService {
           rescueType: rescue.rescueType,
           remainingContestants: rescue.remainingContestants,
           isEffect,
-          currentContestantsCount: remainingContestantsCount
+          currentContestantsCount: remainingContestantsCount,
         };
       });
     } catch (error) {

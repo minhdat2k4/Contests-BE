@@ -12,6 +12,7 @@ import {
   BatchDeleteResult,
 } from "./award.schema";
 import { prisma } from "@/config/database";
+import { match } from "assert";
 
 export default class AwardService {
   private prisma: PrismaClient;
@@ -132,6 +133,7 @@ export default class AwardService {
           contestId: contest.id,
           contestantId: data.contestantId,
           type: data.type,
+          matchId: data.matchId,
         },
         include: {
           contest: {
@@ -201,6 +203,12 @@ export default class AwardService {
               },
             },
           },
+          match: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       });
 
@@ -246,9 +254,12 @@ export default class AwardService {
       hasPrev: boolean;
     };
   }> {
-    const { page, limit, search } = query;
+    const { page, limit, search, matchId } = query;
     const skip = (page - 1) * limit;
     const whereClause: any = {};
+    if (matchId) {
+      whereClause.matchId = matchId;
+    }
 
     if (search) {
       const keywords = search.trim().split(/\s+/);
@@ -362,6 +373,7 @@ export default class AwardService {
           }),
           // Update type if provided
           ...(data.type !== undefined && { type: data.type }),
+          ...(data.matchId !== undefined && { matchId: data.matchId }),
         },
         include: {
           contest: {
@@ -498,5 +510,56 @@ export default class AwardService {
         ERROR_CODES.INTERNAL_SERVER_ERROR
       );
     }
+  }
+
+  static async getAwardByType(type: AwardType, matchId: number): Promise<any> {
+    const awardRaw = await prisma.award.findFirst({
+      where: {
+        type: type,
+        matchId: matchId,
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        contestantId: true,
+        contestant: {
+          select: {
+            student: {
+              select: {
+                fullName: true,
+              },
+            },
+            contestantMatches: {
+              select: {
+                registrationNumber: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!awardRaw) {
+      return null;
+    }
+
+    const award: any = {
+      id: awardRaw?.id,
+      name: awardRaw?.name,
+      type: awardRaw?.type,
+      contestantId: awardRaw?.contestantId,
+      fullName: awardRaw?.contestant?.student?.fullName,
+      registrationNumber:
+        awardRaw?.contestant?.contestantMatches[0]?.registrationNumber,
+    };
+    return award;
+  }
+
+  static async updateAwardContestant(id: number, contestantId: number) {
+    return prisma.award.update({
+      where: { id },
+      data: { contestantId },
+    });
   }
 }

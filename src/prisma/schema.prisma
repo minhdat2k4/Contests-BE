@@ -82,9 +82,6 @@ enum AwardType {
   firstPrize
   secondPrize
   thirdPrize
-  fourthPrize
-  impressiveVideo
-  excellentVideo
 }
 
 enum ControlKey {
@@ -113,6 +110,7 @@ enum ControlKey {
   chart
   statistic 
   top20Winner
+  chartContestant
 }
 
 enum ControlValue {
@@ -322,7 +320,7 @@ model Media {
 model Round {
   id          Int          @id @default(autoincrement())
   name        String       @db.VarChar(255)
-  index       Int         
+  index       Int       
   contestId   Int   
   startTime    DateTime   @default(now())
   endTime      DateTime   @default(now())     
@@ -357,6 +355,7 @@ model Match {
   contestantMatches ContestantMatch[]
   results          Result[]
   rescues          Rescue[]
+  awards           Award[]
   screenControls   ScreenControl?   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -437,7 +436,7 @@ model Rescue {
   supportAnswers     Json?      
   remainingContestants Int     
   questionOrder         Int?      
-  index              Int         
+  index              Int?
   status             RescueStatus
   matchId            Int          @map("match_id")
   match              Match        @relation(fields: [matchId], references: [id],onDelete :Restrict , onUpdate :Restrict)
@@ -453,6 +452,8 @@ model Award {
   contestId    Int        @map("contest_id")
   contest      Contest    @relation(fields: [contestId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   contestantId Int?       @map("contestant_id")
+  matchId      Int?       @map("match_id")
+  match        Match?     @relation(fields: [matchId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   contestant   Contestant? @relation(fields: [contestantId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   type         AwardType  
   createdAt DateTime @default(now())
@@ -502,6 +503,5 @@ model ScreenControl {
   value        String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   @@map("screen_controls")
 }

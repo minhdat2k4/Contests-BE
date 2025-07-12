@@ -29,6 +29,13 @@ studentRouter.get(
   StudentController.getStudentNotContestId
 );
 
+studentRouter.patch(
+  "/:id/toggle-active",
+  authenticate,
+  role("Admin"),
+  StudentController.toggleActive
+);
+
 studentRouter.get(
   "/:id",
   authenticate,

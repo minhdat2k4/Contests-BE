@@ -189,4 +189,11 @@ router.get(
   ResultController.statisticals.bind(resultController)
 );
 
+router.get(
+  "/:matchSlug/contestant-statistics",
+  authenticate,
+  role("Admin", "Judge"),
+  ResultController.statisticalsContestant.bind(resultController)
+);
+
 export { router as resultRouter };

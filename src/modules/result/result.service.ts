@@ -1416,4 +1416,56 @@ export class ResultService {
       },
     });
   }
+  static async chartContestant(matchId: number) {
+    // 1. Group theo contestantId và đếm số câu đúng
+    const groupedResults = await prisma.result.groupBy({
+      by: ["contestantId"],
+      where: {
+        matchId: matchId,
+        isCorrect: true,
+      },
+      _count: {
+        isCorrect: true,
+      },
+    });
+
+    // 2. Lấy thông tin chi tiết contestant, student, registrationNumber
+    const detailed = await Promise.all(
+      groupedResults.map(async item => {
+        const contestant = await prisma.contestant.findUnique({
+          where: {
+            id: item.contestantId,
+          },
+          include: {
+            student: {
+              select: {
+                fullName: true,
+              },
+            },
+            contestantMatches: {
+              where: {
+                matchId: matchId,
+              },
+              select: {
+                registrationNumber: true,
+              },
+            },
+          },
+        });
+
+        return {
+          contestantId: item.contestantId,
+          correctCount: item._count.isCorrect,
+          fullName: contestant?.student?.fullName || "Unknown",
+          registrationNumber:
+            contestant?.contestantMatches?.[0]?.registrationNumber || null,
+        };
+      })
+    );
+
+    const list = detailed
+      .slice(0, 10)
+      .sort((a, b) => b.correctCount - a.correctCount); // Lấy 10 thí sinh đầu tiên
+    return list;
+  }
 }

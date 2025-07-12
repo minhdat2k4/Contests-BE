@@ -11,7 +11,7 @@ export const RescuesShema = z.object({
   supportAnswers: z.any().optional(),
   remainingContestants: z.number(),
   questionOrder: z.number().nullable(),
-  index: z.number(),
+  index: z.number().optional(),
   status: z.enum(["Chưa sử dụng", "Đã sử dụng", "Đã qua"]),
   matchName: z.string(),
 });
@@ -49,7 +49,7 @@ export const CreateRescuesShema = z.object({
       "Id cuộc thi là một số nguyên dương"
     ),
   status: z.nativeEnum(RescueStatus),
-  index: z.number(),
+  index: z.number().optional(),
 });
 
 export const RescuesIdShame = z.object({
@@ -153,7 +153,7 @@ export type RescuesById = {
   remainingContestants: number;
   questionOrder: number | null;
   matchId: number;
-  index: number;
+  index: number | null;
   status: RescueStatus;
   match: { name: string };
 };

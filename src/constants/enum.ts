@@ -80,6 +80,7 @@ export enum ControlKey {
     Video = "video",
     Audio = "audio",
     Image = "image",
+    Top20Winner = "top20Winner",
 }
 
 export enum ControlValue {

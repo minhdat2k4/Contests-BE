@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { ResultController } from "./result.controller";
 import { authenticate, role } from "@/middlewares/auth";
-import { validateBody, validateParams, validateQuery } from "@/utils/validation";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "@/utils/validation";
 import {
   createResultSchema,
   updateResultSchema,
@@ -14,7 +18,7 @@ import {
   getResultsByContestSlugSchema,
   getResultsByContestSlugQuerySchema,
   submitAnswerSchema,
-  banContestantSchema
+  banContestantSchema,
 } from "./result.schema";
 
 const router = Router();
@@ -176,6 +180,20 @@ router.delete(
   role("Admin"),
   validateParams(deleteResultSchema),
   resultController.deleteResult.bind(resultController)
+);
+
+router.get(
+  "/:matchSlug/statistics",
+  authenticate,
+  role("Admin", "Judge"),
+  ResultController.statisticals.bind(resultController)
+);
+
+router.get(
+  "/:matchSlug/contestant-statistics",
+  authenticate,
+  role("Admin", "Judge"),
+  ResultController.statisticalsContestant.bind(resultController)
 );
 
 export { router as resultRouter };

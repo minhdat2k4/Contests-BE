@@ -1,10 +1,6 @@
 import express from "express";
 import AwardController from "./award.controller";
-import {
-  validateBody,
-  validateParams,
-  validateQuery,
-} from "@/utils/validation";
+import { validateBody, validateParams } from "@/utils/validation";
 import { authenticate, role } from "@/middlewares/auth";
 import {
   createAwardSchema,
@@ -13,7 +9,6 @@ import {
   updateAwardSchema,
   getAwardByIdSchema,
   deleteAwardSchema,
-  getAwardsQuerySchema,
   batchDeleteAwardsSchema,
 } from "./award.schema";
 
@@ -36,6 +31,11 @@ router.post(
   awardController.createAwardByContestSlug.bind(awardController)
 );
 
+router.get(
+  "/match/:matchSlug",
+  AwardController.getAwardByType.bind(awardController)
+);
+
 /**
  * @route GET /api/awards/contest/:slug
  * @desc Get awards for specific contest by slug
@@ -43,7 +43,7 @@ router.post(
  */
 router.get(
   "/contest/:slug",
-  validateParams(getContestSlugSchema),
+  // validateParams(getContestSlugSchema),
   awardController.getAwardsByContestSlug.bind(awardController)
 );
 

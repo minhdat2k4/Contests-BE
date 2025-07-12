@@ -955,4 +955,192 @@ export default class ContestantController {
       res.status(400).json(errorResponse((error as Error).message));
     }
   }
+
+  // API cập nhật trạng thái thành completed cho các thí sinh trong trận đấu
+  static async updateToCompleted(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId);
+      if (!matchId || isNaN(matchId)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+
+      const { contestantIds } = req.body;
+      if (!Array.isArray(contestantIds) || contestantIds.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: "Thiếu dữ liệu contestantIds hoặc contestantIds rỗng",
+        });
+        return;
+      }
+
+      // Validate all contestantIds are numbers
+      const invalidIds = contestantIds.filter(id => !Number.isInteger(Number(id)));
+      if (invalidIds.length > 0) {
+        res.status(400).json({
+          success: false,
+          message: `Các ID không hợp lệ: ${invalidIds.join(', ')}`,
+        });
+        return;
+      }
+
+      const result = await ContestantService.updateToCompleted(
+        matchId,
+        contestantIds.map(Number)
+      );
+
+      res.json({
+        ...result
+      });
+    } catch (error) {
+      logger.error('Error in updateToCompleted:', error);
+      res
+        .status(500)
+        .json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  // API cập nhật trạng thái thành eliminated cho các thí sinh trong trận đấu (từ completed về eliminated)
+  static async updateToEliminated(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId);
+      if (!matchId || isNaN(matchId)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+
+      const { contestantIds } = req.body;
+      if (!Array.isArray(contestantIds) || contestantIds.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: "Thiếu dữ liệu contestantIds hoặc contestantIds rỗng",
+        });
+        return;
+      }
+
+      // Validate all contestantIds are numbers
+      const invalidIds = contestantIds.filter(id => !Number.isInteger(Number(id)));
+      if (invalidIds.length > 0) {
+        res.status(400).json({
+          success: false,
+          message: `Các ID không hợp lệ: ${invalidIds.join(', ')}`,
+        });
+        return;
+      }
+
+      const result = await ContestantService.updateToEliminated(
+        matchId,
+        contestantIds.map(Number)
+      );
+
+      res.json({
+        ...result
+      });
+    } catch (error) {
+      logger.error('Error in updateToEliminated:', error);
+      res
+        .status(500)
+        .json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  // API lấy danh sách thí sinh ứng cử viên cứu trợ (chỉ lấy dữ liệu, không cập nhật bảng rescue)
+  static async getCandidatesList(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId);
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+
+      if (!matchId || isNaN(matchId)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+
+      // Validate limit nếu có
+      if (limit !== undefined && (isNaN(limit) || limit <= 0)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Limit phải là số nguyên dương" });
+        return;
+      }
+
+      const data = await ContestantService.getCandidatesList(matchId, limit);
+      
+      logger.info(`Lấy danh sách ứng cử viên cứu trợ trong trận đấu ${matchId} thành công`);
+      res.json(
+        successResponse(
+          data,
+          "Lấy danh sách ứng cử viên cứu trợ thành công"
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  // API lấy danh sách thí sinh đã hoàn thành (completed) trong trận đấu
+  static async getCompletedContestants(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = Number(req.params.matchId);
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+
+      if (!matchId || isNaN(matchId)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Thiếu hoặc sai matchId" });
+        return;
+      }
+
+      // Validate limit nếu có
+      if (limit !== undefined && (isNaN(limit) || limit <= 0)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Limit phải là số nguyên dương" });
+        return;
+      }
+
+      const data = await ContestantService.getCompletedContestants(matchId, limit);
+      
+      logger.info(`Lấy danh sách thí sinh đã hoàn thành trong trận đấu ${matchId} thành công`);
+      res.json(
+        successResponse(
+          data,
+          "Lấy danh sách thí sinh đã hoàn thành thành công"
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  // API cập nhật tất cả thí sinh completed về eliminated trong trận đấu
+  static async updateAllCompletedToEliminated(req: Request, res: Response): Promise<void> {
+    try {
+      const matchId = parseInt(req.params.matchId);
+      
+      if (!matchId || matchId <= 0) {
+        throw new Error("ID trận đấu không hợp lệ");
+      }
+
+      const result = await ContestantService.updateAllCompletedToEliminated(matchId);
+
+      logger.info(`Cập nhật tất cả thí sinh completed về eliminated trong trận đấu ${matchId} thành công`);
+      res.json(
+        successResponse(
+          result,
+          result.message
+        )
+      );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
 }

@@ -5,14 +5,7 @@ import {
   validateQuery,
 } from "@/utils/validation";
 import { MatchController } from "@/modules/match";
-import {
-  MatchIdShame,
-  CreateMatchSchema,
-  UpdateMatchInput,
-  deleteMatchesSchema,
-  MatchQuerySchema,
-  UpdateMatchSchema,
-} from "./match.schema";
+import { MatchIdShame, deleteMatchesSchema } from "./match.schema";
 import { authenticate, role } from "@/middlewares/auth";
 const matchRouter = Router();
 // private

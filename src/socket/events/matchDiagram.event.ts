@@ -8,6 +8,7 @@ import { RescueService } from "@/modules/rescues";
 
 import { z } from "zod";
 import { UserService } from "@/modules/user";
+import e from "express";
 
 export const updateEliminated = z.object({
   match: z.string(),
@@ -42,8 +43,23 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
         });
       }
 
+      const deletedResult = await ResultService.deleted(
+        match.id,
+        payload.questionOrder
+      );
+
+      if (!deletedResult) {
+        return callback({
+          success: false,
+          message: "Xoá kết quả thất bại",
+        });
+      }
+
       const UpdateEliminated =
-        await GroupDivisionService.UpdateContestantStatusEliminated(match.id);
+        await GroupDivisionService.UpdateContestantStatusEliminated(
+          match.id,
+          payload.questionOrder
+        );
       if (!UpdateEliminated) {
         return callback({
           success: false,
@@ -51,13 +67,12 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
         });
       }
 
-      const in_progress: number[] = (
-        await GroupDivisionService.getContestantMatchByStatus(
-          match.id,
-          "in_progress",
-          payload.questionOrder
-        )
-      ).map(c => c.contestantId);
+      const in_progress = await GroupDivisionService.getContestantMatchByStatus(
+        match.id,
+        "in_progress"
+      );
+
+      const payloadInProgress = in_progress.map(c => c.contestantId);
 
       if (!in_progress) {
         return callback({
@@ -66,27 +81,10 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
         });
       }
 
-      const eliminated: number[] = (
-        await GroupDivisionService.getContestantMatchByStatus(
-          match.id,
-          "eliminated",
-          payload.questionOrder
-        )
-      ).map(c => c.contestantId);
-
-      if (!eliminated) {
-        return callback({
-          success: false,
-          message: "Không tìm thấy thí sinh bị loại",
-        });
-      }
-
-      await ResultService.deleted(match.id, payload.questionOrder);
-
       const resultTrue = await ResultService.createIsCorrectTrues(
         match.id,
         payload.questionOrder,
-        in_progress
+        payloadInProgress
       );
 
       if (!resultTrue) {
@@ -95,6 +93,22 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
           message: "Cập nhật kết quả thí sinh đúng thất bại",
         });
       }
+
+      const eliminatedRaw =
+        await GroupDivisionService.getContestantMatchByStatus(
+          match.id,
+          "eliminated",
+          payload.questionOrder
+        );
+
+      if (!eliminatedRaw) {
+        return callback({
+          success: false,
+          message: "Không tìm thấy thí sinh bị loại",
+        });
+      }
+
+      const eliminated = eliminatedRaw.map(c => c.contestantId);
 
       const resultFalse = await ResultService.createIsCorrectFalses(
         match.id,
@@ -186,16 +200,14 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
         });
       }
 
-      // // Trả về kết quả thông qua callback
-      // callback(null, {
-      //   success: true,
-      //   message: `Đã cập nhật ${result.totalUpdated} rescue`,
-      //   data: result,
-      // });
-
       io.of("/match-control").to(roomName).emit("rescue:statusUpdated", {
         success: true,
         data: result,
+      });
+      const ListRescue = await RescueService.getListRescue(match.id);
+
+      io.of("/match-control").to(roomName).emit("rescue:updateStatus", {
+        ListRescue,
       });
     } catch (error) {
       console.error("Lỗi khi xử lý cập nhật trạng thái:", error);
@@ -204,7 +216,6 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
   });
 
   socket.on("update:Rescued", async (rawData: unknown, callback) => {
-    console.log("update:Rescued event received", rawData);
     const validation = updateRescued.safeParse(rawData);
     if (!validation.success) {
       return callback({
@@ -253,9 +264,12 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
 
       const countInProgress = await MatchService.countIn_progress(match.id);
 
-      const ids = GroupDivisionService.getIdsByStatus(match.id);
+      const ids = await GroupDivisionService.getIdsByStatus(match.id);
+
+      const arr: number[] = ids.map(id => Number(id.registrationNumber));
+
       const eventData = {
-        rescuedContestantIds: ids,
+        rescuedContestantIds: arr,
         message: "Bạn đã được cứu trợ! Hãy tiếp tục thi đấu.",
       };
       const roomById = `match-${match.id}`;

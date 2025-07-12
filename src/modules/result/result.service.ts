@@ -619,7 +619,7 @@ export class ResultService {
       });
 
       const totalQuestions = results.length;
-      const correctAnswers = results.filter((r) => r.isCorrect).length;
+      const correctAnswers = results.filter(r => r.isCorrect).length;
       const incorrectAnswers = totalQuestions - correctAnswers;
       const accuracy =
         totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
@@ -976,7 +976,7 @@ export class ResultService {
             /^[a-d]\./i, // "A.", "a."
           ];
 
-          const isOptionFormat = optionPatterns.some((pattern) =>
+          const isOptionFormat = optionPatterns.some(pattern =>
             pattern.test(studentAnswer)
           );
 
@@ -1046,10 +1046,10 @@ export class ResultService {
               // So sánh từng từ (giữ nguyên dấu câu giữa câu)
               const studentWords = normalizedStudentAnswer
                 .split(/\s+/)
-                .filter((word) => word.length > 0);
+                .filter(word => word.length > 0);
               const correctWords = normalizedCorrectAnswer
                 .split(/\s+/)
-                .filter((word) => word.length > 0);
+                .filter(word => word.length > 0);
 
               // So sánh từng từ và dấu câu
               if (studentWords.length === correctWords.length) {
@@ -1104,7 +1104,7 @@ export class ResultService {
         } else if (question.questionType === "essay") {
           const studentAnswer = data.answer.toLowerCase().trim();
           const optionPatterns = [/^option\s*[a-d]$/i, /^[a-d]$/i, /^[a-d]\./i];
-          const isOptionFormat = optionPatterns.some((pattern) =>
+          const isOptionFormat = optionPatterns.some(pattern =>
             pattern.test(studentAnswer)
           );
 
@@ -1164,7 +1164,7 @@ export class ResultService {
         // 🔥 NEW: Thông báo đặc biệt cho câu hỏi tự luận
         const studentAnswer = data.answer.toLowerCase().trim();
         const optionPatterns = [/^option\s*[a-d]$/i, /^[a-d]$/i, /^[a-d]\./i];
-        const isOptionFormat = optionPatterns.some((pattern) =>
+        const isOptionFormat = optionPatterns.some(pattern =>
           pattern.test(studentAnswer)
         );
 
@@ -1365,6 +1365,9 @@ export class ResultService {
   }
 
   static async deleted(match: number, questionOrder: number) {
+    console.log(
+      `Deleting results for match ${match} and questionOrder ${questionOrder}`
+    );
     return prisma.result.deleteMany({
       where: { matchId: match, questionOrder: questionOrder },
     });
@@ -1374,7 +1377,7 @@ export class ResultService {
     questionOrder: number,
     contestants: number[]
   ) {
-    const data = contestants.map((contestantId) => ({
+    const data = contestants.map(contestantId => ({
       contestantId: contestantId,
       matchId: match,
       isCorrect: true,
@@ -1390,7 +1393,7 @@ export class ResultService {
     questionOrder: number,
     contestants: number[]
   ) {
-    const data = contestants.map((contestantId) => ({
+    const data = contestants.map(contestantId => ({
       contestantId: contestantId,
       matchId: match,
       isCorrect: false,
@@ -1399,5 +1402,70 @@ export class ResultService {
     return prisma.result.createMany({
       data: data,
     });
+  }
+
+  static async statisticals(matchId: number) {
+    return prisma.result.groupBy({
+      by: ["questionOrder"],
+      _count: {
+        isCorrect: true,
+      },
+      where: {
+        matchId: matchId,
+        isCorrect: true,
+      },
+    });
+  }
+  static async chartContestant(matchId: number) {
+    // 1. Group theo contestantId và đếm số câu đúng
+    const groupedResults = await prisma.result.groupBy({
+      by: ["contestantId"],
+      where: {
+        matchId: matchId,
+        isCorrect: true,
+      },
+      _count: {
+        isCorrect: true,
+      },
+    });
+
+    // 2. Lấy thông tin chi tiết contestant, student, registrationNumber
+    const detailed = await Promise.all(
+      groupedResults.map(async item => {
+        const contestant = await prisma.contestant.findUnique({
+          where: {
+            id: item.contestantId,
+          },
+          include: {
+            student: {
+              select: {
+                fullName: true,
+              },
+            },
+            contestantMatches: {
+              where: {
+                matchId: matchId,
+              },
+              select: {
+                registrationNumber: true,
+              },
+            },
+          },
+        });
+
+        return {
+          contestantId: item.contestantId,
+          correctCount: item._count.isCorrect,
+          fullName: contestant?.student?.fullName || "Unknown",
+          registrationNumber:
+            contestant?.contestantMatches?.[0]?.registrationNumber || null,
+        };
+      })
+    );
+
+    const list = detailed
+      .slice(0, 10)
+      .sort((a, b) => b.correctCount - a.correctCount); // Lấy 10 thí sinh đầu tiên
+    return list;
   }
 }

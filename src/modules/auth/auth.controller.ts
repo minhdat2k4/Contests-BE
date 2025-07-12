@@ -107,6 +107,21 @@ export default class AuthController {
           .json(validateData("identifier", "Tài khoản không tồn tại"));
         return;
       }
+
+      if (!user.isActive) {
+        logger.error(`Tài khoản ${input.identifier} đã bị vô hiệu hóa`);
+        res
+          .status(400)
+          .json(validateData("identifier", "Tài khoản đã bị vô hiệu hóa"));
+        return;
+      }
+
+      if (user.role === "Student") {
+        throw new Error(
+          "Vui lòng sử dụng endpoint /student/login để đăng nhập"
+        );
+      }
+
       const isPassword = await AuthService.isPassword(
         input.password,
         user.password

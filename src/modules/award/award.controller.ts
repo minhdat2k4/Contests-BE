@@ -28,6 +28,26 @@ export default class AwardController {
   async createAward(req: Request, res: Response): Promise<void> {
     try {
       const data: CreateAwardData = req.body;
+
+      const match = await prisma.match.findUnique({
+        where: { id: data.matchId },
+      });
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu với ID này");
+      }
+
+      const existing = await prisma.award.count({
+        where: {
+          type: data.type,
+          matchId: data.matchId,
+        },
+      });
+
+      console.log("Existing awards count:", existing);
+      if (existing > 0) {
+        throw new Error("Loại giải thưởng này đã tồn tại cho trận đấu này");
+      }
+
       const award = await this.awardService.createAward(data);
 
       logger.info(`Award created successfully: ${award.id}`);
@@ -85,7 +105,36 @@ export default class AwardController {
   async updateAward(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
+
       const data: UpdateAwardData = req.body;
+
+      if (data.matchId) {
+        const match = await prisma.match.findUnique({
+          where: { id: data.matchId },
+        });
+        if (!match) {
+          throw new Error("Không tìm thấy trận đấu với ID này");
+        }
+      }
+
+      const existingAward = await this.awardService.getAwardById(Number(id));
+      if (!existingAward) {
+        throw new Error("Không tìm thấy giải thưởng với ID này");
+      }
+
+      if (data.type) {
+        const existing = await prisma.award.count({
+          where: {
+            type: data.type,
+            matchId: data.matchId || data.matchId,
+            id: { not: Number(id) }, // Exclude current award
+          },
+        });
+
+        if (existing > 0) {
+          throw new Error("Loại giải thưởng này đã tồn tại cho trận đấu này");
+        }
+      }
 
       // Check if at least one field is provided
       if (Object.keys(data).length === 0) {
@@ -106,17 +155,7 @@ export default class AwardController {
       res.json(successResponse(award, "Cập nhật giải thưởng thành công"));
     } catch (error) {
       logger.error("Error in updateAward controller:", error);
-      if (error instanceof CustomError) {
-        res
-          .status(error.statusCode)
-          .json(errorResponse(error.message, error.code));
-      } else {
-        res
-          .status(500)
-          .json(
-            errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR)
-          );
-      }
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
 
@@ -215,6 +254,27 @@ export default class AwardController {
     try {
       const { slug } = req.params;
       const data: CreateAwardByContestData = req.body;
+
+      if (data.matchId) {
+        const match = await prisma.match.findUnique({
+          where: { id: data.matchId },
+        });
+        if (!match) {
+          throw new Error("Không tìm thấy trận đấu với ID này");
+        }
+      }
+      const exting = await prisma.award.count({
+        where: {
+          type: data.type,
+          matchId: data.matchId,
+          contest: {
+            slug: slug,
+          },
+        },
+      });
+      if (exting > 0) {
+        throw new Error("Loại giải thưởng này đã tồn tại cho trận đấu này");
+      }
       const award = await this.awardService.createAwardByContestSlug(
         slug,
         data
@@ -226,17 +286,7 @@ export default class AwardController {
         .json(successResponse(award, "Tạo giải thưởng thành công"));
     } catch (error) {
       logger.error("Error in createAwardByContestSlug controller:", error);
-      if (error instanceof CustomError) {
-        res
-          .status(error.statusCode)
-          .json(errorResponse(error.message, error.code));
-      } else {
-        res
-          .status(500)
-          .json(
-            errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR)
-          );
-      }
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
 
@@ -258,6 +308,7 @@ export default class AwardController {
         page: Number(req.query.page) || 1,
         limit: Number(req.query.limit) || 10,
         search: req.query.search as string | undefined,
+        matchId: req.query.matchId ? Number(req.query.matchId) : undefined,
       };
 
       const awards = await this.awardService.getAll(query, contest.id);
@@ -272,7 +323,6 @@ export default class AwardController {
         )
       );
     } catch (error) {
-      logger.error("Error in getAwardsByContestSlug controller:", error);
       if (error instanceof CustomError) {
         res
           .status(error.statusCode)
@@ -284,6 +334,51 @@ export default class AwardController {
             errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR)
           );
       }
+    }
+  }
+
+  static async getAwardByType(req: Request, res: Response): Promise<void> {
+    try {
+      const { matchSlug } = req.params;
+
+      if (!matchSlug) {
+        throw new Error("Match slug không được để trống");
+      }
+      const match = await prisma.match.findFirst({
+        where: { slug: matchSlug },
+      });
+      if (!match) {
+        throw new Error("Không tìm thấy trận đấu với slug này");
+      }
+
+      const firstPrize = await AwardService.getAwardByType(
+        "firstPrize",
+        match.id
+      );
+
+      const secondPrize = await AwardService.getAwardByType(
+        "secondPrize",
+        match.id
+      );
+
+      const thirdPrize = await AwardService.getAwardByType(
+        "thirdPrize",
+        match.id
+      );
+
+      res.json(
+        successResponse(
+          {
+            firstPrize,
+            secondPrize,
+            thirdPrize,
+          },
+          "Lấy giải thưởng theo loại thành công"
+        )
+      );
+    } catch (error) {
+      logger.error("Lấy lấy danh sách giải thưởng thấy bại", error);
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
 }

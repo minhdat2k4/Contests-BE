@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AwardType } from "@prisma/client";
+import { match } from "assert";
 
 // Create Award Schema
 export const createAwardSchema = z.object({
@@ -24,38 +25,47 @@ export const createAwardSchema = z.object({
   type: z.nativeEnum(AwardType, {
     errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" }),
   }),
+  matchId: z
+    .number()
+    .int("Match ID phải là số nguyên")
+    .positive("Match ID phải là số dương")
+    .optional(),
 });
 
 // Update Award Schema (using PATCH method for flexible updates)
-export const updateAwardSchema = z
-  .object({
-    name: z
-      .string()
-      .min(1, "Tên giải thưởng không được để trống")
-      .max(255, "Tên giải thưởng không được vượt quá 255 ký tự")
-      .optional(),
-    contestId: z
-      .number()
-      .int("Contest ID phải là số nguyên")
-      .positive("Contest ID phải là số dương")
-      .optional(),
-    contestantId: z
-      .union([
-        z
-          .number()
-          .int("Contestant ID phải là số nguyên")
-          .positive("Contestant ID phải là số dương"),
-        z.null(),
-      ])
-      .nullable()
-      .optional(),
-    type: z
-      .nativeEnum(AwardType, {
-        errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" }),
-      })
-      .optional(),
-  })
-  .strict(); // Prevent unknown fields
+export const updateAwardSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Tên giải thưởng không được để trống")
+    .max(255, "Tên giải thưởng không được vượt quá 255 ký tự")
+    .optional(),
+  contestId: z
+    .number()
+    .int("Contest ID phải là số nguyên")
+    .positive("Contest ID phải là số dương")
+    .optional(),
+  contestantId: z
+    .union([
+      z
+        .number()
+        .int("Contestant ID phải là số nguyên")
+        .positive("Contestant ID phải là số dương"),
+      z.null(),
+    ])
+    .nullable()
+    .optional(),
+  type: z
+    .nativeEnum(AwardType, {
+      errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" }),
+    })
+    .optional(),
+  matchId: z
+    .number()
+    .int("Match ID phải là số nguyên")
+    .positive("Match ID phải là số dương")
+    .optional(),
+});
+// Prevent unknown fields
 
 // Get Award by ID Schema
 export const getAwardByIdSchema = z.object({
@@ -94,6 +104,11 @@ export const getAwardsQuerySchema = z.object({
   search: z
     .string()
     .max(255, "Từ khóa tìm kiếm không được vượt quá 255 ký tự")
+    .optional(),
+  matchId: z
+    .number()
+    .int("Match ID phải là số nguyên")
+    .positive("Match ID phải là số dương")
     .optional(),
 });
 
@@ -157,6 +172,11 @@ export const createAwardByContestSchema = z.object({
   type: z.nativeEnum(AwardType, {
     errorMap: () => ({ message: "Loại giải thưởng không hợp lệ" }),
   }),
+  matchId: z
+    .number()
+    .int("Match ID phải là số nguyên")
+    .positive("Match ID phải là số dương")
+    .optional(),
 });
 
 // TypeScript types

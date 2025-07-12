@@ -179,15 +179,6 @@ export default class StudentController {
   static async createStudent(req: Request, res: Response): Promise<void> {
     try {
       const input: Omit<CreateStudentInput, "avatar"> = req.body;
-      const slug = req.params.slug;
-
-      const contest = await prisma.contest.findFirst({
-        where: { slug },
-      });
-
-      if (!contest) {
-        throw new Error("Không tìm thấy cuộc thi");
-      }
 
       const classEx = await prisma.class.findFirst({
         where: { id: Number(input.classId) },

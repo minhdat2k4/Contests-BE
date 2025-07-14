@@ -2,6 +2,7 @@
 import "module-alias/register";
 import http from "http";
 import { Server } from "socket.io";
+import cors from "cors";
 
 import app from "./app";
 import { connectDatabase, disconnectDatabase } from "./config/database";
@@ -26,6 +27,14 @@ const gracefulShutdown = async (signal: string): Promise<void> => {
 const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
   "http://localhost:5173",
 ];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 
 const startServer = async (): Promise<void> => {
   try {

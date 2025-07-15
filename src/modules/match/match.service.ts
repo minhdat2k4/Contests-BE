@@ -126,6 +126,7 @@ export default class MatchService {
         status: true,
         currentQuestion: true,
         questionPackageId: true,
+        maxContestantColumn: true,
         studentId: true,
         student: { select: { fullName: true } },
         questionPackage: { select: { name: true } },
@@ -204,6 +205,11 @@ export default class MatchService {
     if (data.slug !== undefined) {
       updateData.slug = data.slug;
     }
+
+    if (data.maxContestantColumn !== undefined) {
+      updateData.maxContestantColumn = data.maxContestantColumn;
+    }
+
     // console.log(data);
     return prisma.match.update({
       where: { id: id },
@@ -415,6 +421,11 @@ export default class MatchService {
         name: true,
         confirmCurrentQuestion: true,
         user: { select: { username: true } },
+        match: {
+          select: {
+            maxContestantColumn: true,
+          },
+        },
         contestantMatches: {
           select: {
             registrationNumber: true,

@@ -23,7 +23,17 @@ export default class ExcelController {
         throw new Error("Không có tệp để nhập");
       }
       const columns = importExcel(file);
-      res.status(200).json(successResponse(columns));
+      const data = columns.map(column => {
+        return {
+          id: column.A,
+          username: column.B,
+          password: column.C,
+          email: column.D,
+          role: column.E,
+        };
+      });
+
+      res.status(200).json(successResponse(data));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

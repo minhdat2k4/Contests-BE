@@ -14,6 +14,9 @@ import {
   moveUploadedFile,
 } from "@/utils/uploadFile";
 import path from "path";
+import { importExcel } from "@/utils/Excel";
+import { CreateClassInput } from "../class";
+import { UserService } from "../user";
 export default class StudentController {
   static async toggleActive(req: Request, res: Response): Promise<void> {
     try {
@@ -332,6 +335,156 @@ export default class StudentController {
       res.json(
         successResponse(students, `Lấy danh sách sinh viên  thành công`)
       );
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async importExcel(req: Request, res: Response): Promise<void> {
+    try {
+      const file = req.file;
+      if (!file) {
+        throw new Error("Không có tệp để nhập");
+      }
+
+      const columns = importExcel(file);
+      const errors: string[] = [];
+      let data: CreateStudentInput[] = [];
+
+      for (const [index, column] of columns.entries()) {
+        const input: {
+          fullName: string;
+          classId: number;
+          username?: string;
+          studentCode?: string | undefined;
+        } = {
+          fullName: String(column.B),
+          classId: Number(column.C),
+          username: String(column.D),
+          studentCode: String(column.E),
+        };
+
+        if (!input.fullName || !input.classId) {
+          const msg = `Dòng ${
+            index + 2
+          }: Thiếu thông tin bắt buộc (Họ tên, Mã lớp học)`;
+          logger.warn(msg);
+          errors.push(msg);
+          continue;
+        }
+
+        const existingClass = await prisma.class.findFirst({
+          where: { id: input.classId, isActive: true },
+        });
+        if (!existingClass) {
+          const msg = `Dòng ${index + 2}: Lớp học với ID ${
+            input.classId
+          } không tồn tại`;
+          logger.warn(msg);
+          errors.push(msg);
+          continue;
+        }
+
+        let userId: number | undefined = undefined;
+
+        if (input.username) {
+          const existingUserName = await prisma.user.findFirst({
+            where: { username: input.username },
+          });
+
+          if (!existingUserName) {
+            const msg = `Dòng ${index + 2}: Tài khoản '${
+              input.username
+            }' chưa tồn tại`;
+            logger.warn(msg);
+            errors.push(msg);
+            continue;
+          }
+
+          const existingStudent = await StudentService.getStudentBy({
+            userId: existingUserName.id,
+          });
+
+          if (existingStudent) {
+            const msg = `Dòng ${index + 2}: Sinh viên với tài khoản '${
+              input.username
+            }' đã tồn tại`;
+            logger.warn(msg);
+            errors.push(msg);
+            continue;
+          }
+          userId = existingUserName.id;
+        }
+        if (input.studentCode) {
+          const classId = await prisma.class.findFirst({
+            where: { id: input.classId, isActive: true },
+            select: {
+              school: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              id: true,
+            },
+          });
+
+          if (!classId) {
+            const msg = `Dòng ${index + 2}: Lớp học với ID ${
+              input.classId
+            } không tồn tại`;
+            logger.warn(msg);
+            errors.push(msg);
+            continue;
+          }
+
+          const existingStudentCode = await prisma.student.findFirst({
+            where: {
+              studentCode: input.studentCode,
+              class: {
+                school: {
+                  id: classId.school.id,
+                },
+              },
+            },
+          });
+
+          if (existingStudentCode) {
+            const msg = `Dòng ${index + 2}: Mã sinh viên '${
+              input.studentCode
+            }' đã tồn tại trong trường học '${classId.school.name}'`;
+            logger.warn(msg);
+            errors.push(msg);
+            continue;
+          }
+        }
+
+        data.push({
+          fullName: input.fullName,
+          classId: existingClass.id,
+          studentCode: input.studentCode || undefined,
+          isActive: true,
+          userId: userId,
+        });
+      }
+      if (errors.length > 0) {
+        logger.warn("Một số lỗi đã xảy ra trong quá trình nhập dữ liệu");
+        res.status(400).json({
+          success: false,
+          message: "Một số lỗi đã xảy ra trong quá trình nhập dữ liệu",
+          errors,
+        });
+        return;
+      }
+
+      if (data.length === 0) {
+        throw new Error("Không có dữ liệu hợp lệ để nhập");
+      }
+
+      const result = await StudentService.createManyStundents(data);
+      logger.info(`Nhập dữ liệu thành công ${result.count} người dùng`);
+      res.json(successResponse(result.count, "Nhập dữ liệu thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

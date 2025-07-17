@@ -276,4 +276,13 @@ export default class StudentService {
 
     return student?.id ?? null;
   }
+
+  static async createManyStundents(
+    data: CreateStudentInput[]
+  ): Promise<{ count: number }> {
+    return prisma.student.createMany({
+      data: data,
+      skipDuplicates: true,
+    });
+  }
 }

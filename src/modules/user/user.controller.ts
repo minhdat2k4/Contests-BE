@@ -390,7 +390,7 @@ export default class UserController {
           password: column.C,
           email: column.D,
           role: column.E as Role,
-          isActive: column.F === "true",
+          isActive: true,
         };
 
         if (!input.username || !input.password || !input.email || !input.role) {

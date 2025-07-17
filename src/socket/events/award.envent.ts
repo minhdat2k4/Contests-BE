@@ -102,9 +102,6 @@ export const registerAwardEvents = (io: Server, socket: Socket) => {
     }
 
     const payload = validation.data;
-
-    console.log(payload);
-
     try {
       const match = await MatchService.MatchControl(payload.match);
       if (!match) {

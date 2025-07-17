@@ -1,5 +1,6 @@
 import { prisma } from "@/config/database";
 import { Student, Class } from "@prisma/client";
+import { match } from "assert";
 import {
   CreateStudentInput,
   StudentQueryInput,
@@ -256,25 +257,21 @@ export default class StudentService {
     matchId: number,
     registrationNumber: number
   ): Promise<number | null> {
-    const student = await prisma.student.findFirst({
+    const student = await prisma.contestantMatch.findFirst({
       where: {
-        contestants: {
-          some: {
-            contestantMatches: {
-              some: {
-                matchId: matchId,
-                registrationNumber: registrationNumber,
-              },
-            },
+        matchId: matchId,
+        registrationNumber: registrationNumber,
+      },
+      select: {
+        contestant: {
+          select: {
+            studentId: true,
           },
         },
       },
-      select: {
-        id: true,
-      },
     });
 
-    return student?.id ?? null;
+    return student?.contestant?.studentId ?? null;
   }
 
   static async createManyStundents(

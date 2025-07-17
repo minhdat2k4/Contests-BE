@@ -8,7 +8,6 @@ import { RescueService } from "@/modules/rescues";
 
 import { z } from "zod";
 import { UserService } from "@/modules/user";
-import e from "express";
 
 export const updateEliminated = z.object({
   match: z.string(),
@@ -176,6 +175,7 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
             });
         });
       }
+
       if (!judges) {
         return callback({
           success: false,
@@ -208,6 +208,27 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
 
       io.of("/match-control").to(roomName).emit("rescue:updateStatus", {
         ListRescue,
+      });
+
+      const statistics = await ResultService.chartContestant(match?.id);
+
+      if (!statistics) {
+        callback({
+          success: false,
+          message: "Không tìm thấy thống kê cho trận đấu này",
+        });
+        return;
+      }
+
+      const data = statistics.map(stat => ({
+        label: stat.registrationNumber,
+        value: stat.correctCount,
+        fullName: stat.fullName,
+        contestantId: stat.contestantId,
+      }));
+
+      io.of("/match-control").to(roomName).emit("listResult", {
+        data,
       });
     } catch (error) {
       console.error("Lỗi khi xử lý cập nhật trạng thái:", error);

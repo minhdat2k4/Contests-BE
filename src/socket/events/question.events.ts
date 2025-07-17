@@ -8,6 +8,7 @@ import { GroupDivisionService } from "@/modules/groupDivision";
 import ContestantService from "@/modules/contestant/contestant.service";
 
 import { matchTimers } from "../events/timer.event";
+import { UserService } from "@/modules/user";
 
 export const registerQuestionEvents = (io: Server, socket: Socket) => {
   socket.on("currentQuestion:get", async (data, callback) => {
@@ -70,6 +71,23 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
     await GroupDivisionService.UpdateContestantStatusByIds(matchInfo.id);
 
     const ListContestant = await MatchService.ListContestant(matchInfo.id);
+
+    const judges = await UserService.ListJudgeByMatchId(matchInfo.id);
+    if (judges) {
+      judges.forEach(async judge => {
+        const judgeRoom = `match-${match}-judge-${judge.id}`;
+        const data =
+          await GroupDivisionService.getContestantByJudgeIdAndMatchId(
+            judge.id,
+            matchInfo.id
+          );
+        io.of("/match-control")
+          .to(judgeRoom)
+          .emit("contestant:status-update-judge", {
+            data,
+          });
+      });
+    }
 
     const isMatchStarted = matchRaw.status === "ongoing";
     callback?.(null, {
@@ -189,7 +207,7 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
 
       // Lấy danh sách thí sinh đã hoàn thành (completed)
       const result = await ContestantService.getCompletedContestants(
-        Number(matchId),
+        Number(matchId)
         // Number(limit) // không cần giới hạn, lấy tất cả thí sinh đã hoàn thành
       );
 
@@ -229,11 +247,13 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       });
 
       // Gửi cập nhật screen control cho admin
-      io.of("/match-control").to(roomName).emit("screen:update", {
-        updatedScreen: {
-          controlKey: "top20Winner",
-        },
-      });
+      io.of("/match-control")
+        .to(roomName)
+        .emit("screen:update", {
+          updatedScreen: {
+            controlKey: "top20Winner",
+          },
+        });
 
       logger.info(`Đã gửi Top Winner cho match ${matchId}`);
     } catch (error) {
@@ -283,11 +303,13 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       });
 
       // Gửi cập nhật screen control cho admin
-      io.of("/match-control").to(roomName).emit("screen:update", {
-        updatedScreen: {
-          controlKey: "question",
-        },
-      });
+      io.of("/match-control")
+        .to(roomName)
+        .emit("screen:update", {
+          updatedScreen: {
+            controlKey: "question",
+          },
+        });
 
       logger.info(`Đã ẩn Top20 Winner cho match ${matchId}`);
     } catch (error) {

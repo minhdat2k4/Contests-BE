@@ -102,18 +102,12 @@ export default class AuthController {
       const user = await AuthService.findUserByIdentifier(input.identifier);
       if (!user) {
         logger.error(`Tài khoản ${input.identifier} không tồn tại`);
-        res
-          .status(400)
-          .json(validateData("identifier", "Tài khoản không tồn tại"));
-        return;
+        throw new Error("Tài khoản hoặc mật khẩu không chính xác");
       }
 
       if (!user.isActive) {
         logger.error(`Tài khoản ${input.identifier} đã bị vô hiệu hóa`);
-        res
-          .status(400)
-          .json(validateData("identifier", "Tài khoản đã bị vô hiệu hóa"));
-        return;
+        throw new Error("Tài khoản đã bị vô hiệu hóa");
       }
 
       if (user.role === "Student") {
@@ -127,9 +121,7 @@ export default class AuthController {
         user.password
       );
       if (!isPassword) {
-        logger.error(`Tài khoản ${input.identifier} nhập sai mật khẩu`);
-        res.status(400).json(validateData("password", "Sai mật khẩu "));
-        return;
+        throw new Error("Tài khoản hoặc mật khẩu không chính xác");
       }
       const tokenData = {
         userId: user.id,
@@ -618,11 +610,7 @@ export default class AuthController {
         req.user.password
       );
       if (!isPassWord) {
-        logger.error(
-          `Người dùng ${req.user.username} nhập sai mật khẩu hiện tại`
-        );
-        res.status(400).json(validateData("currentPassword", "Sai mật khẩu"));
-        return;
+        throw new Error("Sai mật khẩu hiện tại");
       }
       await UserService.UpdateUser(req.user.userId, {
         password: input.newPassword,
@@ -645,8 +633,7 @@ export default class AuthController {
         req.user.userId
       );
       if (extisingEmail) {
-        res.status(400).json(validateData("email", "Email đã tồn tại"));
-        return;
+        throw new Error("Email đã tồn tại");
       }
       await UserService.UpdateUser(req.user.userId, {
         email: input.email,

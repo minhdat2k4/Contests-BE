@@ -470,12 +470,14 @@ export default class RescueController {
 
       const rescues = await RescueService.getAllRescue(match.id, questionOrder);
 
-      if (!rescues || rescues.length === 0) {
-        throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
-      }
+      // if (!rescues || rescues.length === 0) {
+      //   throw new Error("Không tìm thấy cứu trợ cho trận đấu này");
+      // }
+      // Thay vì throw error, trả về mảng rỗng
+      const result = rescues || [];
 
       logger.info(`Lấy danh sách cứu trợ cho trận đấu ${match.id} thành công`);
-      res.json(successResponse(rescues, "Lấy danh sách cứu trợ thành công"));
+      res.json(successResponse(result, "Lấy danh sách cứu trợ thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

@@ -607,6 +607,14 @@ export default class GroupDivisionService {
       select: {
         registrationNumber: true,
         status: true,
+        match: {
+          select: {
+            maxContestantColumn: true,
+          },
+        },
+      },
+      orderBy: {
+        registrationNumber: "asc",
       },
     });
   }

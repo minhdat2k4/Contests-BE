@@ -74,6 +74,16 @@ export const CreateMatchSchema = z.object({
     .optional(),
 
   status: nativeEnum(ContestStatus),
+  
+  maxContestantColumn: z.coerce
+    .number({
+      invalid_type_error: "Số cột hiển thị phải là số",
+    })
+    .int("Số cột hiển thị phải là số nguyên")
+    .min(1, "Số cột hiển thị phải ít nhất là 1")
+    .max(20, "Số cột hiển thị tối đa là 20")
+    .optional(),
+    
   isActive: z.boolean().optional(),
 });
 
@@ -143,6 +153,16 @@ export const UpdateMatchSchema = z.object({
     .optional(),
 
   status: nativeEnum(ContestStatus).optional(),
+  
+  maxContestantColumn: z.coerce
+    .number({
+      invalid_type_error: "Số cột hiển thị phải là số",
+    })
+    .int("Số cột hiển thị phải là số nguyên")
+    .min(1, "Số cột hiển thị phải ít nhất là 1")
+    .max(20, "Số cột hiển thị tối đa là 20")
+    .optional(),
+    
   isActive: z.boolean().optional(),
 });
 
@@ -216,6 +236,7 @@ export type MatchById = {
   status: ContestStatus;
   currentQuestion: number;
   questionPackageId: number;
+  maxContestantColumn: number | null;
   student: { fullName: string } | null;
   round: { name: string };
 };

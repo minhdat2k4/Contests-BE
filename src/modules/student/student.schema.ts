@@ -36,7 +36,8 @@ export const CreateStudentShema = z.object({
       required_error: "Vui lòng nhập user ID",
       invalid_type_error: "User ID là một số nguyên",
     })
-    .refine(val => !NaN && val > 0, "User ID là một số nguyên dương"),
+    .refine(val => !NaN && val > 0, "User ID là một số nguyên dương")
+    .optional(),
   isActive: z.boolean().optional(),
   avatar: z.string().max(255, "Avatar tối đa 255 kí tự").optional(),
   bio: z.string().max(1000, "Bio tối đa 1000 kí tự").optional(),

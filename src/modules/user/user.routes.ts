@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { authenticate, role } from "@/middlewares/auth";
 import { UserController } from "@/modules/user";
+import multer from "multer";
+const upload = multer({ storage: multer.memoryStorage() });
+
 import {
   CreateUserSchema,
   UserIdShema,
@@ -21,6 +24,14 @@ userRouter.get(
   authenticate,
   role("Admin"),
   UserController.getListUser
+);
+
+userRouter.post(
+  "/import/excel",
+  authenticate,
+  role("Admin"),
+  upload.single("file"),
+  UserController.importExcel
 );
 
 userRouter.get(

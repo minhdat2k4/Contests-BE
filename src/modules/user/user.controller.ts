@@ -10,6 +10,9 @@ import { errorResponse, successResponse } from "@/utils/response";
 
 import bcrypt from "bcrypt";
 import { Role } from "@prisma/client";
+import { importExcel } from "../../utils/Excel";
+
+import { prisma } from "@/config/database";
 
 export default class UserController {
   static async creatUser(req: Request, res: Response): Promise<void> {
@@ -83,6 +86,34 @@ export default class UserController {
       }
       if (!user) {
         throw new Error("Không tìm thấy người dùng");
+      }
+
+      if (input.role && input.role !== user.role) {
+        if (user.role === "Judge") {
+          const countGroups = await UserService.countGroupsByUserId(user.id);
+          if (countGroups > 0) {
+            throw new Error(
+              `Không thể thay đổi vai trò của ${user.username} vì họ là trọng tài của ${countGroups} trận đấu`
+            );
+          }
+        }
+
+        if (user.role === "Student") {
+          const student = await prisma.student.findFirst({
+            where: { userId: user.id },
+          });
+
+          if (student) {
+            const countContestants = await prisma.contestant.count({
+              where: { studentId: student.id },
+            });
+            if (countContestants > 0) {
+              throw new Error(
+                `Không thể thay đổi vai trò của ${user.username} vì họ là thí sinh của ${countContestants} cuộc thi`
+              );
+            }
+          }
+        }
       }
       const userUpdate = await UserService.UpdateUser(user.id, input);
       if (!userUpdate) {
@@ -185,12 +216,30 @@ export default class UserController {
       if (!user) {
         throw new Error("Không tìm thấy người dùng");
       }
+
+      if (user.role === "Student") {
+        const student = await prisma.student.findFirst({
+          where: { userId: user.id },
+        });
+
+        if (student) {
+          const countContestants = await prisma.contestant.count({
+            where: { studentId: student.id },
+          });
+          if (countContestants > 0) {
+            throw new Error(
+              `Không thể xoá ${user.username} vì họ là thí sinh của ${countContestants} cuộc thi`
+            );
+          }
+        }
+      }
       const countGroups = await UserService.countGroupsByUserId(user.id);
       if (countGroups > 0) {
         throw new Error(
           `Không thể xoá ${user.username} này vì họ là trọng tài của ${countGroups} trận đấu`
         );
       }
+
       const deleted = await UserService.deleteUser(user.id);
       if (!deleted) {
         throw new Error("Xoá người dùng thất bại");
@@ -230,6 +279,25 @@ export default class UserController {
             msg: `Không thể xoá "${user.username}" vì họ là trọng tài của ${countGroups} trận đấu`,
           });
           continue;
+        }
+
+        if (user.role === "Student") {
+          const student = await prisma.student.findFirst({
+            where: { userId: user.id },
+          });
+
+          if (student) {
+            const countContestants = await prisma.contestant.count({
+              where: { studentId: student.id },
+            });
+            if (countContestants > 0) {
+              messages.push({
+                status: "error",
+                msg: `Không thể xoá "${user.username}" vì họ là thí sinh của ${countContestants} cuộc thi`,
+              });
+              continue;
+            }
+          }
         }
 
         const result = await UserService.deleteUser(user.id);
@@ -299,6 +367,85 @@ export default class UserController {
       }
       logger.info(`Lấy thông tin người thành công ${user}`);
       res.json(successResponse(user, "Lấy danh sách người dùng thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+
+  static async importExcel(req: Request, res: Response): Promise<void> {
+    try {
+      const file = req.file;
+      if (!file) {
+        throw new Error("Không có tệp để nhập");
+      }
+
+      const columns = importExcel(file);
+      const errors: string[] = [];
+      let data: CreateUserInput[] = [];
+
+      for (const [index, column] of columns.entries()) {
+        const input: CreateUserInput = {
+          username: column.B,
+          password: column.C,
+          email: column.D,
+          role: column.E as Role,
+          isActive: column.F === "true",
+        };
+
+        if (!input.username || !input.password || !input.email || !input.role) {
+          const msg = `Dòng ${
+            index + 2
+          }: Thiếu thông tin bắt buộc (Tài khoản, mật khẩu, email)`;
+          logger.warn(msg);
+          errors.push(msg);
+          continue;
+        }
+
+        const existingUserName = await UserService.existingUserName(
+          input.username
+        );
+        if (existingUserName) {
+          const msg = `Dòng ${index + 2}: Tài khoản '${
+            input.username
+          }' đã tồn tại`;
+          logger.warn(msg);
+          errors.push(msg);
+          continue;
+        }
+
+        const existingEmail = await UserService.existingEmail(input.email);
+        if (existingEmail) {
+          const msg = `Dòng ${index + 2}: Email '${input.email}' đã tồn tại`;
+          logger.warn(msg);
+          errors.push(msg);
+          continue;
+        }
+
+        const hashPassword = await bcrypt.hash(input.password, 10);
+        data.push({
+          ...input,
+          password: hashPassword,
+        });
+      }
+
+      if (errors.length > 0) {
+        logger.warn("Một số lỗi đã xảy ra trong quá trình nhập dữ liệu");
+        res.status(400).json({
+          success: false,
+          message: "Một số lỗi đã xảy ra trong quá trình nhập dữ liệu",
+          errors,
+        });
+        return;
+      }
+
+      if (data.length === 0) {
+        throw new Error("Không có dữ liệu hợp lệ để nhập");
+      }
+
+      const result = await UserService.createManyUsers(data);
+      logger.info(`Nhập dữ liệu thành công ${result.count} người dùng`);
+      res.json(successResponse(result.count, "Nhập dữ liệu thành công"));
     } catch (error) {
       logger.error((error as Error).message);
       res.status(400).json(errorResponse((error as Error).message));

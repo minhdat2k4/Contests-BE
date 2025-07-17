@@ -69,6 +69,19 @@ export default class MatchController {
       });
       if (!QuestionPackage) throw Error("Không tìm thấy gói câu hỏi");
 
+      const countQuestion = await prisma.questionDetail.count({
+        where: { questionPackageId: input.questionPackageId },
+      });
+
+      if (countQuestion < 1) {
+        throw new Error("Gói câu hỏi không có câu hỏi nào");
+      }
+      if (countQuestion < input.currentQuestion) {
+        throw new Error(
+          `Gói câu hỏi chỉ có ${countQuestion} câu hỏi, không đủ cho trận đấu`
+        );
+      }
+
       const round = await prisma.round.findFirst({
         where: { id: input.roundId },
       });
@@ -220,6 +233,19 @@ export default class MatchController {
         where: { id: input.questionPackageId },
       });
       if (!QuestionPackage) throw Error("Không tìm thấy gói câu hỏi");
+
+      const countQuestion = await prisma.questionDetail.count({
+        where: { questionPackageId: input.questionPackageId },
+      });
+      if (countQuestion < 1) {
+        throw new Error("Gói câu hỏi không có câu hỏi nào");
+      }
+
+      if (input.currentQuestion && countQuestion < input.currentQuestion) {
+        throw new Error(
+          `Gói câu hỏi chỉ có ${countQuestion} câu hỏi, không đủ cho trận đấu`
+        );
+      }
 
       const round = await prisma.round.findFirst({
         where: { id: input.roundId },

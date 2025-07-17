@@ -2,7 +2,6 @@ import { User } from "@prisma/client";
 import { prisma } from "@/config/database";
 import { UserInput, CreateUserInput, UserQueryInput } from "./user.schema";
 import bcrypt from "bcrypt";
-import { notDeepEqual } from "assert";
 export default class UserService {
   static async creatUser(user: CreateUserInput) {
     return prisma.user.create({
@@ -224,6 +223,15 @@ export default class UserService {
         role: "Student",
         OR: [{ student: null }, { id: student?.userId }],
       },
+    });
+  }
+
+  static async createManyUsers(
+    users: CreateUserInput[]
+  ): Promise<{ count: number }> {
+    return prisma.user.createMany({
+      data: users,
+      skipDuplicates: true, // Skip duplicates based on unique constraints
     });
   }
 }

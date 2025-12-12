@@ -45,3 +45,4 @@ src/modules/user/user.controller.ts
 uploads/**/*
 !uploads/about/
 !uploads/about/*
+package-lock.json

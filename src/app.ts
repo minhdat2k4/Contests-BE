@@ -62,6 +62,9 @@ const corsOptions: CorsOptions = {
 // ✅ GỌI CORS TRƯỚC KHI ROUTE
 app.use(cors(corsOptions));
 
+// Xác định đường dẫn uploads chính xác cho cả dev và production
+const uploadsPath = path.resolve(process.cwd(), "uploads");
+
 // Static file /uploads kèm CORS headers
 app.use(
   "/uploads",
@@ -77,6 +80,8 @@ app.use(
       "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control"
     );
     res.header("Access-Control-Allow-Credentials", "true");
+    // Thêm cache headers cho static files
+    res.header("Cache-Control", "public, max-age=31536000");
 
     if (req.method === "OPTIONS") {
       res.sendStatus(200);
@@ -85,8 +90,18 @@ app.use(
 
     next();
   },
-  express.static(path.join(__dirname, "../uploads"))
+  express.static(uploadsPath, {
+    // Tùy chọn để debug
+    fallthrough: true,
+    // Cho phép truy cập file index
+    index: false,
+  })
 );
+
+// Log đường dẫn uploads khi khởi động (chỉ trong development)
+if (process.env.NODE_ENV === "development") {
+  console.log(`📁 Uploads directory: ${uploadsPath}`);
+}
 
 // ========== Middleware ==========
 app.use(helmet());

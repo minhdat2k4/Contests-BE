@@ -1,0 +1,68 @@
+name: Deploy BE
+
+on:
+  push:
+    branches:
+      - v1.2 # hoặc develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🌚 Create .env file
+        run: |
+          touch .env
+          echo "NODE_ENV=staging" >> .env
+          echo "PORT=4014" >> .env
+          echo "DATABASE_URL='mysql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@localhost:3306/olympic'" >> .env
+          echo "JWT_SECRET=supersecretkeythatismorethan32chars" >> .env
+          echo "JWT_EXPIRES_IN=7d" >> .env
+          echo "JWT_REFRESH_EXPIRES_IN=30d" >> .env
+          echo "CORS_ORIGIN=http://contests.cuocthi.online" >> .env
+          echo "BASE_URL=http://contests-api.cuocthi.online" >> .env
+          echo "LOG_LEVEL=info" >> .env
+          echo "MAX_FILE_SIZE=5242880" >> .env
+          cat .env
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
+      
+      - name: Check SSH port
+        run: |
+          nc -zv ${{ secrets.SERVER_HOST }} 22
+      
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+          "echo 'SSH connected successfully'"
+      
+      - name: Upload .env to server
+        run: |
+          scp -o StrictHostKeyChecking=no .env \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_PATH }}/.env
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            source "$NVM_DIR/nvm.sh"
+            cd ${{ secrets.SERVER_PATH }}
+            nvm use 22
+            git reset --hard
+            git pull origin v1.2
+            npm install
+            rm -rf dist
+            npm run build
+            pm2 reload pm2.config.js || pm2 start pm2.config.js

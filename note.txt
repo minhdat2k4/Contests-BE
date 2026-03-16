@@ -7,7 +7,7 @@ Node: 22
 prisma:generate
 
 2.Tạo migrate
-prisma:migrate
+LOCAL: prisma:migrate || PROD: prisma:deploy
 
 3.Run seed
 prisma:seed

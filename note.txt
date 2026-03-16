@@ -1,0 +1,13 @@
+====Info===
+Node: 22
+
+====Setup databse===
+
+1.Tạo database
+prisma:generate
+
+2.Tạo migrate
+prisma:migrate
+
+3.Run seed
+prisma:seed

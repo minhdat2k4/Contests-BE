@@ -488,6 +488,7 @@ model ClassVideo {
   contestId  Int?
   contest    Contest?  @relation(fields: [contestId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   videos     String
+  isWinner   Boolean   @default(false) //trường này dùng để xác định video lớp đoạt giải
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 

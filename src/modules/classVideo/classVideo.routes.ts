@@ -26,17 +26,24 @@ classVideoRouter.post(
 );
 
 classVideoRouter.get(
-  "/contest/:slug",
-  authenticate,
-  role("Admin"),
-  ClassVideoController.getAlls
-);
-
-classVideoRouter.get(
   "/contest/list-video/:slug",
   authenticate,
   role("Admin"),
   ClassVideoController.ClassVideosByContestSlug
+);
+
+classVideoRouter.get(
+  "/contest/winner/:slug",
+  authenticate,
+  role("Admin"),
+  ClassVideoController.GetWinnerByContestSlug
+); //Route để lấy video đoạt giải
+
+classVideoRouter.get(
+  "/contest/:slug",
+  authenticate,
+  role("Admin"),
+  ClassVideoController.getAlls
 );
 
 classVideoRouter.get(

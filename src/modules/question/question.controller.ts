@@ -11,6 +11,9 @@ import {
   BatchDeleteQuestionsData,
   UploadMediaData
 } from "./question.schema";
+//tuankiet
+import { importExcel } from "@/utils/Excel";
+import { Prisma } from "@prisma/client";
 
 export class QuestionController {
   private questionService: QuestionService;
@@ -77,9 +80,9 @@ export class QuestionController {
   async createQuestion(req: Request, res: Response): Promise<void> {
     try {
       const data: CreateQuestionData = req.body;
-        // Handle uploaded files
+      // Handle uploaded files
       const uploadedFiles: { questionMedia?: Express.Multer.File[], mediaAnswer?: Express.Multer.File[] } = {};
-      
+
       if (req.files) {
         if (Array.isArray(req.files)) {
           // Handle array of files (single field)
@@ -87,23 +90,23 @@ export class QuestionController {
         } else {
           // Handle named fields
           if (req.files.questionMedia) {
-            uploadedFiles.questionMedia = Array.isArray(req.files.questionMedia) 
-              ? req.files.questionMedia 
+            uploadedFiles.questionMedia = Array.isArray(req.files.questionMedia)
+              ? req.files.questionMedia
               : [req.files.questionMedia];
           }
           if (req.files.mediaAnswer) {
-            uploadedFiles.mediaAnswer = Array.isArray(req.files.mediaAnswer) 
-              ? req.files.mediaAnswer 
+            uploadedFiles.mediaAnswer = Array.isArray(req.files.mediaAnswer)
+              ? req.files.mediaAnswer
               : [req.files.mediaAnswer];
           }
         }
-        
+
         // Validate file sizes
         const allFiles: Express.Multer.File[] = [
           ...(uploadedFiles.questionMedia || []),
           ...(uploadedFiles.mediaAnswer || [])
         ];
-        
+
         if (allFiles.length > 0) {
           const { validateFileSizes } = await import('./question.upload');
           try {
@@ -144,41 +147,41 @@ export class QuestionController {
     try {
       const { id } = req.params;
       const data: UpdateQuestionData = req.body;
-      
+
       console.log("=== DEBUG: updateQuestion Controller Started ===");
       console.log("Question ID:", id);
       console.log("Request body data:", JSON.stringify(data, null, 2));
       console.log("Request files:", req.files ? "Yes" : "No");
-      
+
       // Get current question to merge with existing files
       const currentQuestion = await this.questionService.getQuestionById(Number(id));
-      
+
       // Handle uploaded files
       const uploadedFiles: { questionMedia?: Express.Multer.File[], mediaAnswer?: Express.Multer.File[] } = {};
-      
+
       if (req.files) {
         if (Array.isArray(req.files)) {
           uploadedFiles.questionMedia = req.files;
         } else {
           const files = req.files as { [fieldname: string]: Express.Multer.File[] };
           if (files.questionMedia) {
-            uploadedFiles.questionMedia = Array.isArray(files.questionMedia) 
-              ? files.questionMedia 
+            uploadedFiles.questionMedia = Array.isArray(files.questionMedia)
+              ? files.questionMedia
               : [files.questionMedia];
           }
           if (files.mediaAnswer) {
-            uploadedFiles.mediaAnswer = Array.isArray(files.mediaAnswer) 
-              ? files.mediaAnswer 
+            uploadedFiles.mediaAnswer = Array.isArray(files.mediaAnswer)
+              ? files.mediaAnswer
               : [files.mediaAnswer];
           }
         }
-        
+
         // Validate file sizes
         const allFiles: Express.Multer.File[] = [
           ...(uploadedFiles.questionMedia || []),
           ...(uploadedFiles.mediaAnswer || [])
         ];
-        
+
         if (allFiles.length > 0) {
           const { validateFileSizes } = await import('./question.upload');
           try {
@@ -203,7 +206,7 @@ export class QuestionController {
       // Parse delete requests from body
       let filesToDeleteFromQuestionMedia: string[] = [];
       let filesToDeleteFromMediaAnswer: string[] = [];
-      
+
       if (data.deleteQuestionMedia) {
         if (typeof data.deleteQuestionMedia === 'string') {
           try {
@@ -236,7 +239,7 @@ export class QuestionController {
           });
         }
       }
-      
+
       if (data.deleteMediaAnswer) {
         if (typeof data.deleteMediaAnswer === 'string') {
           try {
@@ -276,7 +279,7 @@ export class QuestionController {
       // Auto-merge logic: Start with existing files, remove deleted ones, then add new ones
       let finalQuestionMedia = [...(currentQuestion.questionMedia || [])];
       let finalMediaAnswer = [...(currentQuestion.mediaAnswer || [])];
-      
+
       // Remove files marked for deletion
       if (filesToDeleteFromQuestionMedia.length > 0) {
         finalQuestionMedia = finalQuestionMedia.filter(
@@ -284,23 +287,23 @@ export class QuestionController {
         );
         logger.info(`Removing ${filesToDeleteFromQuestionMedia.length} files from questionMedia: ${filesToDeleteFromQuestionMedia.join(', ')}`);
       }
-      
+
       if (filesToDeleteFromMediaAnswer.length > 0) {
         finalMediaAnswer = finalMediaAnswer.filter(
           (media: any) => !filesToDeleteFromMediaAnswer.includes(media.filename)
         );
         logger.info(`Removing ${filesToDeleteFromMediaAnswer.length} files from mediaAnswer: ${filesToDeleteFromMediaAnswer.join(', ')}`);
       }
-      
+
       // Prepare clean data for service (remove delete fields)
       const { ...cleanData } = data as any;
-      
+
       // Thêm thông tin về các file cần xóa
       if (filesToDeleteFromQuestionMedia.length > 0) {
         cleanData.deleteQuestionMedia = filesToDeleteFromQuestionMedia;
         cleanData.questionMedia = finalQuestionMedia.length > 0 ? finalQuestionMedia : null;
       }
-      
+
       if (filesToDeleteFromMediaAnswer.length > 0) {
         cleanData.deleteMediaAnswer = filesToDeleteFromMediaAnswer;
         cleanData.mediaAnswer = finalMediaAnswer.length > 0 ? finalMediaAnswer : null;
@@ -325,7 +328,7 @@ export class QuestionController {
         questionMedia = finalQuestionMedia;
         logger.info(`Adding ${newQuestionMedia.length} new files to questionMedia`);
       }
-      
+
       if (uploadedFiles.mediaAnswer && uploadedFiles.mediaAnswer.length > 0) {
         const newMediaAnswer = await this.questionService['processMediaFiles'](uploadedFiles.mediaAnswer);
         finalMediaAnswer.push(...newMediaAnswer);
@@ -337,7 +340,7 @@ export class QuestionController {
       if (questionMedia !== null) {
         cleanData.questionMedia = questionMedia;
       }
-      
+
       if (mediaAnswer !== null) {
         cleanData.mediaAnswer = mediaAnswer;
       }
@@ -358,7 +361,7 @@ export class QuestionController {
       logger.info(`Question updated successfully with auto-merge and delete: ${question.id}`);
       logger.info(`QuestionMedia: ${filesToDeleteFromQuestionMedia.length} deleted, ${uploadedFiles.questionMedia?.length || 0} added`);
       logger.info(`MediaAnswer: ${filesToDeleteFromMediaAnswer.length} deleted, ${uploadedFiles.mediaAnswer?.length || 0} added`);
-      
+
       console.log("=== DEBUG: Sending response to frontend ===");
       res.json(successResponse(question, "Cập nhật câu hỏi thành công"));
     } catch (error) {
@@ -453,17 +456,17 @@ export class QuestionController {
       const { id } = req.params;
       // Default to questionMedia if not specified
       const mediaType = req.body.mediaType || 'questionMedia';
-      
+
       if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
         res.status(400).json(errorResponse("Không có file nào được upload", "VALIDATION_ERROR"));
         return;
       }
 
       const files = Array.isArray(req.files) ? req.files : Object.values(req.files).flat();
-      
+
       const result = await this.questionService.uploadMediaForQuestion(
-        Number(id), 
-        mediaType as 'questionMedia' | 'mediaAnswer', 
+        Number(id),
+        mediaType as 'questionMedia' | 'mediaAnswer',
         files as Express.Multer.File[]
       );
 
@@ -476,6 +479,62 @@ export class QuestionController {
       } else {
         res.status(500).json(errorResponse("Lỗi hệ thống", ERROR_CODES.INTERNAL_SERVER_ERROR));
       }
+    }
+  }
+  importExcel=async(req: Request, res: Response): Promise<void>=> {
+    try {
+      const file = req.file;
+      if (!file) {
+        throw new Error("Không có tệp để nhập");
+      }
+
+      const columns = importExcel(file);
+      const errors: string[] = [];
+      let data: Prisma.QuestionCreateManyInput[] = [];
+
+      for (const [index, column] of columns.entries()) {
+        const input: Prisma.QuestionCreateManyInput = {
+          intro: column.B ? String(column.B) : null,
+          defaultTime: Number(column.C),
+          questionType: String(column.D) as "multiple_choice" | "essay" | "image" | "audio" | "video",
+          content: String(column.E),
+
+          // ✅ JSON fields
+          options:  String(column.F).split("|"),
+          questionMedia: undefined,
+          mediaAnswer: undefined,
+
+          correctAnswer: String(column.G),
+          score: Number(column.H),
+          difficulty: String(column.I) as "Alpha" | "Beta" | "Rc" | "Gold",
+          explanation: column.J ? String(column.J) : null,
+          questionTopicId: Number(column.K),
+
+          isActive: true,
+        };
+
+        data.push(input);
+      }
+      if (errors.length > 0) {
+        logger.warn("Một số lỗi đã xảy ra trong quá trình nhập dữ liệu");
+        res.status(400).json({
+          success: false,
+          message: "Một số lỗi đã xảy ra trong quá trình nhập dữ liệu",
+          errors,
+        });
+        return;
+      }
+
+      if (data.length === 0) {
+        throw new Error("Không có dữ liệu hợp lệ để nhập");
+      }
+
+      const result = await this.questionService.createManyQuestion(data);
+      logger.info(`Nhập dữ liệu thành công ${result.count} câu hỏi"`);
+      res.json(successResponse(result.count, "Nhập dữ liệu thành công"));
+    } catch (error) {
+      logger.error((error as Error).message);
+      res.status(400).json(errorResponse((error as Error).message));
     }
   }
 }

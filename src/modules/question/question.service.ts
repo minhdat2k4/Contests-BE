@@ -9,6 +9,8 @@ import { CustomError } from "@/middlewares/errorHandler";
 import { ERROR_CODES } from "@/constants/errorCodes";
 import path from "path";
 import fs from "fs";
+//tuankiet
+import { Prisma } from "@prisma/client";
 
 import {
   CreateQuestionData,
@@ -497,7 +499,7 @@ export class QuestionService {
             ERROR_CODES.VALIDATION_ERROR
           );
         }
-        
+
         // Kiểm tra correctAnswer có nằm trong options không
         if (!data.options.includes(data.correctAnswer)) {
           throw new CustomError(
@@ -638,7 +640,7 @@ export class QuestionService {
           this.normalizeFilename(filename)
         ).filter(filename => filename && filename.trim() !== ''); // Filter ra filename rỗng
         console.log('Normalized filenames for deletion:', normalizedFilenames);
-        
+
         if (normalizedFilenames.length > 0) {
           const filesToDelete = normalizedFilenames.map(filename => ({
             filename,
@@ -649,12 +651,12 @@ export class QuestionService {
           }));
           console.log('Files to delete:', filesToDelete);
           await this.deleteMediaFiles(filesToDelete);
-          
+
           // Cập nhật questionMedia bằng cách loại bỏ các file đã xóa
           if (existingQuestion.questionMedia) {
             const existingMedia = existingQuestion.questionMedia as MediaFile[];
             console.log('Existing media before filter:', existingMedia);
-            questionMedia = existingMedia.filter(media => 
+            questionMedia = existingMedia.filter(media =>
               !normalizedFilenames.includes(media.filename)
             );
             console.log('Remaining media after deletion:', questionMedia);
@@ -677,7 +679,7 @@ export class QuestionService {
           this.normalizeFilename(filename)
         ).filter(filename => filename && filename.trim() !== ''); // Filter ra filename rỗng
         console.log('Normalized filenames for deletion:', normalizedFilenames);
-        
+
         if (normalizedFilenames.length > 0) {
           const filesToDelete = normalizedFilenames.map(filename => ({
             filename,
@@ -688,12 +690,12 @@ export class QuestionService {
           }));
           console.log('Files to delete:', filesToDelete);
           await this.deleteMediaFiles(filesToDelete);
-          
+
           // Cập nhật mediaAnswer bằng cách loại bỏ các file đã xóa
           if (existingQuestion.mediaAnswer) {
             const existingMedia = existingQuestion.mediaAnswer as MediaFile[];
             console.log('Existing media before filter:', existingMedia);
-            mediaAnswer = existingMedia.filter(media => 
+            mediaAnswer = existingMedia.filter(media =>
               !normalizedFilenames.includes(media.filename)
             );
             console.log('Remaining media after deletion:', mediaAnswer);
@@ -1060,5 +1062,13 @@ export class QuestionService {
         ERROR_CODES.INTERNAL_SERVER_ERROR
       );
     }
+  }
+  async createManyQuestion(
+    data: Prisma.QuestionCreateManyInput[]
+  ): Promise<{ count: number }> {
+    return this.prisma.question.createMany({
+      data: data,
+      skipDuplicates: true,
+    });
   }
 }

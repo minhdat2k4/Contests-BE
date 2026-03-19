@@ -15,6 +15,9 @@ import {
   uploadMediaSchema
 } from "./question.schema";
 import { questionMediaUpload } from "./question.upload";
+//tuankiet
+import multer = require("multer");
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 const questionController = new QuestionController();
@@ -141,6 +144,14 @@ router.post(
   validateParams(getQuestionByIdSchema),
   ...handleMediaUpload(questionMediaUpload.multiple("media", 10)),
   questionController.uploadMediaForQuestion.bind(questionController)
+);
+//tuankiet
+router.post(
+  "/import/excel",
+  authenticate,
+  role("Admin"),
+  upload.single("file"),
+  questionController.importExcel.bind(questionController)
 );
 
 export default router;

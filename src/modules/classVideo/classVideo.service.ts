@@ -43,6 +43,7 @@ export default class ClassVideoService {
         slogan: true,
         videos: true,
         classId: true,
+        isWinner: true,
         class: {
           select: {
             name: true,
@@ -57,6 +58,7 @@ export default class ClassVideoService {
       videos: key.videos,
       classId: key.classId,
       className: key.class?.name ?? undefined,
+      isWinner: key.isWinner,
     }));
     const total = await prisma.classVideo.count({
       where: { contestId: contestId, ...whereClause },
@@ -86,6 +88,7 @@ export default class ClassVideoService {
         slogan: true,
         videos: true,
         classId: true,
+        isWinner: true,
         class: {
           select: {
             name: true,
@@ -123,6 +126,10 @@ export default class ClassVideoService {
 
     if (data.name !== undefined) {
       updateData.name = data.name;
+    }
+
+    if (data.isWinner !== undefined) {
+      updateData.isWinner = data.isWinner;
     }
 
     return prisma.classVideo.update({

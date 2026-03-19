@@ -4,8 +4,8 @@ export const CreateClassVideoShema = z.object({
   slogan: z.string().optional(),
   classId: z.coerce.number().min(1, "Class ID phải là số nguyên dương"),
   contestId: z.coerce.number().min(1, "Contest ID phải là số nguyên dương"),
-
   videos: z.string().min(1, "Video không được để trống"),
+  isWinner: z.boolean().optional(),
 });
 
 export const ClassVideoIdSchema = z.object({
@@ -28,6 +28,7 @@ export const UpdateClassVideoSchema = z.object({
     .optional(),
 
   videos: z.string().min(1, "Video không được để trống").optional(),
+  isWinner: z.boolean().optional(),
 });
 
 export const deleteClassVideosSchema = z.object({
@@ -70,6 +71,7 @@ export const ClassVideoSchema = z.object({
   classId: z.coerce.number().min(1, "Class ID phải là số nguyên dương"),
   videos: z.string().min(1, "Video không được để trống"),
   className: z.string().optional(),
+  isWinner: z.boolean(), //thêm trường isWinner
 });
 
 export type CreateClassVideoInput = z.infer<typeof CreateClassVideoShema>;

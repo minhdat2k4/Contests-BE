@@ -66,13 +66,12 @@ export default class ClassVideoController {
 
   static async create(req: Request, res: Response): Promise<void> {
     try {
-      const input: Omit<CreateClassVideoInput, "videos" | "contestId"> =
-        req.body;
-
+      const input: Omit<CreateClassVideoInput, "videos" | "contestId"> = req.body;
       const slug = req.params.slug;
       const contest = await prisma.contest.findFirst({
         where: { slug },
       });
+      const isWinner = String(req.body.isWinner).trim() === "true";
 
       if (!contest) {
         throw new Error("Không tìm thấy cuộc thi");
@@ -99,6 +98,7 @@ export default class ClassVideoController {
         slogan: input.slogan,
         classId: classEx.id,
         contestId: contest.id,
+        isWinner,
       };
 
       const classVideo = await ClassVideoService.create(data);
@@ -110,6 +110,7 @@ export default class ClassVideoController {
       await moveUploadedFile(info.tempPath!, info.destPath!);
 
       logger.info(`Thêm video lớp học thành công`);
+      
       res.json(successResponse(classVideo, `Thêm video lớp học thành công`));
     } catch (error) {
       logger.error((error as Error).message);
@@ -171,6 +172,13 @@ export default class ClassVideoController {
       if (input.slogan) data.slogan = input.slogan;
       if (input.classId) data.classId = Number(input.classId);
       if (newUrl) data.videos = newUrl;
+      if (input.isWinner !== undefined) {
+        if (typeof input.isWinner === 'string') {
+          data.isWinner = input.isWinner === 'true';
+        } else if (typeof input.isWinner === 'boolean') {
+          data.isWinner = input.isWinner;
+        }
+      }
 
       if (Object.keys(data).length === 0) {
         throw new Error("Không có dữ liệu nào để cập nhật");
@@ -267,6 +275,42 @@ export default class ClassVideoController {
 
       res.json(
         successResponse(classVideos, "Lấy danh sách video lớp học thành công")
+      );
+    } catch (error) {
+      logger.error("Error fetching class videos by contest slug:", error);
+      res.status(400).json(errorResponse((error as Error).message));
+    }
+  }
+  //Lấy video đoạt giải của một cuộc thi
+  static async GetWinnerByContestSlug(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { slug } = req.params;
+      const contest = await prisma.contest.findUnique({
+        where: { slug },
+      });
+
+      if (!contest) {
+        throw new Error("Không tìm thấy cuộc thi");
+      }
+
+      const classVideos = await prisma.classVideo.findMany({
+        where: { contestId: contest.id, isWinner: true },
+        select: {
+          id: true,
+          name: true,
+          videos: true,
+        },
+      });
+
+      if (!classVideos) {
+        throw new Error("Không tìm thấy video lớp đoạt giải nào cho cuộc thi này");
+      }
+
+      res.json(
+        successResponse(classVideos, "Lấy danh sách video lớp đoạt giải thành công")
       );
     } catch (error) {
       logger.error("Error fetching class videos by contest slug:", error);

@@ -15,7 +15,7 @@ export const createResultSchema = z.object({
     .default(true),
   questionOrder: z.number()
     .int("Question order phải là số nguyên")
-    .positive("Question order phải là số dương")
+    .positive("Question order phải là số dương"),
 });
 
 // Update Result Schema (PATCH method)
@@ -37,7 +37,7 @@ export const updateResultSchema = z.object({
   questionOrder: z.number()
     .int("Question order phải là số nguyên")
     .positive("Question order phải là số dương")
-    .optional()
+    .optional(),
 }).refine(
   (data) => Object.keys(data).length > 0,
   {
@@ -199,6 +199,7 @@ export interface ResultResponse {
   matchId: number;
   isCorrect: boolean;
   questionOrder: number;
+  score: number;
   createdAt: Date;
   updatedAt: Date;
   contestant?: {

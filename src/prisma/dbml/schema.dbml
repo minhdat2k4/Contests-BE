@@ -272,6 +272,7 @@ Table results {
   contestant contestants [not null]
   match matches [not null]
   isCorrect Boolean [not null, default: true]
+  score Int [not null, default: 0]
   questionOrder Int [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]

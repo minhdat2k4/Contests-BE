@@ -381,7 +381,7 @@ export class ResultService {
       const result = await this.prisma.result.update({
         where: { id },
         data: {
-          ...(data.name && { name: data.name }),
+          // ...(data.name && { name: data.name }),//tuankiet result ko co name
           ...(data.contestantId && { contestantId: data.contestantId }),
           ...(data.matchId && { matchId: data.matchId }),
           ...(data.isCorrect !== undefined && { isCorrect: data.isCorrect }),

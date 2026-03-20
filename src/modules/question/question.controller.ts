@@ -496,7 +496,7 @@ export class QuestionController {
         const input: Prisma.QuestionCreateManyInput = {
           intro: column.B ? String(column.B) : null,
           defaultTime: Number(column.C),
-          questionType: String(column.D) as "multiple_choice" | "essay" | "image" | "audio" | "video",
+          questionType: String(column.M) as "multiple_choice" | "essay" | "image" | "audio" | "video",
           content: String(column.E),
 
           // ✅ JSON fields
@@ -508,7 +508,7 @@ export class QuestionController {
           score: Number(column.H),
           difficulty: String(column.I) as "Alpha" | "Beta" | "Rc" | "Gold",
           explanation: column.J ? String(column.J) : null,
-          questionTopicId: Number(column.K),
+          questionTopicId: Number(column.N),
 
           isActive: true,
         };

@@ -422,14 +422,10 @@ model Result {
   match          Match      @relation(fields: [matchId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   isCorrect      Boolean    @default(true) 
   score          Int        @default(0)
-  //tuankiet
-  answer  String          @db.Text
   questionOrder  Int       
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@map("results")
-  //tuankiet
-  @@unique([contestantId, matchId, questionOrder])
 }
 
 model Rescue {

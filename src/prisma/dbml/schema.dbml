@@ -276,10 +276,6 @@ Table results {
   questionOrder Int [not null]
   createdAt DateTime [default: `now()`, not null]
   updatedAt DateTime [not null]
-
-  indexes {
-    (contestantId, matchId, questionOrder) [unique]
-  }
 }
 
 Table rescues {

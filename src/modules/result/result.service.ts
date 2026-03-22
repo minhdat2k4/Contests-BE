@@ -357,29 +357,37 @@ export class ResultService {
         }
       }
 
-      // Check for duplicate if key fields are being updated
-      if (data.contestantId || data.matchId || data.questionOrder) {
-        const duplicateCheck = await this.prisma.result.findFirst({
-          where: {
-            contestantId: data.contestantId || existingResult.contestantId,
-            matchId: data.matchId || existingResult.matchId,
-            questionOrder: data.questionOrder || existingResult.questionOrder,
-            id: { not: id }, // Exclude current result
-          },
-        });
+      //tuankiet: da co @@unique([contestantId, matchId, questionOrder]) trong result schema check
+      // // Check for duplicate if key fields are being updated
+      // if (data.contestantId || data.matchId || data.questionOrder) {
+      //   const duplicateCheck = await this.prisma.result.findFirst({
+      //     where: {
+      //       contestantId: data.contestantId || existingResult.contestantId,
+      //       matchId: data.matchId || existingResult.matchId,
+      //       questionOrder: data.questionOrder || existingResult.questionOrder,
+      //       id: { not: id }, // Exclude current result
+      //     },
+      //   });
 
-        if (duplicateCheck) {
-          throw new CustomError(
-            "Kết quả đã tồn tại cho contestant, match và question order này",
-            409,
-            ERROR_CODES.RESULT_ALREADY_EXISTS
-          );
-        }
-      }
+      //   if (duplicateCheck) {
+      //     throw new CustomError(
+      //       "Kết quả đã tồn tại cho contestant, match và question order này",
+      //       409,
+      //       ERROR_CODES.RESULT_ALREADY_EXISTS
+      //     );
+      //   }
+      // }
 
       // Update result
       const result = await this.prisma.result.update({
-        where: { id },
+        // where: { id },
+        where: {
+          contestantId_matchId_questionOrder: {
+            contestantId: data.contestantId!,
+            matchId: data.matchId!,
+            questionOrder: data.questionOrder!,
+          },
+        },//tuankiet
         data: {
           // ...(data.name && { name: data.name }),//tuankiet result ko co name
           ...(data.contestantId && { contestantId: data.contestantId }),
@@ -867,9 +875,8 @@ export class ResultService {
         if (contestantMatch.status === "eliminated") {
           return {
             success: false,
-            message: `Bạn đã bị loại tại câu hỏi số ${
-              contestantMatch.eliminatedAtQuestionOrder || "N/A"
-            } và không thể tiếp tục trả lời`,
+            message: `Bạn đã bị loại tại câu hỏi số ${contestantMatch.eliminatedAtQuestionOrder || "N/A"
+              } và không thể tiếp tục trả lời`,
           };
         }
 
@@ -1312,9 +1319,8 @@ export class ResultService {
           INSERT INTO anti_cheat_violations 
           (contestant_id, match_id, violation_type, violation_count, reason, banned_at, banned_by)
           VALUES 
-          (${contestantId}, ${data.matchId}, ${data.violationType}, ${
-          data.violationCount
-        }, ${data.reason}, ${bannedAt}, ${data.bannedBy || "SYSTEM"})
+          (${contestantId}, ${data.matchId}, ${data.violationType}, ${data.violationCount
+          }, ${data.reason}, ${bannedAt}, ${data.bannedBy || "SYSTEM"})
         `;
       } catch (logError) {
         console.warn(

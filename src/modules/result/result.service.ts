@@ -961,6 +961,7 @@ export class ResultService {
 
       // 6. Kiểm tra đáp án đúng/sai
       let isCorrect = false;
+      let score=0;
       const question = questionDetail.question;
 
       // 🔧 XỬ LÝ: Trường hợp không chọn đáp án nào
@@ -972,6 +973,8 @@ export class ResultService {
           // Câu hỏi trắc nghiệm: so sánh trực tiếp
           isCorrect =
             data.answer.toLowerCase() === question.correctAnswer?.toLowerCase();
+          //tuankiet: gan diem
+          score = isCorrect ? question.score : 0;
         } else if (question.questionType === "essay") {
           // 🔥 NEW: Xử lý câu hỏi tự luận
           const studentAnswer = data.answer.toLowerCase().trim();
@@ -1091,6 +1094,7 @@ export class ResultService {
           questionOrder: data.questionOrder,
           //tuankiet 
           answer:data.answer,
+          score:score,
         },
         include: {
           contestant: {

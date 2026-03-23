@@ -1413,11 +1413,29 @@ export class ResultService {
     questionOrder: number,
     contestants: number[]
   ) {
+    //tuankiet: 
+     const matchInfo = await prisma.match.findUnique({
+        where: { id: match },
+      });
+      // Lấy thông tin câu hỏi 
+      const questionDetail = await prisma.questionDetail.findFirst({
+        where: {
+          questionPackageId: matchInfo?.questionPackageId,
+          questionOrder: questionOrder,
+          isActive: true,
+        },
+        include: {
+          question: true,
+        },
+      });
+    const question = questionDetail?.question
     const data = contestants.map(contestantId => ({
       contestantId: contestantId,
       matchId: match,
       isCorrect: true,
       questionOrder: questionOrder,
+      score:question?.score,
+      answer:question?.correctAnswer,
     }));
     return prisma.result.createMany({
       data: data,
@@ -1434,6 +1452,7 @@ export class ResultService {
       matchId: match,
       isCorrect: false,
       questionOrder: questionOrder,
+      score:0,
     }));
     return prisma.result.createMany({
       data: data,

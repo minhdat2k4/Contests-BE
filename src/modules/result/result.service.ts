@@ -1080,7 +1080,8 @@ export class ResultService {
             data.answer.toLowerCase() === question.correctAnswer?.toLowerCase();
         }
       }
-
+      console.log(question)
+      console.log(data)
       // 7. Lưu kết quả vào database
       const result = await this.prisma.result.create({
         data: {
@@ -1088,6 +1089,8 @@ export class ResultService {
           matchId: data.matchId,
           isCorrect: isCorrect,
           questionOrder: data.questionOrder,
+          //tuankiet 
+          answer:data.answer,
         },
         include: {
           contestant: {

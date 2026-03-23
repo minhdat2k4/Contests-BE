@@ -420,6 +420,8 @@ model Result {
   matchId        Int        @map("match_id")
   contestant     Contestant @relation(fields: [contestantId], references: [id],onDelete :Restrict , onUpdate :Restrict)
   match          Match      @relation(fields: [matchId], references: [id],onDelete :Restrict , onUpdate :Restrict)
+  //tuankiet
+  answer  String?            @db.Text
   isCorrect      Boolean    @default(true) 
   score          Int        @default(0)
   questionOrder  Int       

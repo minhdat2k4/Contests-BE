@@ -194,7 +194,8 @@ export type SubmitAnswerData = z.infer<typeof submitAnswerSchema>;
 // Response Types
 export interface ResultResponse {
   id: number;
-  name: string;
+  //tuankiet result ko co name
+  // name: string;
   contestantId: number;
   matchId: number;
   isCorrect: boolean;
@@ -204,7 +205,8 @@ export interface ResultResponse {
   updatedAt: Date;
   contestant?: {
     id: number;
-    name: string;
+    //tuankiet result ko co name
+    // name: string;
     studentId: number;
     student?: {
       id: number;

@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE `class_videos` ADD COLUMN `isWinner` BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE `class_Videos` ADD COLUMN `isWinner` BOOLEAN NOT NULL DEFAULT false;

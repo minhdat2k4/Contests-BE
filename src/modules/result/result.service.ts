@@ -379,6 +379,22 @@ export class ResultService {
       // }
 
       // Update result
+      // Lay thong tin tran 
+      const match = await this.prisma.match.findUnique({
+        where: { id: data.matchId },
+      });
+      // Lấy thông tin câu hỏi 
+      const questionDetail = await this.prisma.questionDetail.findFirst({
+        where: {
+          questionPackageId: match?.questionPackageId,
+          questionOrder: data.questionOrder,
+          isActive: true,
+        },
+        include: {
+          question: true,
+        },
+      });
+      const question = questionDetail?.question
       const result = await this.prisma.result.update({
         // where: { id },
         where: {
@@ -392,8 +408,15 @@ export class ResultService {
           // ...(data.name && { name: data.name }),//tuankiet result ko co name
           ...(data.contestantId && { contestantId: data.contestantId }),
           ...(data.matchId && { matchId: data.matchId }),
-          ...(data.isCorrect !== undefined && { isCorrect: data.isCorrect }),
+          ...(data.isCorrect !== undefined && {
+            isCorrect: data.isCorrect,
+            score: data.isCorrect ? question?.score : 0,
+          }),
           ...(data.questionOrder && { questionOrder: data.questionOrder }),
+          ...(data.isCorrect && {
+            answer: question?.correctAnswer
+          }),
+
         },
         include: {
           contestant: {
@@ -961,6 +984,7 @@ export class ResultService {
 
       // 6. Kiểm tra đáp án đúng/sai
       let isCorrect = false;
+      let score = 0;
       const question = questionDetail.question;
 
       // 🔧 XỬ LÝ: Trường hợp không chọn đáp án nào
@@ -972,6 +996,8 @@ export class ResultService {
           // Câu hỏi trắc nghiệm: so sánh trực tiếp
           isCorrect =
             data.answer.toLowerCase() === question.correctAnswer?.toLowerCase();
+          //tuankiet: gan diem
+          score = isCorrect ? question.score : 0;
         } else if (question.questionType === "essay") {
           // 🔥 NEW: Xử lý câu hỏi tự luận
           const studentAnswer = data.answer.toLowerCase().trim();
@@ -1080,7 +1106,8 @@ export class ResultService {
             data.answer.toLowerCase() === question.correctAnswer?.toLowerCase();
         }
       }
-
+      console.log(question)
+      console.log(data)
       // 7. Lưu kết quả vào database
       const result = await this.prisma.result.create({
         data: {
@@ -1088,6 +1115,9 @@ export class ResultService {
           matchId: data.matchId,
           isCorrect: isCorrect,
           questionOrder: data.questionOrder,
+          //tuankiet
+          answer: data.answer,
+          score: score,
         },
         include: {
           contestant: {
@@ -1383,11 +1413,29 @@ export class ResultService {
     questionOrder: number,
     contestants: number[]
   ) {
+    //tuankiet: 
+     const matchInfo = await prisma.match.findUnique({
+        where: { id: match },
+      });
+      // Lấy thông tin câu hỏi 
+      const questionDetail = await prisma.questionDetail.findFirst({
+        where: {
+          questionPackageId: matchInfo?.questionPackageId,
+          questionOrder: questionOrder,
+          isActive: true,
+        },
+        include: {
+          question: true,
+        },
+      });
+    const question = questionDetail?.question
     const data = contestants.map(contestantId => ({
       contestantId: contestantId,
       matchId: match,
       isCorrect: true,
       questionOrder: questionOrder,
+      score:question?.score,
+      answer:question?.correctAnswer,
     }));
     return prisma.result.createMany({
       data: data,
@@ -1404,6 +1452,7 @@ export class ResultService {
       matchId: match,
       isCorrect: false,
       questionOrder: questionOrder,
+      score:0,
     }));
     return prisma.result.createMany({
       data: data,

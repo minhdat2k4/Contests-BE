@@ -271,6 +271,7 @@ Table results {
   matchId Int [not null]
   contestant contestants [not null]
   match matches [not null]
+  answer String
   isCorrect Boolean [not null, default: true]
   score Int [not null, default: 0]
   questionOrder Int [not null]

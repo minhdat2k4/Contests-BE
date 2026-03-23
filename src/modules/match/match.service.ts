@@ -438,6 +438,8 @@ export default class MatchService {
             status: true,
             contestant: {
               select: {
+                //tuankiet: lay kem result cua thi sinh
+                results:true,
                 student: {
                   select: {
                     id: true,

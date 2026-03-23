@@ -379,6 +379,22 @@ export class ResultService {
       // }
 
       // Update result
+      // Lay thong tin tran 
+      const match = await this.prisma.match.findUnique({
+        where: { id: data.matchId },
+      });
+      // Lấy thông tin câu hỏi 
+      const questionDetail = await this.prisma.questionDetail.findFirst({
+        where: {
+          questionPackageId: match?.questionPackageId,
+          questionOrder: data.questionOrder,
+          isActive: true,
+        },
+        include: {
+          question: true,
+        },
+      });
+      const question = questionDetail?.question
       const result = await this.prisma.result.update({
         // where: { id },
         where: {
@@ -392,8 +408,15 @@ export class ResultService {
           // ...(data.name && { name: data.name }),//tuankiet result ko co name
           ...(data.contestantId && { contestantId: data.contestantId }),
           ...(data.matchId && { matchId: data.matchId }),
-          ...(data.isCorrect !== undefined && { isCorrect: data.isCorrect }),
+          ...(data.isCorrect !== undefined && {
+            isCorrect: data.isCorrect,
+            score: data.isCorrect ? question?.score : 0,
+          }),
           ...(data.questionOrder && { questionOrder: data.questionOrder }),
+          ...(data.isCorrect && {
+            answer: question?.correctAnswer
+          }),
+
         },
         include: {
           contestant: {
@@ -961,7 +984,7 @@ export class ResultService {
 
       // 6. Kiểm tra đáp án đúng/sai
       let isCorrect = false;
-      let score=0;
+      let score = 0;
       const question = questionDetail.question;
 
       // 🔧 XỬ LÝ: Trường hợp không chọn đáp án nào
@@ -1092,9 +1115,9 @@ export class ResultService {
           matchId: data.matchId,
           isCorrect: isCorrect,
           questionOrder: data.questionOrder,
-          //tuankiet 
-          answer:data.answer,
-          score:score,
+          //tuankiet
+          answer: data.answer,
+          score: score,
         },
         include: {
           contestant: {

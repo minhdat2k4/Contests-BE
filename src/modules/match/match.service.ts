@@ -439,9 +439,7 @@ export default class MatchService {
             contestant: {
               select: {
                 //tuankiet: lay kem result cua thi sinh
-                results:{where:{
-                  matchId:matchId
-                }},
+                results:true,
                 student: {
                   select: {
                     id: true,

@@ -439,7 +439,11 @@ export default class MatchService {
             contestant: {
               select: {
                 //tuankiet: lay kem result cua thi sinh
-                results:true,
+                results:{
+                  where:{
+                    matchId:matchId,
+                  }
+                },
                 student: {
                   select: {
                     id: true,

@@ -109,18 +109,18 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
 
       const eliminated = eliminatedRaw.map(c => c.contestantId);
 
-      // const resultFalse = await ResultService.createIsCorrectFalses(
-      //   match.id,
-      //   payload.questionOrder,
-      //   eliminated
-      // );
+      const resultFalse = await ResultService.createIsCorrectFalses(
+        match.id,
+        payload.questionOrder,
+        eliminated
+      );
 
-      // if (!resultFalse) {
-      //   return callback({
-      //     success: false,
-      //     message: "Cập nhật kết quả thí sinh sai thất bại",
-      //   });
-      // }
+      if (!resultFalse) {
+        return callback({
+          success: false,
+          message: "Cập nhật kết quả thí sinh sai thất bại",
+        });
+      }
 
       const ListContestant = await MatchService.ListContestant(match.id);
 

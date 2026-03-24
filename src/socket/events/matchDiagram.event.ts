@@ -41,18 +41,18 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
           message: "Không tìm thấy trận đấu",
         });
       }
+      //tuankiet: xoa delete
+      // const deletedResult = await ResultService.deleted(
+      //   match.id,
+      //   payload.questionOrder
+      // );
 
-      const deletedResult = await ResultService.deleted(
-        match.id,
-        payload.questionOrder
-      );
-
-      if (!deletedResult) {
-        return callback({
-          success: false,
-          message: "Xoá kết quả thất bại",
-        });
-      }
+      // if (!deletedResult) {
+      //   return callback({
+      //     success: false,
+      //     message: "Xoá kết quả thất bại",
+      //   });
+      // }
 
       const UpdateEliminated =
         await GroupDivisionService.UpdateContestantStatusEliminated(

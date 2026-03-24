@@ -1404,8 +1404,9 @@ export class ResultService {
     console.log(
       `Deleting results for match ${match} and questionOrder ${questionOrder}`
     );
+    //tuankiet
     return prisma.result.deleteMany({
-      where: { matchId: match, questionOrder: questionOrder },
+      where: { matchId: match, questionOrder: questionOrder,isCorrect:true },
     });
   }
   static async createIsCorrectTrues(

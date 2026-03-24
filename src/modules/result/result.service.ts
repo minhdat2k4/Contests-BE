@@ -1405,7 +1405,9 @@ export class ResultService {
       `Deleting results for match ${match} and questionOrder ${questionOrder}`
     );
     return prisma.result.deleteMany({
-      where: { matchId: match, questionOrder: questionOrder },
+      // where: { matchId: match, questionOrder: questionOrder },
+      //tuankiet: chi xoa ket qua dung de create lai
+      where: { matchId: match, questionOrder: questionOrder,isCorrect:true },
     });
   }
   static async createIsCorrectTrues(

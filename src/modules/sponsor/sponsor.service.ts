@@ -52,8 +52,13 @@ export class SponsorService {
           ERROR_CODES.SPONSOR_NOT_FOUND
         );
       }
-
-      return sponsor as SponsorResponse;
+      //tuankiet: edit lai dau ra video url 
+      return {
+      ...sponsor,
+      videos: sponsor.videos
+        ? `${process.env.BASE_URL}${sponsor.videos}`
+        : null,
+    } as SponsorResponse;
     } catch (error) {
       logger.error("Error getting sponsor by ID:", error);
       if (error instanceof CustomError) {
@@ -117,7 +122,7 @@ export class SponsorService {
       name: key.name,
       logo: key.logo,
       images: key.images,
-      videos: key.videos,
+      videos: `${process.env.BASE_URL}${key.videos}`,
     }));
     const total = await this.prisma.sponsor.count({
       where: { contestId: contestId, ...whereClause },

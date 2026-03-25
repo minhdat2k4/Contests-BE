@@ -55,7 +55,7 @@ export default class ClassVideoService {
       id: key.id,
       name: key.name,
       slogan: key.slogan ?? null,
-      videos: key.videos,
+      videos: `${process.env.BASE_URL}${key.videos}`,
       classId: key.classId,
       className: key.class?.name ?? undefined,
       isWinner: key.isWinner,
@@ -78,7 +78,7 @@ export default class ClassVideoService {
   }
 
   static async getBy(data: any): Promise<ClassVideo | null> {
-    return prisma.classVideo.findFirst({
+    const result= await prisma.classVideo.findFirst({
       where: {
         ...data,
       },
@@ -96,6 +96,17 @@ export default class ClassVideoService {
         },
       },
     });
+
+    const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+
+  if (!result) return null;
+
+  return {
+    ...result,
+    videos: result.videos
+      ? `${BASE_URL}${result.videos}`
+      : "",
+  };
   }
 
   static async create(data: CreateClassVideoInput): Promise<ClassVideo | null> {

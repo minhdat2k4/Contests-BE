@@ -585,8 +585,20 @@ export class SponsorController {
         throw new Error("Không tìm thấy nhà tài trợ");
       }
 
+      //tuankiet: dinh dang video url trc khi gui
+      const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+
+      const result = sponsors.map(s => ({
+        ...s,
+        videos: Array.isArray(s.videos)
+          ? s.videos.map(v => `${BASE_URL}${v}`)
+          : s.videos
+            ? `${BASE_URL}${s.videos}`
+            : null,
+      }));
+
       res.json(
-        successResponse(sponsors, "Lấy danh sách nhà tài trợ thành công")
+        successResponse(result, "Lấy danh sách nhà tài trợ thành công")
       );
     } catch (error) {
       logger.error("Error fetching sponsors by contest slug:", error);

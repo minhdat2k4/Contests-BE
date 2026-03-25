@@ -110,7 +110,6 @@ export default class ClassVideoController {
       await moveUploadedFile(info.tempPath!, info.destPath!);
 
       logger.info(`Thêm video lớp học thành công`);
-      
       res.json(successResponse(classVideo, `Thêm video lớp học thành công`));
     } catch (error) {
       logger.error((error as Error).message);
@@ -273,8 +272,20 @@ export default class ClassVideoController {
         throw new Error("Không tìm thấy video lớp học nào cho cuộc thi này");
       }
 
+      //tuankiet
+      const BASE_URL = process.env.BASE_URL || "http://localhost:3000q";
+
+      const result = classVideos.map(item => ({
+        ...item,
+        videos: Array.isArray(item.videos)
+          ? item.videos.map(v => `${BASE_URL}${v}`)
+          : item.videos
+            ? `${BASE_URL}${item.videos}`
+            : null,
+      }));
+
       res.json(
-        successResponse(classVideos, "Lấy danh sách video lớp học thành công")
+        successResponse(result, "Lấy danh sách video lớp học thành công")
       );
     } catch (error) {
       logger.error("Error fetching class videos by contest slug:", error);

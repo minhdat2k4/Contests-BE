@@ -1405,7 +1405,9 @@ export class ResultService {
       `Deleting results for match ${match} and questionOrder ${questionOrder}`
     );
     return prisma.result.deleteMany({
-      where: { matchId: match, questionOrder: questionOrder },
+      // where: { matchId: match, questionOrder: questionOrder },
+      //tuankiet: chi xoa ket qua dung de create lai
+      where: { matchId: match, questionOrder: questionOrder,isCorrect:true },
     });
   }
   static async createIsCorrectTrues(
@@ -1429,17 +1431,28 @@ export class ResultService {
         },
       });
     const question = questionDetail?.question
-    const data = contestants.map(contestantId => ({
-      contestantId: contestantId,
-      matchId: match,
-      isCorrect: true,
-      questionOrder: questionOrder,
-      score:question?.score,
-      answer:question?.correctAnswer,
-    }));
-    return prisma.result.createMany({
-      data: data,
-    });
+    //tuankiet: sua thanh update, ko tao lai
+      const results = await Promise.all(
+    contestants.map((contestantId) =>
+      prisma.result.updateMany({
+        where: {
+          contestantId,
+          matchId: match,
+          questionOrder,
+        },
+        data: {
+          isCorrect: true,
+          score: question?.score,
+          answer: question?.correctAnswer,
+        },
+      })
+    )
+  );
+
+  // 👉 gộp count giống createMany
+  const totalCount = results.reduce((sum, r) => sum + r.count, 0);
+
+  return { count: totalCount };
   }
 
   static async createIsCorrectFalses(

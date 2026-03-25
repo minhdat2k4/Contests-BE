@@ -41,18 +41,18 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
           message: "Không tìm thấy trận đấu",
         });
       }
+      //tuankiet: xoa delete
+      // const deletedResult = await ResultService.deleted(
+      //   match.id,
+      //   payload.questionOrder
+      // );
 
-      const deletedResult = await ResultService.deleted(
-        match.id,
-        payload.questionOrder
-      );
-
-      if (!deletedResult) {
-        return callback({
-          success: false,
-          message: "Xoá kết quả thất bại",
-        });
-      }
+      // if (!deletedResult) {
+      //   return callback({
+      //     success: false,
+      //     message: "Xoá kết quả thất bại",
+      //   });
+      // }
 
       const UpdateEliminated =
         await GroupDivisionService.UpdateContestantStatusEliminated(
@@ -106,21 +106,21 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
           message: "Không tìm thấy thí sinh bị loại",
         });
       }
+      //tuankiet: giu nguyen ket qua sai
+      // const eliminated = eliminatedRaw.map(c => c.contestantId);
 
-      const eliminated = eliminatedRaw.map(c => c.contestantId);
+      // const resultFalse = await ResultService.createIsCorrectFalses(
+      //   match.id,
+      //   payload.questionOrder,
+      //   eliminated
+      // );
 
-      const resultFalse = await ResultService.createIsCorrectFalses(
-        match.id,
-        payload.questionOrder,
-        eliminated
-      );
-
-      if (!resultFalse) {
-        return callback({
-          success: false,
-          message: "Cập nhật kết quả thí sinh sai thất bại",
-        });
-      }
+      // if (!resultFalse) {
+      //   return callback({
+      //     success: false,
+      //     message: "Cập nhật kết quả thí sinh sai thất bại",
+      //   });
+      // }
 
       const ListContestant = await MatchService.ListContestant(match.id);
 

@@ -320,4 +320,10 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       });
     }
   });
+
+  //tuenkiet :show dap an
+  socket.on("show-answer",()=>{
+    logger.info("event show-answer")
+    io.of("/student").emit("show-answer")
+  })
 };

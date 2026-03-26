@@ -738,13 +738,11 @@ export class ResultService {
         ];
       }
 
-      if (matchId) {
-        where.matchId = matchId;
-      }
-
-      if (roundId) {
+      //tuankiet
+      if (matchId || roundId) {
         where.match = {
-          roundId: roundId,
+          ...(matchId && { id: matchId }),
+          ...(roundId && { roundId: roundId }),
         };
       }
 
@@ -1407,7 +1405,7 @@ export class ResultService {
     return prisma.result.deleteMany({
       // where: { matchId: match, questionOrder: questionOrder },
       //tuankiet: chi xoa ket qua dung de create lai
-      where: { matchId: match, questionOrder: questionOrder,isCorrect:true },
+      where: { matchId: match, questionOrder: questionOrder, isCorrect: true },
     });
   }
   static async createIsCorrectTrues(
@@ -1416,43 +1414,43 @@ export class ResultService {
     contestants: number[]
   ) {
     //tuankiet: 
-     const matchInfo = await prisma.match.findUnique({
-        where: { id: match },
-      });
-      // Lấy thông tin câu hỏi 
-      const questionDetail = await prisma.questionDetail.findFirst({
-        where: {
-          questionPackageId: matchInfo?.questionPackageId,
-          questionOrder: questionOrder,
-          isActive: true,
-        },
-        include: {
-          question: true,
-        },
-      });
+    const matchInfo = await prisma.match.findUnique({
+      where: { id: match },
+    });
+    // Lấy thông tin câu hỏi 
+    const questionDetail = await prisma.questionDetail.findFirst({
+      where: {
+        questionPackageId: matchInfo?.questionPackageId,
+        questionOrder: questionOrder,
+        isActive: true,
+      },
+      include: {
+        question: true,
+      },
+    });
     const question = questionDetail?.question
     //tuankiet: sua thanh update, ko tao lai
-      const results = await Promise.all(
-    contestants.map((contestantId) =>
-      prisma.result.updateMany({
-        where: {
-          contestantId,
-          matchId: match,
-          questionOrder,
-        },
-        data: {
-          isCorrect: true,
-          score: question?.score,
-          answer: question?.correctAnswer,
-        },
-      })
-    )
-  );
+    const results = await Promise.all(
+      contestants.map((contestantId) =>
+        prisma.result.updateMany({
+          where: {
+            contestantId,
+            matchId: match,
+            questionOrder,
+          },
+          data: {
+            isCorrect: true,
+            score: question?.score,
+            answer: question?.correctAnswer,
+          },
+        })
+      )
+    );
 
-  // 👉 gộp count giống createMany
-  const totalCount = results.reduce((sum, r) => sum + r.count, 0);
+    // 👉 gộp count giống createMany
+    const totalCount = results.reduce((sum, r) => sum + r.count, 0);
 
-  return { count: totalCount };
+    return { count: totalCount };
   }
 
   static async createIsCorrectFalses(
@@ -1465,7 +1463,7 @@ export class ResultService {
       matchId: match,
       isCorrect: false,
       questionOrder: questionOrder,
-      score:0,
+      score: 0,
     }));
     return prisma.result.createMany({
       data: data,

@@ -481,7 +481,7 @@ export class QuestionController {
       }
     }
   }
-  importExcel=async(req: Request, res: Response): Promise<void>=> {
+  importExcel = async (req: Request, res: Response): Promise<void> => {
     try {
       const file = req.file;
       if (!file) {
@@ -493,6 +493,10 @@ export class QuestionController {
       let data: Prisma.QuestionCreateManyInput[] = [];
 
       for (const [index, column] of columns.entries()) {
+        //tuankiet: skip nhung dong trong
+        if (!column.E || !column.C || !column.M) {
+          continue;
+        }
         const input: Prisma.QuestionCreateManyInput = {
           intro: column.B ? String(column.B) : null,
           defaultTime: Number(column.C),
@@ -500,7 +504,7 @@ export class QuestionController {
           content: String(column.E),
 
           // ✅ JSON fields
-          options:  String(column.F).split("|"),
+          options: String(column.F).split("|"),
           questionMedia: undefined,
           mediaAnswer: undefined,
 

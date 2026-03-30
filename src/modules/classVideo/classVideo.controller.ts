@@ -320,9 +320,20 @@ export default class ClassVideoController {
         throw new Error("Không tìm thấy video lớp đoạt giải nào cho cuộc thi này");
       }
 
+      //quy: fix đường dẫn
+      const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+      const result = classVideos.map(item => ({
+        ...item,
+        videos: Array.isArray(item.videos)
+          ? item.videos.map(v => `${BASE_URL}${v}`)
+          : item.videos
+            ? `${BASE_URL}${item.videos}`
+            : null,
+      }));
       res.json(
-        successResponse(classVideos, "Lấy danh sách video lớp đoạt giải thành công")
+        successResponse(result, "Lấy danh sách video lớp đoạt giải thành công")
       );
+
     } catch (error) {
       logger.error("Error fetching class videos by contest slug:", error);
       res.status(400).json(errorResponse((error as Error).message));

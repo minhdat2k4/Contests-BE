@@ -326,4 +326,14 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
     logger.info("event show-answer")
     io.of("/student").emit("show-answer")
   })
+
+  //quy: show rescue animation
+  socket.on("rescue:show", (data) => {
+    const { match } = data;
+    const roomName = `match-${match}`;
+
+    io.of("/match-control")
+      .to(roomName)
+      .emit("rescue:show");
+  });
 };

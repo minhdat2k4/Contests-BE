@@ -319,6 +319,17 @@ export default class AuthController {
           round: {
             contestId: contestant.contestId,
           },
+
+          //quy: chỉ lấy trận thí sinh tham gia
+          contestantMatches: {
+            //some:lọc các bản ghi dựa trên điều kiện tồn tại của 
+            //ít nhất một bản ghi liên quan (giống như EXISTS trong SQL)
+            some: {
+              contestantId: contestant.id,
+              // isActive: true,
+            },
+          },
+
         },
         select: {
           id: true,

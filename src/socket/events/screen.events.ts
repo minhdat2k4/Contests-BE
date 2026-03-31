@@ -57,9 +57,18 @@ export const registerScreenEvents = (io: Server, socket: Socket) => {
     callback(null, {
       message: "Cập nhật màn hình thành công",
     });
+      const ListContestant = await MatchService.ListContestant(matchRaw.id);
+
+      if (!ListContestant) {
+        return callback({
+          success: false,
+          message: "Không tìm thấy thí sinh",
+        });
+      }
 
     io.of("/match-control").to(roomName).emit("screen:update", {
       updatedScreen,
+      ListContestant,
     });
   });
 };

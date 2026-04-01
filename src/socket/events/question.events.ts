@@ -103,40 +103,41 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
     });
 
     // 🔥 NEW: CHỈ gửi cho học sinh khi match đã bắt đầu
-    if (isMatchStarted) {
-      io.of("/student")
-        .to(roomName)
-        .emit("match:questionShown", {
-          matchId: matchInfo.id,
-          matchSlug: matchInfo.slug,
-          currentQuestion: questionOrder,
-          remainingTime: currentQuestion.defaultTime,
-          currentQuestionData: {
-            order: questionOrder,
-            question: {
-              id: currentQuestion.id,
-              intro: currentQuestion.intro,
-              content: currentQuestion.content,
-              questionType: currentQuestion.questionType,
-              difficulty: currentQuestion.difficulty,
-              defaultTime: currentQuestion.defaultTime,
-              score: currentQuestion.score,
-              options: Array.isArray(currentQuestion.options)
-                ? currentQuestion.options
-                : typeof currentQuestion.options === "string"
-                ? JSON.parse(currentQuestion.options)
-                : [],
-              media: Array.isArray((currentQuestion as any).media)
-                ? (currentQuestion as any).media
-                : [],
-            },
-          },
-        });
-    } else {
-      console.log(
-        `[DEBUG] ⚠️ KHÔNG gửi câu hỏi cho học sinh (match chưa bắt đầu)`
-      );
-    }
+    //quy comment
+    // if (isMatchStarted) {
+    //   io.of("/student")
+    //     .to(roomName)
+    //     .emit("match:questionShown", {
+    //       matchId: matchInfo.id,
+    //       matchSlug: matchInfo.slug,
+    //       currentQuestion: questionOrder,
+    //       remainingTime: currentQuestion.defaultTime,
+    //       currentQuestionData: {
+    //         order: questionOrder,
+    //         question: {
+    //           id: currentQuestion.id,
+    //           intro: currentQuestion.intro,
+    //           content: currentQuestion.content,
+    //           questionType: currentQuestion.questionType,
+    //           difficulty: currentQuestion.difficulty,
+    //           defaultTime: currentQuestion.defaultTime,
+    //           score: currentQuestion.score,
+    //           options: Array.isArray(currentQuestion.options)
+    //             ? currentQuestion.options
+    //             : typeof currentQuestion.options === "string"
+    //             ? JSON.parse(currentQuestion.options)
+    //             : [],
+    //           media: Array.isArray((currentQuestion as any).media)
+    //             ? (currentQuestion as any).media
+    //             : [],
+    //         },
+    //       },
+    //     });
+    // } else {
+    //   console.log(
+    //     `[DEBUG] ⚠️ KHÔNG gửi câu hỏi cho học sinh (match chưa bắt đầu)`
+    //   );
+    // }
   });
 
   // Event để cập nhật status rescue dựa vào câu hỏi hiện tại
@@ -327,7 +328,7 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
     io.of("/student").emit("show-answer")
   })
 
-  //quy: show rescue animation
+  //quy: hiển thị rescue animation
   socket.on("rescue:show", (data) => {
     const { match } = data;
     const roomName = `match-${match}`;
@@ -335,5 +336,60 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
     io.of("/match-control")
       .to(roomName)
       .emit("rescue:show");
+  });
+
+  //quy: event gửi câu hỏi cho thí sinh
+  socket.on("currentQuestion:emit-student", async (data, callback) => {
+    const { match, questionOrder } = data;
+
+    const matchInfo = await MatchService.MatchControl(match);
+    if (!matchInfo) {
+      return callback?.({ success: false, message: "Không tìm thấy trận đấu" });
+    }
+
+    const currentQuestion = await MatchService.CurrentQuestion(
+      questionOrder,
+      matchInfo.questionPackageId
+    );
+
+    if (!currentQuestion) {
+      return callback?.({ success: false, message: "Câu hỏi không hợp lệ" });
+    }
+
+    const roomName = `match-${match}`;
+
+    io.of("/student")
+      .to(roomName)
+      .emit("match:questionShown", {
+        matchId: matchInfo.id,
+        matchSlug: matchInfo.slug,
+        currentQuestion: questionOrder,
+        remainingTime: currentQuestion.defaultTime,
+        currentQuestionData: {
+          order: questionOrder,
+          question: {
+            id: currentQuestion.id,
+            intro: currentQuestion.intro,
+            content: currentQuestion.content,
+            questionType: currentQuestion.questionType,
+            difficulty: currentQuestion.difficulty,
+            defaultTime: currentQuestion.defaultTime,
+            score: currentQuestion.score,
+            options: Array.isArray(currentQuestion.options)
+              ? currentQuestion.options
+              : typeof currentQuestion.options === "string"
+                ? JSON.parse(currentQuestion.options)
+                : [],
+            media: Array.isArray((currentQuestion as any).media)
+              ? (currentQuestion as any).media
+              : [],
+          },
+        },
+      });
+
+    callback?.(null, {
+      success: true,
+      message: "Đã emit câu hỏi cho thí sinh",
+    });
   });
 };

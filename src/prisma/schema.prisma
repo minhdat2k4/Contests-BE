@@ -240,7 +240,9 @@ model QuestionPackage {
 
 model Question {
   id             Int             @id @default(autoincrement())
-  intro          String?         @db.VarChar(255)
+  // intro          String?         @db.VarChar(255)
+  //tuankiet:
+  intro String? @db.Text
   defaultTime    Int                     
   questionType   QuestionType   
   content        String          @db.Text

@@ -432,6 +432,8 @@ export default class MatchService {
         },
         contestantMatches: {
           select: {
+            //tuankiet
+            contestantId:true,
             registrationNumber: true,
             eliminatedAtQuestionOrder: true,
             rescuedAtQuestionOrder: true,

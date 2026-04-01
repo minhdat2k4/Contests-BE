@@ -4,6 +4,9 @@ import { MatchService } from "@/modules/match";
 import { ScreenService, UpdateScreenInput } from "@/modules/screen";
 import { ControlKey, ControlValue } from "@prisma/client";
 import { z } from "zod";
+import { Logger } from "winston";
+import { logger } from "@/utils/logger";
+import { prisma } from "@/config/database";
 
 export const updateScreen = z.object({
   controlKey: z.nativeEnum(ControlKey).optional(),
@@ -57,15 +60,58 @@ export const registerScreenEvents = (io: Server, socket: Socket) => {
     callback(null, {
       message: "Cập nhật màn hình thành công",
     });
-      const ListContestant = await MatchService.ListContestant(matchRaw.id);
-
-      if (!ListContestant) {
-        return callback({
-          success: false,
-          message: "Không tìm thấy thí sinh",
-        });
+    var ListContestant = await MatchService.ListContestant(matchRaw.id);
+    // const CPListContestant  =ListContestant;
+    if (!ListContestant) {
+      return callback({
+        success: false,
+        message: "Không tìm thấy thí sinh",
+      });
+    }
+    //tuankiet auto band null result
+    const toEliminate = await prisma.contestantMatch.findMany({
+      where: {
+        matchId: matchRaw.id,
+        contestant: {
+          results: {
+            none: {
+              matchId: matchRaw.id,
+              questionOrder: matchRaw.currentQuestion
+            }
+          }
+        }
       }
+    });
 
+    await Promise.all(
+      toEliminate.map(c =>
+        prisma.contestantMatch.update({
+          where: {
+            contestantId_matchId: {
+              contestantId: c.contestantId,
+              matchId: matchRaw.id,
+            }
+          },
+          data: {
+            status: c.status == "banned"
+              ? "banned"
+              :
+              c.status == "rescued" ? "rescued" : "eliminated",
+            eliminatedAtQuestionOrder: c.status == "rescued" ?null:matchRaw.id,
+          }
+        })
+      )
+    );
+
+    ListContestant = await MatchService.ListContestant(matchRaw.id);
+    // const CPListContestant  =ListContestant;
+    if (!ListContestant) {
+      return callback({
+        success: false,
+        message: "Không tìm thấy thí sinh",
+      });
+    }
+    logger.info("DSTS trc khi emit ", ListContestant[0].contestantMatches)
     io.of("/match-control").to(roomName).emit("screen:update", {
       updatedScreen,
       ListContestant,

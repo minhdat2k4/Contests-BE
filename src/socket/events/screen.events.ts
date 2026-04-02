@@ -68,41 +68,42 @@ export const registerScreenEvents = (io: Server, socket: Socket) => {
         message: "Không tìm thấy thí sinh",
       });
     }
-    //tuankiet auto band null result
-    const toEliminate = await prisma.contestantMatch.findMany({
-      where: {
-        matchId: matchRaw.id,
-        contestant: {
-          results: {
-            none: {
-              matchId: matchRaw.id,
-              questionOrder: matchRaw.currentQuestion
+    if (payload.controlKey === ControlKey.matchDiagram) {
+      //tuankiet auto band null result
+      const toEliminate = await prisma.contestantMatch.findMany({
+        where: {
+          matchId: matchRaw.id,
+          contestant: {
+            results: {
+              none: {
+                matchId: matchRaw.id,
+                questionOrder: matchRaw.currentQuestion
+              }
             }
           }
         }
-      }
-    });
+      });
 
-    await Promise.all(
-      toEliminate.map(c =>
-        prisma.contestantMatch.update({
-          where: {
-            contestantId_matchId: {
-              contestantId: c.contestantId,
-              matchId: matchRaw.id,
+      await Promise.all(
+        toEliminate.map(c =>
+          prisma.contestantMatch.update({
+            where: {
+              contestantId_matchId: {
+                contestantId: c.contestantId,
+                matchId: matchRaw.id,
+              }
+            },
+            data: {
+              status: c.status == "rescued" ? "rescued"
+                :
+                c.status == "banned" ? "banned" : "eliminated",
+              // eliminatedAtQuestionOrder: c.status == "rescued" ? null : matchRaw.currentQuestion,
+              rescuedAtQuestionOrder: c.status == "rescued" ? matchRaw.currentQuestion : null,
             }
-          },
-          data: {
-            status: c.status == "banned"
-              ? "banned"
-              :
-              c.status == "rescued" ? "rescued" : "eliminated",
-            eliminatedAtQuestionOrder: c.status == "rescued" ?null:matchRaw.id,
-          }
-        })
-      )
-    );
-
+          })
+        )
+      );
+    }
     ListContestant = await MatchService.ListContestant(matchRaw.id);
     // const CPListContestant  =ListContestant;
     if (!ListContestant) {

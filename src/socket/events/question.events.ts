@@ -374,14 +374,14 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
             questionType: currentQuestion.questionType,
             difficulty: currentQuestion.difficulty,
             defaultTime: currentQuestion.defaultTime,
-            score: currentQuestion.score,
+            score: 999,
             options: Array.isArray(currentQuestion.options)
               ? currentQuestion.options
               : typeof currentQuestion.options === "string"
                 ? JSON.parse(currentQuestion.options)
                 : [],
-            media: Array.isArray((currentQuestion as any).media)
-              ? (currentQuestion as any).media
+            media: Array.isArray((currentQuestion as any).questionMedia)
+              ? (currentQuestion as any).questionMedia
               : [],
           },
         },

@@ -369,12 +369,13 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
           order: questionOrder,
           question: {
             id: currentQuestion.id,
-            intro: currentQuestion.intro,
-            content: currentQuestion.content,
+            //tuankiet: ko gui intro va content cho thí sinh
+            // intro: currentQuestion.intro,
+            // content: currentQuestion.content,
             questionType: currentQuestion.questionType,
             difficulty: currentQuestion.difficulty,
             defaultTime: currentQuestion.defaultTime,
-            score: 999,
+            score: currentQuestion.score,
             options: Array.isArray(currentQuestion.options)
               ? currentQuestion.options
               : typeof currentQuestion.options === "string"

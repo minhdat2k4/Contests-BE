@@ -228,7 +228,9 @@ export const getQuestionMediaPath = (filename: string): string => {
 
 // Get question media URL
 export const getQuestionMediaUrl = (filename: string): string => {
-  return `${process.env.BASE_URL}/uploads/questions/${filename}`;
+  // return `${process.env.BASE_URL}/uploads/questions/${filename}`;
+  //tuankiet: ko luu BASE_ULR khi upload
+   return `/uploads/questions/${filename}`;
 };
 
 // Validate uploaded file size against media type limits

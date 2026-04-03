@@ -187,9 +187,8 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
       logger.error("Socket error - rescue:updateStatusByQuestion:", error);
       callback({
         success: false,
-        message: `Lỗi khi cập nhật trạng thái rescue: ${
-          (error as Error).message
-        }`,
+        message: `Lỗi khi cập nhật trạng thái rescue: ${(error as Error).message
+          }`,
       });
     }
   });
@@ -323,7 +322,7 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
   });
 
   //tuenkiet :show dap an
-  socket.on("show-answer",()=>{
+  socket.on("show-answer", () => {
     logger.info("event show-answer")
     io.of("/student").emit("show-answer")
   })
@@ -382,7 +381,10 @@ export const registerQuestionEvents = (io: Server, socket: Socket) => {
                 ? JSON.parse(currentQuestion.options)
                 : [],
             media: Array.isArray((currentQuestion as any).questionMedia)
-              ? (currentQuestion as any).questionMedia
+              ? (currentQuestion as any).questionMedia.map((m: any) => ({
+                ...m,
+                url: `${process.env.BASE_URL || ""}${m.url}`,
+              }))
               : [],
           },
         },

@@ -35,6 +35,7 @@ import {
   getMediaDuration,
   TMP_UPLOAD_DIR,
 } from "./question.upload";
+import { array } from "zod";
 
 export class QuestionService {
   private prisma: PrismaClient;
@@ -453,7 +454,19 @@ export class QuestionService {
           ERROR_CODES.QUESTION_NOT_FOUND
         );
       }
-
+      //tuankiet: gan Base URL cho question  khi trả về question
+      if (question.questionMedia && Array.isArray(question.questionMedia) && question.questionMedia.length > 0) {
+        question.questionMedia = question.questionMedia.map((media: any) => ({
+          ...media,
+          url: `${process.env.BASE_URL}${media.url}`,
+        }));
+      }
+      if (question.mediaAnswer && Array.isArray(question.mediaAnswer) && question.mediaAnswer.length > 0) {
+        question.mediaAnswer = question.mediaAnswer.map((media: any) => ({
+          ...media,
+          url: `${process.env.BASE_URL}${media.url}`,
+        }));
+      }
       return question as QuestionResponse;
     } catch (error) {
       logger.error("Error getting question by ID:", error);

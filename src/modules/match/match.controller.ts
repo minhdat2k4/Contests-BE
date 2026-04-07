@@ -544,11 +544,18 @@ export default class MatchController {
 
       const total = await MatchService.Total(match.id);
 
+      //quy
+      const countRescued = await MatchService.countRescued(match.id);
+
+      console.log("danh sach bi loai: ", countEliminated);
+
       res.json(
         successResponse(
           {
             countIn_progress: countIn_progress,
             countEliminated: countEliminated,
+            //quy
+            countRescued: countRescued,
             total: total,
           },
           `Lấy thông tin trận đấu thành công`

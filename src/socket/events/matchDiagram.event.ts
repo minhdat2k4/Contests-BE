@@ -133,6 +133,9 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
 
       const countInProgress = await MatchService.countIn_progress(match.id);
 
+      //quy: lấy số lượng thí sinh cứu trợ để cập nhật realtime
+      const countRescued = await MatchService.countRescued(match.id);
+
       const screen = await MatchService.ScreenControl(match.id);
 
       if (!screen)
@@ -157,6 +160,8 @@ export const registerMatchDiagramEvents = (io: Server, socket: Socket) => {
         ListContestant,
         countInProgress,
         updatedScreen,
+        //quy: thêm
+        countRescued,
       });
 
       const judges = await UserService.ListJudgeByMatchId(match.id);

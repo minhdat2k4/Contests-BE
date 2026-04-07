@@ -1482,56 +1482,113 @@ export class ResultService {
       },
     });
   }
+
+  //quy: comment danh sách 10 người
+  // static async chartContestant(matchId: number) {
+  //   // 1. Group theo contestantId và đếm số câu đúng
+  //   const groupedResults = await prisma.result.groupBy({
+  //     by: ["contestantId"],
+  //     where: {
+  //       matchId: matchId,
+  //       isCorrect: true,
+  //     },
+  //     _count: {
+  //       isCorrect: true,
+  //     },
+  //   });
+
+  //   // 2. Lấy thông tin chi tiết contestant, student, registrationNumber
+  //   const detailed = await Promise.all(
+  //     groupedResults.map(async item => {
+  //       const contestant = await prisma.contestant.findUnique({
+  //         where: {
+  //           id: item.contestantId,
+  //         },
+  //         include: {
+  //           student: {
+  //             select: {
+  //               fullName: true,
+  //             },
+  //           },
+  //           contestantMatches: {
+  //             where: {
+  //               matchId: matchId,
+  //             },
+  //             select: {
+  //               registrationNumber: true,
+  //             },
+  //           },
+  //         },
+  //       });
+
+  //       return {
+  //         contestantId: item.contestantId,
+  //         correctCount: item._count.isCorrect,
+  //         fullName: contestant?.student?.fullName || "Unknown",
+  //         registrationNumber:
+  //           contestant?.contestantMatches?.[0]?.registrationNumber || null,
+  //       };
+  //     })
+  //   );
+
+  //   const list = detailed
+  //     .slice(0, 10)
+  //     .sort((a, b) => b.correctCount - a.correctCount); // Lấy 10 thí sinh đầu tiên
+  //   return list;
+  // }
+
+  //quy: lấy toàn bộ danh sách
   static async chartContestant(matchId: number) {
-    // 1. Group theo contestantId và đếm số câu đúng
-    const groupedResults = await prisma.result.groupBy({
-      by: ["contestantId"],
+    // 1. Lấy tất cả contestant trong trận
+    const contestants = await prisma.contestant.findMany({
       where: {
-        matchId: matchId,
-        isCorrect: true,
+        contestantMatches: {
+          some: {
+            matchId: matchId,
+          },
+        },
       },
-      _count: {
-        isCorrect: true,
+      include: {
+        student: {
+          select: {
+            fullName: true,
+          },
+        },
+        contestantMatches: {
+          where: {
+            matchId: matchId,
+          },
+          select: {
+            registrationNumber: true,
+          },
+        },
+        results: {
+          where: {
+            matchId: matchId,
+          },
+          select: {
+            isCorrect: true,
+          },
+        },
       },
     });
 
-    // 2. Lấy thông tin chi tiết contestant, student, registrationNumber
-    const detailed = await Promise.all(
-      groupedResults.map(async item => {
-        const contestant = await prisma.contestant.findUnique({
-          where: {
-            id: item.contestantId,
-          },
-          include: {
-            student: {
-              select: {
-                fullName: true,
-              },
-            },
-            contestantMatches: {
-              where: {
-                matchId: matchId,
-              },
-              select: {
-                registrationNumber: true,
-              },
-            },
-          },
-        });
+    // 2. Tính số câu đúng cho từng thí sinh
+    const ranked = contestants.map(c => {
+      const correctCount = c.results.filter(r => r.isCorrect).length;
 
-        return {
-          contestantId: item.contestantId,
-          correctCount: item._count.isCorrect,
-          fullName: contestant?.student?.fullName || "Unknown",
-          registrationNumber:
-            contestant?.contestantMatches?.[0]?.registrationNumber || null,
-        };
-      })
-    );
+      return {
+        contestantId: c.id,
+        fullName: c.student?.fullName || "Unknown",
+        registrationNumber:
+          c.contestantMatches?.[0]?.registrationNumber || null,
+        correctCount,
+      };
+    });
 
-    const list = detailed
-      .slice(0, 10)
-      .sort((a, b) => b.correctCount - a.correctCount); // Lấy 10 thí sinh đầu tiên
-    return list;
+    // 3. Sort giảm dần (người giỏi đứng đầu)
+    ranked.sort((a, b) => b.correctCount - a.correctCount);
+
+    return ranked;
   }
 }

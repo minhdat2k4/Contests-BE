@@ -83,7 +83,7 @@ export const getResultsByContestSlugQuerySchema = z.object({
   limit: z.string()
     .regex(/^\d+$/, "Limit phải là số")
     .transform(Number)
-    .refine(val => val > 0 && val <= 100, "Limit phải từ 1-100")
+    .refine(val => val > 0 && val <= 800, "Limit phải từ 1-800")
     .default("10"),
   search: z.string()
     .min(1, "Từ khóa tìm kiếm không được để trống")
@@ -127,7 +127,7 @@ export const getResultsQuerySchema = z.object({
   limit: z.string()
     .regex(/^\d+$/, "Limit phải là số")
     .transform(Number)
-    .refine(val => val > 0 && val <= 100, "Limit phải từ 1-100")
+    .refine(val => val > 0 && val <= 800, "Limit phải từ 1-800")
     .default("10"),
   search: z.string()
     .min(1, "Từ khóa tìm kiếm không được để trống")

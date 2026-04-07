@@ -475,6 +475,13 @@ export default class MatchService {
     });
   }
 
+  //quy
+  static async countRescued(matchId: number) {
+    return prisma.contestantMatch.count({
+      where: { matchId: matchId, status: "rescued" },
+    });
+  }
+  
   static async Total(matchId: number) {
     return prisma.contestantMatch.count({
       where: { matchId: matchId, status: { notIn: ["banned"] } },
